@@ -1,0 +1,24 @@
+﻿@{
+    ViewData["Title"] = "系統權限申請中心";
+}
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white fw-bold">提交新申請</div>
+            <div class="card-body">
+                <form>
+                    <div class="mb-3">
+                        <label class="form-label fs-7 fw-bold">欲申請之模組/廠區</label>
+                        <select class="form-select"><option>DF (Thin Film)</option><option>ET (Etch)</option></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fs-7 fw-bold">申請理由</label>
+                        <textarea class="form-control" rows="3" placeholder="請簡述業務需求..."></textarea>
+                    </div>
+                    <button type="button" class="btn btn-primary w-100" onclick="alert('已送出審核！')">送出審核</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
