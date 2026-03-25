@@ -1,0 +1,16 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace EQDashboard.Controllers
+{
+    [Authorize] // 整個 Dashboard Controller 都必須登入才能存取
+    public class DashboardController : Controller
+    {
+        public IActionResult Index()
+        {
+            return View();
+        }
+    }
+}
+
+
