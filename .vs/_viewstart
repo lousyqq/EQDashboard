@@ -1,0 +1,6 @@
+@{
+    // 指定預設的 Layout 版面配置
+    Layout = "_Layout";
+}
+
+
