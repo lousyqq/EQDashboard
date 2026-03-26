@@ -1,10 +1,6 @@
 {
   "Files": [
     {
-      "Id": "C:\\Example\\EQDashboard\\EQDashboard\\obj\\Debug\\net8.0\\scopedcss\\projectbundle\\EQDashboard.bundle.scp.css",
-      "PackagePath": "staticwebassets\\EQDashboard.bundle.scp.css"
-    },
-    {
       "Id": "C:\\Example\\EQDashboard\\EQDashboard\\wwwroot\\css\\site.css",
       "PackagePath": "staticwebassets\\css\\site.css"
     },

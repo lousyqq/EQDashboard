@@ -3,28 +3,36 @@
   "WorkspaceRootPath": "C:\\Example\\EQDashboard\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|c:\\example\\eqdashboard\\eqdashboard\\views\\shared\\_layout.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\views\\shared\\_layout.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|c:\\example\\eqdashboard\\eqdashboard\\views\\dashboard\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\views\\dashboard\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|c:\\example\\eqdashboard\\eqdashboard\\views\\account\\login.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\views\\account\\login.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|c:\\example\\eqdashboard\\eqdashboard\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|c:\\example\\eqdashboard\\eqdashboard\\controllers\\dashboardcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\controllers\\dashboardcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|c:\\example\\eqdashboard\\eqdashboard\\controllers\\accountcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\controllers\\accountcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|c:\\example\\eqdashboard\\eqdashboard\\views\\account\\login.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\views\\account\\login.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|c:\\example\\eqdashboard\\eqdashboard\\views\\dashboard\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\views\\dashboard\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|c:\\example\\eqdashboard\\eqdashboard\\views\\shared\\_layout.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\views\\shared\\_layout.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|c:\\example\\eqdashboard\\eqdashboard\\views\\_viewstart.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\views\\_viewstart.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|c:\\example\\eqdashboard\\eqdashboard\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|c:\\example\\eqdashboard\\eqdashboard\\eqdashboard.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{B5F739BD-4B49-4C84-8EF1-D3F9D59C5401}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\eqdashboard.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
     }
   ],
   "DocumentGroupContainers": [
@@ -34,7 +42,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 4,
           "Children": [
             {
               "$type": "Bookmark",
@@ -42,41 +50,16 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "_Layout.cshtml",
-              "DocumentMoniker": "C:\\Example\\EQDashboard\\EQDashboard\\Views\\Shared\\_Layout.cshtml",
-              "RelativeDocumentMoniker": "EQDashboard\\Views\\Shared\\_Layout.cshtml",
-              "ToolTip": "C:\\Example\\EQDashboard\\EQDashboard\\Views\\Shared\\_Layout.cshtml",
-              "RelativeToolTip": "EQDashboard\\Views\\Shared\\_Layout.cshtml",
-              "ViewState": "AgIAABQAAAAAAAAAAADwvyIAAABKAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-03-23T17:21:27.277Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "AccountController.cs",
-              "DocumentMoniker": "C:\\Example\\EQDashboard\\EQDashboard\\Controllers\\AccountController.cs",
-              "RelativeDocumentMoniker": "EQDashboard\\Controllers\\AccountController.cs",
-              "ToolTip": "C:\\Example\\EQDashboard\\EQDashboard\\Controllers\\AccountController.cs",
-              "RelativeToolTip": "EQDashboard\\Controllers\\AccountController.cs",
-              "ViewState": "AgIAACYAAAAAAAAAAAAQwEUAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-23T17:20:02.531Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Example\\EQDashboard\\EQDashboard\\Program.cs",
-              "RelativeDocumentMoniker": "EQDashboard\\Program.cs",
-              "ToolTip": "C:\\Example\\EQDashboard\\EQDashboard\\Program.cs",
-              "RelativeToolTip": "EQDashboard\\Program.cs",
-              "ViewState": "AgIAAAwAAAAAAAAAAAAAwCUAAAAKAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-23T17:18:13.578Z",
+              "DocumentIndex": 7,
+              "Title": "EQDashboard",
+              "DocumentMoniker": "C:\\Example\\EQDashboard\\EQDashboard\\EQDashboard.csproj",
+              "RelativeDocumentMoniker": "EQDashboard\\EQDashboard.csproj",
+              "ToolTip": "C:\\Example\\EQDashboard\\EQDashboard\\EQDashboard.csproj",
+              "RelativeToolTip": "EQDashboard\\EQDashboard.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAKAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-03-26T16:53:17.962Z",
+              "IsPinned": true,
               "EditorCaption": ""
             },
             {
@@ -87,35 +70,87 @@
               "RelativeDocumentMoniker": "EQDashboard\\Views\\Account\\Login.cshtml",
               "ToolTip": "C:\\Example\\EQDashboard\\EQDashboard\\Views\\Account\\Login.cshtml",
               "RelativeToolTip": "EQDashboard\\Views\\Account\\Login.cshtml",
-              "ViewState": "AgIAAEsAAAAAAAAAAADwv2QAAAAHAAAAAAAAAA==",
+              "ViewState": "AgIAAEgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-03-23T17:02:46.973Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "DashboardController.cs",
-              "DocumentMoniker": "C:\\Example\\EQDashboard\\EQDashboard\\Controllers\\DashboardController.cs",
-              "RelativeDocumentMoniker": "EQDashboard\\Controllers\\DashboardController.cs",
-              "ToolTip": "C:\\Example\\EQDashboard\\EQDashboard\\Controllers\\DashboardController.cs",
-              "RelativeToolTip": "EQDashboard\\Controllers\\DashboardController.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-23T17:01:13.382Z",
+              "WhenOpened": "2026-03-26T18:16:27.196Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 1,
+              "Title": "AccountController.cs",
+              "DocumentMoniker": "C:\\Example\\EQDashboard\\EQDashboard\\Controllers\\AccountController.cs",
+              "RelativeDocumentMoniker": "EQDashboard\\Controllers\\AccountController.cs",
+              "ToolTip": "C:\\Example\\EQDashboard\\EQDashboard\\Controllers\\AccountController.cs",
+              "RelativeToolTip": "EQDashboard\\Controllers\\AccountController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAuwA0AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-26T17:55:52.332Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "DashboardController.cs",
+              "DocumentMoniker": "C:\\Example\\EQDashboard\\EQDashboard\\Controllers\\DashboardController.cs",
+              "RelativeDocumentMoniker": "EQDashboard\\Controllers\\DashboardController.cs",
+              "ToolTip": "C:\\Example\\EQDashboard\\EQDashboard\\Controllers\\DashboardController.cs",
+              "RelativeToolTip": "EQDashboard\\Controllers\\DashboardController.cs",
+              "ViewState": "AgIAAAUAAAAAAAAAAADwvwwAAAAlAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-26T17:55:10.728Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
               "Title": "Index.cshtml",
               "DocumentMoniker": "C:\\Example\\EQDashboard\\EQDashboard\\Views\\Dashboard\\Index.cshtml",
               "RelativeDocumentMoniker": "EQDashboard\\Views\\Dashboard\\Index.cshtml",
               "ToolTip": "C:\\Example\\EQDashboard\\EQDashboard\\Views\\Dashboard\\Index.cshtml",
               "RelativeToolTip": "EQDashboard\\Views\\Dashboard\\Index.cshtml",
-              "ViewState": "AgIAAFoAAAAAAAAAAADwv2YAAAAkAAAAAAAAAA==",
+              "ViewState": "AgIAAFgJAAAAAAAAAAAwwGwJAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-03-23T15:04:15.36Z",
+              "WhenOpened": "2026-03-26T17:48:58.491Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "_ViewStart.cshtml",
+              "DocumentMoniker": "C:\\Example\\EQDashboard\\EQDashboard\\Views\\_ViewStart.cshtml",
+              "RelativeDocumentMoniker": "EQDashboard\\Views\\_ViewStart.cshtml",
+              "ToolTip": "C:\\Example\\EQDashboard\\EQDashboard\\Views\\_ViewStart.cshtml",
+              "RelativeToolTip": "EQDashboard\\Views\\_ViewStart.cshtml",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-03-26T17:42:51.301Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "_Layout.cshtml",
+              "DocumentMoniker": "C:\\Example\\EQDashboard\\EQDashboard\\Views\\Shared\\_Layout.cshtml",
+              "RelativeDocumentMoniker": "EQDashboard\\Views\\Shared\\_Layout.cshtml",
+              "ToolTip": "C:\\Example\\EQDashboard\\EQDashboard\\Views\\Shared\\_Layout.cshtml",
+              "RelativeToolTip": "EQDashboard\\Views\\Shared\\_Layout.cshtml",
+              "ViewState": "AgIAAAQAAAAAAAAAAAAIwCMAAAAHAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-03-26T13:19:55.174Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Example\\EQDashboard\\EQDashboard\\Program.cs",
+              "RelativeDocumentMoniker": "EQDashboard\\Program.cs",
+              "ToolTip": "C:\\Example\\EQDashboard\\EQDashboard\\Program.cs",
+              "RelativeToolTip": "EQDashboard\\Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAB4AAAAKAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-26T17:58:10.346Z",
               "EditorCaption": ""
             }
           ]

@@ -1,0 +1,7 @@
+C:\Example\EQDashboard\EQDashboard\obj\Debug\netcoreapp3.1\EQDashboard.GeneratedMSBuildEditorConfig.editorconfig
+C:\Example\EQDashboard\EQDashboard\obj\Debug\netcoreapp3.1\EQDashboard.AssemblyInfoInputs.cache
+C:\Example\EQDashboard\EQDashboard\obj\Debug\netcoreapp3.1\EQDashboard.AssemblyInfo.cs
+C:\Example\EQDashboard\EQDashboard\obj\Debug\netcoreapp3.1\EQDashboard.csproj.CoreCompileInputs.cache
+C:\Example\EQDashboard\EQDashboard\obj\Debug\netcoreapp3.1\EQDashboard.RazorAssemblyInfo.cache
+C:\Example\EQDashboard\EQDashboard\obj\Debug\netcoreapp3.1\EQDashboard.RazorAssemblyInfo.cs
+C:\Example\EQDashboard\EQDashboard\obj\Debug\netcoreapp3.1\EQDashboard.sourcelink.json

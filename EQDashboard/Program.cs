@@ -1,24 +1,19 @@
-using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// 加入 MVC 控制器與視圖服務
 builder.Services.AddControllersWithViews();
-
-// 註冊 Cookie 身分驗證，設定登入與登出路徑
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
-    {
-        options.LoginPath = "/Account/Login";
-        options.AccessDeniedPath = "/Account/Login";
-        options.ExpireTimeSpan = TimeSpan.FromHours(8);
-    });
 
 var app = builder.Build();
 
+// 設定 HTTP 要求管線
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Home/Error");
-    app.UseHsts(); // 啟用嚴格傳輸安全性
+    app.UseExceptionHandler("/Dashboard/Error");
+    app.UseHsts();
 }
 
 app.UseHttpsRedirection();
@@ -26,11 +21,9 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-// 啟用身分驗證與授權 (順序不可對調)
-app.UseAuthentication();
 app.UseAuthorization();
 
-// 預設路由：將首頁指向 Dashboard/Index
+// 【關鍵修正】：將預設起始路由指向 DashboardController 的 Index
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Dashboard}/{action=Index}/{id?}");
