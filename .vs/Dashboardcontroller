@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EQDashboard.Controllers
 {
-    [Authorize] // 整個 Dashboard Controller 都必須登入才能存取
+    [Authorize]
     public class DashboardController : Controller
     {
         public IActionResult Index()
