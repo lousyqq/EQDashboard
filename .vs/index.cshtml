@@ -34,11 +34,11 @@
     </div>
 </div>
 
-<!-- [頁面] 管理系統看板 (僅 Admin 可見的設定頁面) -->
+<!-- [頁面] 管理系統看板 (僅 Admin 可見) -->
 <div id="page-manage-dash" class="page-section">
     <h4 class="mb-3" data-i18n="manage_dash_title">系統看板管理</h4>
     <div class="alert alert-info py-2">
-        <i class="fas fa-info-circle me-2"></i> 您可以在此建立<strong>「連結網址」</strong>或<strong>「應用程式集合 (App Grid)」</strong>，若選擇應用集合，點選該看板時會開啟內部的捷徑方塊頁面。
+        <i class="fas fa-info-circle me-2"></i> 您可以在此建立<strong>「連結網址」</strong>或<strong>「應用程式集合 (App Grid)」</strong>。
     </div>
     
     <div class="card shadow-sm border-0 mb-4">
@@ -160,22 +160,25 @@
     </div>
 </div>
 
-<!-- [頁面] 動態 Iframe 內容區 (用來顯示內嵌網址) -->
+<!-- [頁面] 動態 Iframe 內容區 -->
 <div id="page-iframe" class="page-section">
     <div class="iframe-header">
         <h5 class="m-0 fw-bold text-primary" id="iframe-title"><i class="fas fa-globe me-2"></i>外部網頁</h5>
-        <button class="btn btn-sm btn-outline-primary" id="iframe-popout-btn"><i class="fas fa-external-link-alt me-1"></i>在新分頁開啟</button>
+        <div>
+            <button class="btn btn-sm btn-light me-2" onclick="closeDynamicIframe()"><i class="fas fa-times me-1"></i>關閉</button>
+            <button class="btn btn-sm btn-outline-primary" id="iframe-popout-btn"><i class="fas fa-external-link-alt me-1"></i>在新分頁開啟</button>
+        </div>
     </div>
     <iframe id="main-iframe" src=""></iframe>
 </div>
 
-<!-- [頁面] 預設靜態版塊佔位 -->
+<!-- 預設靜態板塊佔位 -->
 <div id="page-eas-main" class="page-section"><h4 class="mb-3" data-i18n="menu_eas_main">EAS</h4><div class="alert alert-info"><i class="fas fa-tools me-2"></i> <span data-i18n="page_building">頁面內容建置中...</span></div></div>
 <div id="page-eqas" class="page-section"><h4 class="mb-3" data-i18n="menu_eqas">EQAS</h4><div class="alert alert-info"><i class="fas fa-tools me-2"></i> <span data-i18n="page_building">頁面內容建置中...</span></div></div>
 <div id="page-daily" class="page-section"><h4 class="mb-3" data-i18n="menu_daily">日管</h4><div class="alert alert-info"><i class="fas fa-tools me-2"></i> <span data-i18n="page_building">頁面內容建置中...</span></div></div>
 <div id="page-ze-content" class="page-section"><h4 class="mb-3"><span data-i18n="ze_title">ZE 強化防禦看板</span> - <span id="ze-sub-title" class="text-primary"></span></h4><div class="alert alert-info"><i class="fas fa-chart-line me-2"></i> 這是 <strong id="ze-sub-desc"></strong> 的專屬數據報表。(內容建置中)</div></div>
 
-<!-- [頁面] 12M EAS 機況看板 -->
+<!-- 12M EAS 機況看板 -->
 <div id="page-eas" class="page-section">
     <div class="d-flex justify-content-between align-items-end mb-3">
         <div>
@@ -194,7 +197,7 @@
     <div class="eas-table-container shadow-sm" id="eas-grid-container"></div>
 </div>
 
-<!-- [頁面] FDC 指標看板 -->
+<!-- FDC 指標看板 -->
 <div id="page-fdc" class="page-section">
     <h4 class="mb-3" data-i18n="fdc_title">FDC 指標看板</h4>
     <div class="card shadow-sm border-0">
@@ -207,7 +210,7 @@
     </div>
 </div>
 
-<!-- [頁面] 權限申請 -->
+<!-- 權限申請 -->
 <div id="page-apply" class="page-section">
     <h4 class="mb-3" data-i18n="apply_title">系統權限申請中心</h4>
     <div class="card shadow-sm border-0 col-md-6">
