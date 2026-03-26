@@ -10,7 +10,6 @@ namespace EQDashboard.Controllers
         [HttpGet]
         public IActionResult Login()
         {
-            // 若已登入，直接跳轉至儀表板
             if (User.Identity.IsAuthenticated)
             {
                 return RedirectToAction("Index", "Dashboard");
@@ -30,7 +29,7 @@ namespace EQDashboard.Controllers
             string role = "";
             string userName = "";
 
-            // 模擬資料庫 RBAC 驗證邏輯
+            // 模擬身分驗證邏輯
             if (empId.ToLower() == "admin")
             {
                 role = "Admin";
@@ -47,7 +46,6 @@ namespace EQDashboard.Controllers
                 return View();
             }
 
-            // 建立 Claim (將登入資訊寫入 Cookie)
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, empId),
@@ -61,10 +59,12 @@ namespace EQDashboard.Controllers
             return RedirectToAction("Index", "Dashboard");
         }
 
+        // IIS 關鍵修正：確保 Logout 能夠接受 GET 請求，並且明確指定返回的 Controller
+        [HttpGet]
         public async Task<IActionResult> Logout()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return RedirectToAction("Login");
+            return RedirectToAction("Login", "Account");
         }
     }
 }
