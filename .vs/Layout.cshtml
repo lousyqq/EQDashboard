@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - EQ Dashboard</title>
-    <!-- Bootstrap 5 CSS -->
+    <!-- 若 IIS 內網擋 CDN，請將以下兩行改為本地端路徑： href="~/lib/bootstrap/..." -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -14,7 +14,7 @@
         #wrapper { display: flex; width: 100%; height: 100vh; overflow: hidden; }
         #sidebar { width: var(--sidebar-width); background: #fff; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; transition: all 0.3s; z-index: 1000; }
         #content-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        #main-content { padding: 24px; overflow-y: auto; flex: 1; }
+        #main-content { padding: 24px; overflow-y: auto; flex: 1; position: relative;}
 
         .top-navbar { background-color: var(--primary-bg); color: white; padding: 12px 24px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; z-index: 1001;}
         .menu-item { padding: 12px 20px; color: #495057; text-decoration: none; display: flex; align-items: center; border-left: 4px solid transparent; transition: all 0.2s; cursor: pointer; }
@@ -32,13 +32,12 @@
         .page-section.active { display: block; animation: fadeIn 0.3s ease-in-out; }
         @@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* 新增：App Grid 專屬 CSS */
-        .app-grid { display: grid; grid-template-columns: repeat(3, 140px); gap: 30px 40px; padding-top: 20px; justify-content: start; }
+        .app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 30px 20px; padding-top: 20px; justify-items: center; }
         .app-card { display: flex; flex-direction: column; align-items: center; position: relative; transition: all 0.2s; width: 140px; }
         .app-icon-box { width: 100px; height: 100px; border-radius: 22px; background: #fff; border: 1px solid #e0e0e0; box-shadow: 0 4px 8px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; overflow: hidden; position: relative; }
         .app-card:hover .app-icon-box { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.12); border-color: var(--primary-bg); }
         .app-icon-img { width: 100%; height: 100%; object-fit: cover; }
-        .app-name { font-weight: bold; font-size: 1rem; color: #333; text-align: center; word-break: break-all; cursor: pointer; line-height: 1.3; width: 100%; }
+        .app-name { font-weight: bold; font-size: 0.95rem; color: #333; text-align: center; word-break: break-all; cursor: pointer; line-height: 1.3; width: 100%; }
         
         .app-actions { position: absolute; top: -10px; right: 10px; display: none; gap: 6px; z-index: 10; }
         .app-card:hover .app-actions { display: flex; }
@@ -53,8 +52,7 @@
         .app-card.app-add:hover .app-add-box { background: #e9ecef; border-color: #adb5bd; }
         .app-card.app-add:hover .app-add-box i { color: #6c757d; }
 
-        /* 新增：Iframe 特殊高度設定 */
-        #page-iframe.active { display: flex; flex-direction: column; height: calc(100vh - 74px); padding: 0; margin: 0; }
+        #page-iframe.active { display: flex; flex-direction: column; height: calc(100vh - 74px); padding: 0; margin: 0; position: absolute; top: 0; left: 0; width: 100%; z-index: 50;}
         .iframe-header { padding: 12px 24px; background: #fff; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; }
         #main-iframe { flex: 1; width: 100%; height: 100%; border: none; background: #f4f7f6; }
 
@@ -94,13 +92,12 @@
                 </div>
                 
                 <div class="menu-section mt-2" data-i18n="menu_reports">系統看板 (需權限)</div>
-                
                 <!-- 動態系統看板渲染區塊 -->
                 <div id="dynamic-sidebar-menus"></div>
 
                 <div class="menu-section mt-2" data-i18n="menu_settings">系統設定</div>
                 
-                <!-- 管理系統看板按鈕 (僅 Admin 可見) -->
+                <!-- 管理系統看板 (權限動態判定) -->
                 <div class="menu-item locked" id="menu-manage-dash" onclick="navTo('page-manage-dash', this)" style="display:none;">
                     <i class="fas fa-cogs fa-fw me-2"></i> <span data-i18n="menu_manage_dash">管理系統看板</span>
                 </div>
@@ -149,19 +146,20 @@
                             </div>
                         </div>
                         
-                        <div class="ms-3 login-count-box rounded px-2 py-1 text-center" id="login-count-container" title="累計登入次數">
+                        <div class="ms-3 login-count-box rounded px-2 py-1 text-center" id="login-count-container" title="此帳號的累計登入次數">
                             <div style="font-size: 0.65rem; line-height: 1;" class="text-white-50" data-i18n="login_count_label">登入次數</div>
                             <div class="fw-bold fs-6 lh-1 text-warning" id="user-login-count">0</div>
                         </div>
 
+                        <!-- IIS 關鍵修正：登出按鈕改用 Html Helper @Url.Action，解決路徑 404 問題 -->
                         <ul class="dropdown-menu dropdown-menu-end shadow mt-2">
-                            <li><a class="dropdown-item text-danger" href="@Url.Action("Logout", "Account")"><i class="fas fa-sign-out-alt me-2"></i><span data-i18n="logout">登出</span></a></li>
+                            <li><a class="dropdown-item text-danger cursor-pointer" href="@Url.Action("Logout", "Account")"><i class="fas fa-sign-out-alt me-2"></i><span data-i18n="logout">登出</span></a></li>
                         </ul>
                     </div>
                 </div>
             </div>
 
-            <!-- 動態內容區：載入 Dashboard/Index.cshtml 內容 -->
+            <!-- 動態內容切換區 -->
             <div id="main-content">
                 @RenderBody()
             </div>
@@ -188,7 +186,7 @@
         </div>
     </div>
 
-    <!-- 新增 APP 的 Modal -->
+    <!-- 新增 APP Modal -->
     <div class="modal fade" id="appGridModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
@@ -199,36 +197,24 @@
                 <div class="modal-body py-4">
                     <form id="appForm" onsubmit="saveAppItem(event)">
                         <input type="hidden" id="appIdInput">
-                        
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-muted">APP 名稱 <span class="text-danger">*</span></label>
-                            <input type="text" id="appName" class="form-control" placeholder="例如：Google 搜尋" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-muted">網址 (URL) <span class="text-danger">*</span></label>
-                            <input type="url" id="appUrl" class="form-control" placeholder="https://..." required>
-                        </div>
+                        <div class="mb-3"><label class="form-label fw-bold text-muted">APP 名稱 <span class="text-danger">*</span></label><input type="text" id="appName" class="form-control" required></div>
+                        <div class="mb-3"><label class="form-label fw-bold text-muted">網址 (URL) <span class="text-danger">*</span></label><input type="url" id="appUrl" class="form-control" required></div>
                         <div class="mb-3">
                             <label class="form-label fw-bold text-muted">上傳 ICON 圖案 (選填)</label>
                             <input type="file" id="appIconUpload" class="form-control" accept="image/*" onchange="handleAppIconUpload(event)">
-                            <div class="mt-3 text-center">
-                                <img id="appIconPreview" class="app-icon-img shadow-sm border" style="display:none;" src="">
-                            </div>
+                            <div class="mt-3 text-center"><img id="appIconPreview" class="app-icon-img shadow-sm border" style="display:none;" src=""></div>
                         </div>
-                        <div class="d-grid mt-4">
-                            <button type="submit" class="btn btn-primary fw-bold">儲存並新增</button>
-                        </div>
+                        <div class="d-grid mt-4"><button type="submit" class="btn btn-primary fw-bold">儲存並新增</button></div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // --- 1. 橋接 C# 與 JS 的使用者資訊 ---
+        // --- 1. 橋接 C# 與 JS 的使用者資訊 (嚴格型別轉換，避免 IIS 出錯) ---
         const currentUser = {
             id: '@User.Identity.Name',
             name: '@User.Identity.Name',
@@ -237,44 +223,105 @@
         };
 
         const i18n = {
-            zh: {
-                menu_workspace: "個人工作區", menu_home: "首頁總覽", menu_reports: "系統看板 (需權限)", 
-                menu_fdc: "FDC 指標看板", menu_eas_12m: "12M EAS 機況", menu_ze: "ZE 強化防禦",
-                menu_eas_main: "EAS", menu_eqas: "EQAS", menu_daily: "日管", page_building: "頁面內容建置中...",
-                menu_settings: "系統設定", menu_apply: "權限申請中心", menu_manage_dash: "管理系統看板", manage_dash_title: "系統看板管理",
-                nav_title: "EQ Performance Dashboard", role_label: "角色:", logout: "登出", welcome_title: "歡迎登入", welcome_desc: "請從左側選單進入各項報表。", my_role_title: "權限狀態",
-                fab_label: "廠區", current_fab_title: "目前選擇廠區", login_count_label: "登入次數",
-                ze_title: "ZE 強化防禦看板", fdc_title: "FDC 指標看板", apply_title: "權限申請", apply_btn: "送出審核",
-                auth_title: "權限不足", auth_msg: "您無權限瀏覽此報表。<br>是否前往申請？", auth_cancel: "取消", auth_go: "前往申請", eas_title_sub: "EAS 設備機況看板"
-            },
-            en: {
-                menu_workspace: "Workspace", menu_home: "Home", menu_reports: "Reports", 
-                menu_fdc: "FDC Index", menu_eas_12m: "EAS Status", menu_ze: "ZE Enhancement",
-                menu_eas_main: "EAS", menu_eqas: "EQAS", menu_daily: "Daily Mgt", page_building: "Page under construction...",
-                menu_settings: "Settings", menu_apply: "Access Request", menu_manage_dash: "Manage Dashboards", manage_dash_title: "Dashboard Management",
-                nav_title: "EQ Performance Dashboard", role_label: "Role:", logout: "Logout", welcome_title: "Welcome", welcome_desc: "Select a report from the menu.", my_role_title: "My Access",
-                fab_label: "Fab", current_fab_title: "Current Fab", login_count_label: "Logins",
-                ze_title: "ZE Enhancement", fdc_title: "FDC Index", apply_title: "Request Center", apply_btn: "Submit",
-                auth_title: "Access Denied", auth_msg: "No permission.<br>Go to request?", auth_cancel: "Cancel", auth_go: "Go", eas_title_sub: "EAS Equipment Status"
-            },
-            ja: {
-                menu_workspace: "ワークスペース", menu_home: "ホーム", menu_reports: "レポート", 
-                menu_fdc: "FDC インデックス", menu_eas_12m: "EAS 状態", menu_ze: "ZE 強化防禦",
-                menu_eas_main: "EAS", menu_eqas: "EQAS", menu_daily: "日管", page_building: "ページ構築中...",
-                menu_settings: "設定", menu_apply: "権限申請", menu_manage_dash: "ダッシュボード管理", manage_dash_title: "ダッシュボード管理",
-                nav_title: "EQ Performance Dashboard", role_label: "権限:", logout: "ログアウト", welcome_title: "ようこそ", welcome_desc: "メニューからレポートを選択してください。", my_role_title: "権限レベル",
-                fab_label: "工場", current_fab_title: "選択中の工場", login_count_label: "ログイン数",
-                ze_title: "ZE 強化防禦ダッシュボード", fdc_title: "FDC インデックス", apply_title: "権限申請", apply_btn: "申請を送信",
-                auth_title: "アクセス拒否", auth_msg: "権限がありません。<br>申請しますか？", auth_cancel: "キャンセル", auth_go: "申請へ", eas_title_sub: "EAS 装置状態モニタ"
-            }
+            zh: { menu_workspace: "個人工作區", menu_home: "首頁總覽", menu_reports: "系統看板 (需權限)", menu_fdc: "FDC 指標看板", menu_eas_12m: "12M EAS 機況", menu_ze: "ZE 強化防禦", menu_eas_main: "EAS", menu_eqas: "EQAS", menu_daily: "日管", page_building: "頁面內容建置中...", menu_settings: "系統設定", menu_apply: "權限申請中心", menu_manage_dash: "管理系統看板", manage_dash_title: "系統看板管理", nav_title: "EQ Performance Dashboard", role_label: "角色:", logout: "登出", welcome_title: "歡迎登入", welcome_desc: "請從左側選單進入各項報表。", my_role_title: "權限狀態", fab_label: "廠區", current_fab_title: "目前選擇廠區", login_count_label: "登入次數", ze_title: "ZE 強化防禦看板", fdc_title: "FDC 指標看板", apply_title: "權限申請", apply_btn: "送出審核", auth_title: "權限不足", auth_msg: "您無權限瀏覽此報表。<br>是否前往申請？", auth_cancel: "取消", auth_go: "前往申請", eas_title_sub: "EAS 設備機況看板" },
+            en: { menu_workspace: "Workspace", menu_home: "Home", menu_reports: "Reports", menu_fdc: "FDC Index", menu_eas_12m: "EAS Status", menu_ze: "ZE Enhancement", menu_eas_main: "EAS", menu_eqas: "EQAS", menu_daily: "Daily Mgt", page_building: "Page under construction...", menu_settings: "Settings", menu_apply: "Access Request", menu_manage_dash: "Manage Dashboards", manage_dash_title: "Dashboard Management", nav_title: "EQ Performance Dashboard", role_label: "Role:", logout: "Logout", welcome_title: "Welcome", welcome_desc: "Select a report from the menu.", my_role_title: "My Access", fab_label: "Fab", current_fab_title: "Current Fab", login_count_label: "Logins", ze_title: "ZE Enhancement", fdc_title: "FDC Index", apply_title: "Request Center", apply_btn: "Submit", auth_title: "Access Denied", auth_msg: "No permission.<br>Go to request?", auth_cancel: "Cancel", auth_go: "Go", eas_title_sub: "EAS Equipment Status" },
+            ja: { menu_workspace: "ワークスペース", menu_home: "ホーム", menu_reports: "レポート", menu_fdc: "FDC インデックス", menu_eas_12m: "EAS 状態", menu_ze: "ZE 強化防禦", menu_eas_main: "EAS", menu_eqas: "EQAS", menu_daily: "日管", page_building: "ページ構築中...", menu_settings: "設定", menu_apply: "権限申請", menu_manage_dash: "ダッシュボード管理", manage_dash_title: "ダッシュボード管理", nav_title: "EQ Performance Dashboard", role_label: "権限:", logout: "ログアウト", welcome_title: "ようこそ", welcome_desc: "メニューからレポートを選択してください。", my_role_title: "権限レベル", fab_label: "工場", current_fab_title: "選択中の工場", login_count_label: "ログイン数", ze_title: "ZE 強化防禦ダッシュボード", fdc_title: "FDC インデックス", apply_title: "権限申請", apply_btn: "申請を送信", auth_title: "アクセス拒否", auth_msg: "権限がありません。<br>申請しますか？", auth_cancel: "キャンセル", auth_go: "申請へ", eas_title_sub: "EAS 装置状態モニタ" }
         };
 
-        // --- 2. 動態系統看板初始化邏輯 ---
+        let currentLang = 'zh';
+        let currentFab = '12A';
+        const authModal = new bootstrap.Modal(document.getElementById('authModal'));
+        let appGridModalInstance = null;
+
+        // --- 導覽邏輯 ---
+        function changeLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('eq_dashboard_lang', lang);
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[lang] && i18n[lang][key]) el.innerHTML = i18n[lang][key];
+            });
+            const langCodes = { 'zh': 'ZH', 'en': 'EN', 'ja': 'JA' };
+            document.getElementById('current-lang-code').innerText = langCodes[lang];
+            document.querySelectorAll('.lang-check').forEach(el => el.classList.add('d-none'));
+            document.getElementById('check-' + lang).classList.remove('d-none');
+            renderSidebarMenus();
+        }
+
+        function switchFab(fab) {
+            currentFab = fab;
+            document.querySelectorAll('.fab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-fab-' + fab).classList.add('active');
+            const dashFabDisplay = document.getElementById('dash-fab-display');
+            if (dashFabDisplay) dashFabDisplay.innerText = fab;
+
+            if (fab === '12M') {
+                const easContainer = document.querySelector('.eas-table-container');
+                if(easContainer) easContainer.style.borderTopColor = "#dd4b39";
+                changeLanguage('ja');
+            } else if (fab === '12i') {
+                changeLanguage('en');
+            } else if (fab === '12A') {
+                changeLanguage('zh');
+            }
+
+            renderSidebarMenus();
+            
+            const activePage = document.querySelector('.page-section.active');
+            if(activePage && activePage.id !== 'page-home') {
+                let menus = getCustomMenus();
+                let isAllowed = false;
+                menus.forEach(m => {
+                    if ((m.targetPage === activePage.id || activePage.id === 'page-iframe' || activePage.id === 'page-app-grid') && (!m.fabs || m.fabs.includes(fab))) {
+                        isAllowed = true;
+                    }
+                });
+                if(activePage.id === 'page-home' || activePage.id === 'page-manage-dash' || activePage.id === 'page-apply') isAllowed = true;
+                if(!isAllowed) navTo('page-home', document.querySelector('[onclick*="page-home"]'));
+            }
+
+            if(currentUser.id && fab === '12M') renderEasBoard(); 
+        }
+
+        function navTo(pageId, element, subTitle = '') {
+            if (element && element.classList.contains('locked')) { authModal.show(); return; }
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            if(element) element.classList.add('active');
+            
+            document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+            const targetPage = document.getElementById(pageId);
+            if(targetPage) targetPage.classList.add('active');
+
+            if (pageId === 'page-ze-content') {
+                const zeSubTitle = document.getElementById('ze-sub-title');
+                const zeSubDesc = document.getElementById('ze-sub-desc');
+                if(zeSubTitle) zeSubTitle.innerText = subTitle;
+                if(zeSubDesc) zeSubDesc.innerText = subTitle;
+            }
+        }
+
+        function openDynamicIframe(url, title, element) {
+            if (!url) return;
+            navTo('page-iframe', element);
+            document.getElementById('iframe-title').innerHTML = `<i class="fas fa-globe me-2"></i>${title}`;
+            document.getElementById('main-iframe').src = url;
+            document.getElementById('iframe-popout-btn').onclick = () => window.open(url, '_blank');
+        }
+
+        function closeDynamicIframe() {
+            document.getElementById('main-iframe').src = "";
+            navTo('page-home', document.querySelector('[onclick*="page-home"]'));
+        }
+
+        function goToApply() { authModal.hide(); navTo('page-apply', document.querySelector('[onclick*="page-apply"]')); }
+        function checkZeAuth() { if (!currentUser || !currentUser.isAdmin) { authModal.show(); return false; } return true; }
+
+        // --- 動態看板管理系統 ---
         function getCustomMenus() {
-            let menusStr = localStorage.getItem('umc_custom_menus_v3');
+            let menusStr = localStorage.getItem('umc_custom_menus_v4');
             if (!menusStr) {
                 const defaultMenus = [
-                    { id: 'menu_eas_main', name: 'EAS', i18nKey: 'menu_eas_main', targetPage: 'page-eas-main', icon: 'fas fa-desktop', fabs: ['12A'], reqAuth: true, parentId: null },
+                    { id: 'menu_eas_main', name: 'EAS', i18nKey: 'menu_eas_main', targetPage: 'page-eas-main', icon: 'fas fa-desktop', fabs: ['12A', '12i'], reqAuth: true, parentId: null },
                     { id: 'menu_eqas', name: 'EQAS', i18nKey: 'menu_eqas', targetPage: 'page-eqas', icon: 'fas fa-chart-bar', fabs: ['12A'], reqAuth: true, parentId: null },
                     { id: 'menu_daily', name: '日管', i18nKey: 'menu_daily', targetPage: 'page-daily', icon: 'fas fa-calendar-check', fabs: ['12A'], reqAuth: true, parentId: null },
                     { id: 'menu_ze', name: 'ZE 強化防禦', i18nKey: 'menu_ze', icon: 'fas fa-shield-alt', fabs: ['12A'], reqAuth: true, parentId: null },
@@ -287,7 +334,7 @@
                     { id: 'menu_eas_12m', name: '12M EAS 機況', i18nKey: 'menu_eas_12m', targetPage: 'page-eas', icon: 'fas fa-th', fabs: ['12M'], reqAuth: true, parentId: null },
                     { id: 'menu_fdc', name: 'FDC 指標看板', i18nKey: 'menu_fdc', targetPage: 'page-fdc', icon: 'fas fa-table', fabs: ['12A', '12i'], reqAuth: true, parentId: null }
                 ];
-                localStorage.setItem('umc_custom_menus_v3', JSON.stringify(defaultMenus));
+                localStorage.setItem('umc_custom_menus_v4', JSON.stringify(defaultMenus));
                 return defaultMenus;
             }
             return JSON.parse(menusStr);
@@ -309,17 +356,11 @@
             }
             if (!isVisible) return '';
 
-            let defaultIcon = '';
-            if (level === 0) defaultIcon = hasChildren ? 'fa-folder text-warning' : 'fa-link text-primary';
-            else if (level === 1 && hasChildren) defaultIcon = 'fa-folder-open text-warning';
-            else defaultIcon = 'fa-angle-right text-muted';
-
+            let defaultIcon = level === 0 ? (hasChildren ? 'fa-folder text-warning' : 'fa-link text-primary') : (level === 1 && hasChildren ? 'fa-folder-open text-warning' : 'fa-angle-right text-muted');
             const lockIcon = isLocked ? '<i class="fas fa-lock ms-auto auth-icon text-warning"></i>' : '';
             const iconHtml = menu.icon ? `<i class="${menu.icon} fa-fw me-2"></i>` : `<i class="fas ${defaultIcon} fa-fw me-2"></i>`;
             const padClass = level === 1 ? 'ps-4' : (level === 2 ? 'ps-5 ms-2' : '');
-            
-            const i18nAttr = menu.i18nKey ? `data-i18n="${menu.i18nKey}"` : '';
-            const displayName = menu.i18nKey ? `<span ${i18nAttr}>${i18n[currentLang][menu.i18nKey] || menu.name}</span>` : `<span>${menu.name}</span>`;
+            const displayName = menu.i18nKey ? `<span>${i18n[currentLang][menu.i18nKey] || menu.name}</span>` : `<span>${menu.name}</span>`;
 
             let actionAttr = '';
             if (isLocked) {
@@ -329,27 +370,15 @@
             } else if (menu.menuMode === 'app_grid') {
                 actionAttr = `onclick="openAppGridPage('${menu.id}', '${menu.name}', this)"`;
             } else if (menu.url) { 
-                if (menu.target === 'blank') {
-                    actionAttr = `onclick="window.open('${menu.url}', '_blank')"`;
-                } else if (menu.target === 'popup') {
-                    actionAttr = `onclick="window.open('${menu.url}', 'popup_${menu.id}', 'width=1100,height=700,top=100,left=150,toolbar=no,menubar=no,scrollbars=yes,resizable=yes'); return false;"`;
-                } else {
-                    actionAttr = `onclick="openDynamicIframe('${menu.url}', '${menu.name}', this)"`;
-                }
+                if (menu.target === 'blank') actionAttr = `onclick="window.open('${menu.url}', '_blank')"`;
+                else if (menu.target === 'popup') actionAttr = `onclick="window.open('${menu.url}', 'popup_${menu.id}', 'width=1100,height=700,top=100,left=150,toolbar=no,menubar=no,scrollbars=yes,resizable=yes'); return false;"`;
+                else actionAttr = `onclick="openDynamicIframe('${menu.url}', '${menu.name}', this)"`;
             } else if (menu.targetPage) {
                 actionAttr = `onclick="navTo('${menu.targetPage}', this, '${menu.name}')"`;
             }
 
             if (hasChildren) {
-                let html = `
-                <div class="menu-item ${isLocked ? 'locked' : ''} ${padClass}" id="menu-el-${menu.id}" ${actionAttr}>
-                    ${iconHtml} ${displayName}
-                    ${lockIcon}
-                    ${!isLocked ? '<i class="fas fa-chevron-down ms-auto dropdown-icon" style="font-size: 0.8rem;"></i>' : ''}
-                </div>
-                <div class="collapse" id="collapse-${menu.id}">
-                    <div class="bg-light py-1 ${level === 0 ? 'border-bottom' : ''}">
-                `;
+                let html = `<div class="menu-item ${isLocked ? 'locked' : ''} ${padClass}" id="menu-el-${menu.id}" ${actionAttr}>${iconHtml} ${displayName} ${lockIcon} ${!isLocked ? '<i class="fas fa-chevron-down ms-auto dropdown-icon" style="font-size: 0.8rem;"></i>' : ''}</div><div class="collapse" id="collapse-${menu.id}"><div class="bg-light py-1 ${level === 0 ? 'border-bottom' : ''}">`;
                 children.forEach(child => html += generateSidebarMenuItem(child, allMenus, level + 1));
                 html += `</div></div>`;
                 return html;
@@ -363,84 +392,14 @@
             const menus = getCustomMenus();
             const rootMenus = menus.filter(m => !m.parentId);
             rootMenus.forEach(root => html += generateSidebarMenuItem(root, menus, 0));
-            document.getElementById('dynamic-sidebar-menus').innerHTML = html;
+            const dynamicContainer = document.getElementById('dynamic-sidebar-menus');
+            if(dynamicContainer) dynamicContainer.innerHTML = html;
         }
 
-        // --- 3. 語系與廠區切換 ---
-        let currentLang = 'zh';
-        function changeLanguage(lang) {
-            currentLang = lang;
-            document.querySelectorAll('[data-i18n]').forEach(el => {
-                const key = el.getAttribute('data-i18n');
-                if (i18n[lang] && i18n[lang][key]) el.innerHTML = i18n[lang][key];
-            });
-            const langCodes = { 'zh': 'ZH', 'en': 'EN', 'ja': 'JA' };
-            document.getElementById('current-lang-code').innerText = langCodes[lang];
-            document.querySelectorAll('.lang-check').forEach(el => el.classList.add('d-none'));
-            document.getElementById('check-' + lang).classList.remove('d-none');
-        }
-
-        let currentFab = '12A';
-        function switchFab(fab) {
-            currentFab = fab;
-            document.querySelectorAll('.fab-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById('btn-fab-' + fab).classList.add('active');
-            
-            const dashFabDisplay = document.getElementById('dash-fab-display');
-            if (dashFabDisplay) dashFabDisplay.innerText = fab;
-
-            if (fab === '12M') {
-                const easContainer = document.querySelector('.eas-table-container');
-                if(easContainer) easContainer.style.borderTopColor = "#dd4b39";
-                currentLang = 'ja';
-            } else if (fab === '12i') {
-                currentLang = 'en';
-            } else if (fab === '12A') {
-                currentLang = 'zh';
-            }
-
-            renderSidebarMenus();
-            changeLanguage(currentLang); 
-            
-            navTo('page-home', document.querySelector('[onclick*="page-home"]'));
-            if(currentUser.id && fab === '12M') renderEasBoard(); 
-        }
-
-        const authModal = new bootstrap.Modal(document.getElementById('authModal'));
-
-        function navTo(pageId, element, subTitle = '') {
-            if (element && element.classList.contains('locked')) { authModal.show(); return; }
-            
-            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
-            if(element) element.classList.add('active');
-            
-            document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
-            const targetPage = document.getElementById(pageId);
-            if (targetPage) targetPage.classList.add('active');
-
-            if (pageId === 'page-ze-content') {
-                const titleEl = document.getElementById('ze-sub-title');
-                const descEl = document.getElementById('ze-sub-desc');
-                if(titleEl) titleEl.innerText = subTitle;
-                if(descEl) descEl.innerText = subTitle;
-            }
-        }
-
-        function goToApply() { authModal.hide(); navTo('page-apply', document.querySelector('[onclick="navTo(\'page-apply\', this)"]')); }
-
-        // --- 4. 動態系統看板管理 (Manage Dashboard) ---
         function toggleMenuMode() {
             const mode = document.querySelector('input[name="menuMode"]:checked').value;
-            const urlGroup = document.getElementById('urlGroup');
-            const targetGroup = document.getElementById('targetGroup');
-            
-            if (mode === 'app_grid') {
-                urlGroup.style.display = 'none';
-                targetGroup.style.display = 'none';
-            } else {
-                urlGroup.style.display = 'block';
-                targetGroup.style.display = 'block';
-            }
+            document.getElementById('urlGroup').style.display = mode === 'app_grid' ? 'none' : 'block';
+            document.getElementById('targetGroup').style.display = mode === 'app_grid' ? 'none' : 'block';
         }
 
         function renderCustomMenus() {
@@ -449,100 +408,30 @@
             const parentSelect = document.getElementById('customMenuParent');
             
             if(!tableBody || !parentSelect) return;
-
             tableBody.innerHTML = '';
             parentSelect.innerHTML = '<option value="">無 (作為主選單)</option>';
-
-            const rootMenus = menus.filter(m => !m.parentId);
             
-            rootMenus.forEach(root => {
+            menus.filter(m => !m.parentId).forEach(root => {
                 const level1 = menus.filter(m => m.parentId === root.id);
                 parentSelect.innerHTML += `<option value="${root.id}">${root.name}</option>`;
                 tableBody.innerHTML += generateManageTableRow(root, 0, level1.length > 0);
-                
                 level1.forEach(l1 => {
                     const level2 = menus.filter(m => m.parentId === l1.id);
                     parentSelect.innerHTML += `<option value="${l1.id}">&nbsp;&nbsp;&nbsp;-- ${l1.name} (子選單)</option>`;
                     tableBody.innerHTML += generateManageTableRow(l1, 1, level2.length > 0);
-                    
-                    level2.forEach(l2 => {
-                        tableBody.innerHTML += generateManageTableRow(l2, 2, false);
-                    });
+                    level2.forEach(l2 => tableBody.innerHTML += generateManageTableRow(l2, 2, false));
                 });
             });
         }
 
         function generateManageTableRow(menu, level, hasChildren) {
             let padding = level === 1 ? 'ps-4' : (level === 2 ? 'ps-5' : 'ps-3');
-            
-            let iconHtml = '';
-            if (menu.icon) {
-                iconHtml = `<i class="${menu.icon} me-2 text-primary"></i>`;
-            } else {
-                let defaultIcon = level === 0 ? (hasChildren ? 'fas fa-folder text-warning' : 'fas fa-link text-primary') : 'fas fa-angle-right text-muted';
-                if(level === 2) defaultIcon = 'fas fa-minus text-muted ms-2';
-                iconHtml = `<i class="${defaultIcon} me-2"></i>`;
-            }
-            
+            let iconHtml = menu.icon ? `<i class="${menu.icon} me-2 text-primary"></i>` : `<i class="${level === 0 ? (hasChildren ? 'fas fa-folder text-warning' : 'fas fa-link text-primary') : (level === 2 ? 'fas fa-minus text-muted ms-2' : 'fas fa-angle-right text-muted')} me-2"></i>`;
             let levelBadge = level === 0 ? '<span class="badge bg-secondary">主選單</span>' : (level === 1 ? '<span class="badge bg-light text-dark border">子選單</span>' : '<span class="badge bg-light text-muted border">次子選單</span>');
-            
-            let fabsBadge = '';
-            if (menu.fabs && menu.fabs.length > 0) {
-                fabsBadge = menu.fabs.map(f => `<span class="badge bg-secondary me-1" style="font-size:0.65rem;">${f}</span>`).join('');
-            } else {
-                fabsBadge = `<span class="badge bg-dark me-1" style="font-size:0.65rem;">全廠區</span>`;
-            }
+            let fabsBadge = (!menu.fabs || menu.fabs.length === 0) ? `<span class="badge bg-dark me-1" style="font-size:0.65rem;">全廠區</span>` : menu.fabs.map(f => `<span class="badge bg-secondary me-1" style="font-size:0.65rem;">${f}</span>`).join('');
+            let urlDisplay = menu.menuMode === 'app_grid' ? `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary px-2"><i class="fas fa-th-large me-1"></i>App 應用集合</span>` : (menu.url ? `<a href="${menu.url}" target="_blank">${menu.url}</a> <span class="badge bg-${menu.target==='blank'?'info':(menu.target==='popup'?'warning':'success')} ms-1">${menu.target}</span>` : `<span class="text-info small"><i class="fas fa-microchip me-1"></i>內部頁面</span>`);
 
-            let urlDisplay = '';
-            if (menu.menuMode === 'app_grid') {
-                urlDisplay = `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary px-2"><i class="fas fa-th-large me-1"></i>App 應用集合</span>`;
-            } else {
-                let targetBadge = '';
-                if (menu.url) {
-                    if (menu.target === 'blank') targetBadge = '<span class="badge bg-info ms-1">新分頁</span>';
-                    else if (menu.target === 'popup') targetBadge = '<span class="badge bg-warning text-dark ms-1">彈出視窗</span>';
-                    else targetBadge = '<span class="badge bg-success ms-1">內嵌</span>';
-                }
-                urlDisplay = menu.url ? `<a href="${menu.url}" target="_blank">${menu.url}</a> ${targetBadge}` : (menu.targetPage ? `<span class="text-info small"><i class="fas fa-microchip me-1"></i>內部頁面</span>` : '-');
-            }
-
-            return `
-                <tr>
-                    <td class="${padding} fw-bold">${iconHtml} ${menu.name}</td>
-                    <td>${levelBadge}</td>
-                    <td>${fabsBadge}</td>
-                    <td class="text-muted small">${urlDisplay}</td>
-                    <td class="text-center">
-                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editCustomMenu('${menu.id}')"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCustomMenu('${menu.id}')"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>
-            `;
-        }
-
-        function editCustomMenu(id) {
-            const menus = getCustomMenus();
-            const menu = menus.find(m => m.id === id);
-            if (!menu) return;
-
-            document.getElementById('editMenuId').value = menu.id;
-            document.getElementById('customMenuName').value = menu.name;
-            document.getElementById('customMenuUrl').value = menu.url || '';
-            document.getElementById('customMenuParent').value = menu.parentId || '';
-            document.getElementById('customMenuTarget').value = menu.target || 'iframe';
-            document.getElementById('customMenuIcon').value = menu.icon || '';
-            
-            document.querySelectorAll('.fab-check').forEach(cb => {
-                if (!menu.fabs || menu.fabs.length === 0) cb.checked = true;
-                else cb.checked = menu.fabs.includes(cb.value);
-            });
-            
-            document.getElementById(menu.menuMode === 'app_grid' ? 'modeAppGrid' : 'modeLink').checked = true;
-            toggleMenuMode();
-            
-            document.getElementById('cancelMenuBtn').style.display = 'block';
-            document.getElementById('submitMenuBtn').innerHTML = '<i class="fas fa-save me-1"></i> 更新';
-            document.querySelector('#main-content').scrollTo(0,0);
+            return `<tr><td class="${padding} fw-bold">${iconHtml} ${menu.name}</td><td>${levelBadge}</td><td>${fabsBadge}</td><td class="text-muted small">${urlDisplay}</td><td class="text-center"><button class="btn btn-sm btn-outline-primary me-1" onclick="editCustomMenu('${menu.id}')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteCustomMenu('${menu.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
         }
 
         function saveCustomMenu(event) {
@@ -554,52 +443,41 @@
             const parentId = document.getElementById('customMenuParent').value;
             const target = document.getElementById('customMenuTarget').value;
             const icon = document.getElementById('customMenuIcon').value;
-
             const checkedFabs = Array.from(document.querySelectorAll('.fab-check:checked')).map(cb => cb.value);
+
             if (checkedFabs.length === 0) { alert('請至少選擇一個顯示廠區！'); return; }
-            if (!name) return;
 
             let menus = getCustomMenus();
-            
             if (parentId && id) {
-                let currentParent = menus.find(m => m.id === parentId);
-                while(currentParent) {
-                    if (currentParent.id === id) { alert("錯誤：不能將看板設定為自己子選單的子選單！"); return; }
-                    currentParent = menus.find(m => m.id === currentParent.parentId);
-                }
+                let curr = menus.find(m => m.id === parentId);
+                while(curr) { if (curr.id === id) { alert("錯誤：不能將看板設定為自己子選單的子選單！"); return; } curr = menus.find(m => m.id === curr.parentId); }
             }
             
             if (id) {
-                const index = menus.findIndex(m => m.id === id);
-                if (index > -1) {
-                    menus[index].name = name;
-                    menus[index].menuMode = mode;
-                    menus[index].url = mode === 'app_grid' ? '' : url;
-                    if (url && mode !== 'app_grid') menus[index].targetPage = null; 
-                    menus[index].parentId = parentId || null;
-                    menus[index].target = target;
-                    menus[index].icon = icon;
-                    menus[index].fabs = checkedFabs;
-                    menus[index].i18nKey = null; 
-                }
+                const idx = menus.findIndex(m => m.id === id);
+                if (idx > -1) { menus[idx] = { ...menus[idx], name, menuMode: mode, url: mode==='app_grid'?'':url, parentId: parentId||null, target, icon, fabs: checkedFabs }; if(url && mode!=='app_grid') menus[idx].targetPage = null; }
             } else {
-                menus.push({
-                    id: 'dyn_' + Date.now(),
-                    name: name,
-                    menuMode: mode,
-                    url: mode === 'app_grid' ? '' : url,
-                    parentId: parentId || null,
-                    target: target,
-                    icon: icon,
-                    fabs: checkedFabs,
-                    reqAuth: true 
-                });
+                menus.push({ id: 'dyn_' + Date.now(), name, menuMode: mode, url: mode==='app_grid'?'':url, parentId: parentId||null, target, icon, fabs: checkedFabs, reqAuth: true });
             }
+            localStorage.setItem('umc_custom_menus_v4', JSON.stringify(menus));
+            resetMenuForm(); renderCustomMenus(); renderSidebarMenus(); 
+        }
 
-            localStorage.setItem('umc_custom_menus_v3', JSON.stringify(menus));
-            resetMenuForm();
-            renderCustomMenus();
-            renderSidebarMenus(); 
+        function editCustomMenu(id) {
+            const menu = getCustomMenus().find(m => m.id === id);
+            if (!menu) return;
+            document.getElementById('editMenuId').value = menu.id;
+            document.getElementById('customMenuName').value = menu.name;
+            document.getElementById('customMenuUrl').value = menu.url || '';
+            document.getElementById('customMenuParent').value = menu.parentId || '';
+            document.getElementById('customMenuTarget').value = menu.target || 'iframe';
+            document.getElementById('customMenuIcon').value = menu.icon || '';
+            document.querySelectorAll('.fab-check').forEach(cb => cb.checked = (!menu.fabs || menu.fabs.length===0 || menu.fabs.includes(cb.value)));
+            document.getElementById(menu.menuMode === 'app_grid' ? 'modeAppGrid' : 'modeLink').checked = true;
+            toggleMenuMode();
+            document.getElementById('cancelMenuBtn').style.display = 'block';
+            document.getElementById('submitMenuBtn').innerHTML = '<i class="fas fa-save me-1"></i> 更新';
+            document.querySelector('#main-content').scrollTo(0,0);
         }
 
         function resetMenuForm() {
@@ -608,52 +486,28 @@
             document.getElementById('modeLink').checked = true;
             toggleMenuMode();
             document.querySelectorAll('.fab-check').forEach(cb => cb.checked = true);
-            document.getElementById('customMenuTarget').value = 'iframe';
             document.getElementById('customMenuIcon').value = '';
             document.getElementById('cancelMenuBtn').style.display = 'none';
             document.getElementById('submitMenuBtn').innerHTML = '<i class="fas fa-plus me-1"></i> 新增看板';
         }
 
         function deleteCustomMenu(id) {
-            if(!confirm('確定要刪除此看板嗎？若有子選單也會一併被遞迴刪除。')) return;
+            if(!confirm('確定要刪除嗎？子選單與App捷徑將一併刪除。')) return;
             let menus = getCustomMenus();
-            let idsToDelete = new Set([id]);
-            let size = 0;
-            while(idsToDelete.size > size) {
-                size = idsToDelete.size;
-                menus.forEach(m => { if(idsToDelete.has(m.parentId)) idsToDelete.add(m.id); });
-            }
-            
-            menus = menus.filter(m => !idsToDelete.has(m.id));
-            localStorage.setItem('umc_custom_menus_v3', JSON.stringify(menus));
-
+            let ids = new Set([id]);
+            let s = 0;
+            while(ids.size > s) { s = ids.size; menus.forEach(m => { if(ids.has(m.parentId)) ids.add(m.id); }); }
+            localStorage.setItem('umc_custom_menus_v4', JSON.stringify(menus.filter(m => !ids.has(m.id))));
             let apps = JSON.parse(localStorage.getItem('umc_custom_apps_v1')) || [];
-            apps = apps.filter(a => !idsToDelete.has(a.menuId));
-            localStorage.setItem('umc_custom_apps_v1', JSON.stringify(apps));
-            
-            renderCustomMenus();
-            renderSidebarMenus();
+            localStorage.setItem('umc_custom_apps_v1', JSON.stringify(apps.filter(a => !ids.has(a.menuId))));
+            renderCustomMenus(); renderSidebarMenus();
         }
 
-        function openDynamicIframe(url, title, element) {
-            if (!url) return;
-            navTo('page-iframe', element);
-            const iframeTitle = document.getElementById('iframe-title');
-            const mainIframe = document.getElementById('main-iframe');
-            const popoutBtn = document.getElementById('iframe-popout-btn');
-            
-            if(iframeTitle) iframeTitle.innerHTML = `<i class="fas fa-globe me-2"></i>${title}`;
-            if(mainIframe) mainIframe.src = url;
-            if(popoutBtn) popoutBtn.onclick = () => window.open(url, '_blank');
-        }
-
-        // --- 5. App Grid 邏輯 ---
+        // --- 6. App Grid ---
         let currentAppMenuId = null;
         let currentAppIconBase64 = null;
         const defaultAppIcon = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%23002b5e"/><text x="32" y="38" font-family="Arial" font-weight="bold" font-size="20" fill="white" text-anchor="middle">APP</text></svg>';
         
-        let appGridModalInstance = null;
-
         function openAppGridPage(menuId, menuName, element) {
             navTo('page-app-grid', element);
             const gridTitle = document.getElementById('app-grid-title');
@@ -665,36 +519,14 @@
         function renderAppGridList() {
             const container = document.getElementById('app-grid-container');
             if(!container) return;
-
-            let apps = JSON.parse(localStorage.getItem('umc_custom_apps_v1')) || [];
-            apps = apps.filter(a => a.menuId === currentAppMenuId);
-
-            let html = '';
-            apps.forEach(app => {
-                html += `
+            let apps = (JSON.parse(localStorage.getItem('umc_custom_apps_v1')) || []).filter(a => a.menuId === currentAppMenuId);
+            let html = apps.map(app => `
                 <div class="app-card">
-                    ${currentUser.isAdmin ? `
-                    <div class="app-actions">
-                        <button class="app-btn-action app-btn-edit" onclick="editAppItem('${app.id}')" title="編輯"><i class="fas fa-pen"></i></button>
-                        <button class="app-btn-action app-btn-delete" onclick="deleteAppItem('${app.id}')" title="刪除"><i class="fas fa-times"></i></button>
-                    </div>` : ''}
-                    <div class="app-icon-box" onclick="window.open('${app.url}', '_blank')">
-                        <img src="${app.icon || defaultAppIcon}" class="app-icon-img">
-                    </div>
+                    ${currentUser.isAdmin ? `<div class="app-actions"><button class="app-btn-action app-btn-edit" onclick="editAppItem('${app.id}')"><i class="fas fa-pen"></i></button><button class="app-btn-action app-btn-delete" onclick="deleteAppItem('${app.id}')"><i class="fas fa-times"></i></button></div>` : ''}
+                    <div class="app-icon-box" onclick="window.open('${app.url}', '_blank')"><img src="${app.icon || defaultAppIcon}" class="app-icon-img"></div>
                     <div class="app-name" onclick="window.open('${app.url}', '_blank')">${app.name}</div>
-                </div>`;
-            });
-
-            if (currentUser.isAdmin) {
-                html += `
-                <div class="app-card app-add" onclick="openAddAppModal()">
-                    <div class="app-icon-box app-add-box">
-                        <i class="fas fa-plus"></i>
-                    </div>
-                    <div class="app-name text-muted">新增網頁</div>
-                </div>`;
-            }
-
+                </div>`).join('');
+            if (currentUser.isAdmin) html += `<div class="app-card app-add" onclick="openAddAppModal()"><div class="app-icon-box app-add-box"><i class="fas fa-plus"></i></div><div class="app-name text-muted">新增網頁</div></div>`;
             container.innerHTML = html;
         }
 
@@ -710,26 +542,15 @@
 
         function editAppItem(appId) {
             if(!appGridModalInstance) appGridModalInstance = new bootstrap.Modal(document.getElementById('appGridModal'));
-            let apps = JSON.parse(localStorage.getItem('umc_custom_apps_v1')) || [];
-            let app = apps.find(a => a.id === appId);
+            const app = (JSON.parse(localStorage.getItem('umc_custom_apps_v1')) || []).find(a => a.id === appId);
             if(!app) return;
-            
             document.getElementById('appForm').reset();
             document.getElementById('appIdInput').value = app.id;
             document.getElementById('appName').value = app.name;
             document.getElementById('appUrl').value = app.url;
-            
             currentAppIconBase64 = app.icon === defaultAppIcon ? null : app.icon;
-            
             const preview = document.getElementById('appIconPreview');
-            if(app.icon && app.icon !== defaultAppIcon) {
-                preview.src = app.icon;
-                preview.style.display = 'inline-block';
-            } else {
-                preview.style.display = 'none';
-                preview.src = '';
-            }
-            
+            if(app.icon && app.icon !== defaultAppIcon) { preview.src = app.icon; preview.style.display = 'inline-block'; } else { preview.style.display = 'none'; }
             document.querySelector('#appGridModal .modal-title').innerHTML = '<i class="fas fa-edit me-2"></i>編輯 APP 網頁';
             appGridModalInstance.show();
         }
@@ -750,28 +571,12 @@
 
         function saveAppItem(event) {
             event.preventDefault();
-            const id = document.getElementById('appIdInput').value;
-            const name = document.getElementById('appName').value.trim();
-            const url = document.getElementById('appUrl').value.trim();
-
             let apps = JSON.parse(localStorage.getItem('umc_custom_apps_v1')) || [];
+            const id = document.getElementById('appIdInput').value;
+            const data = { menuId: currentAppMenuId, name: document.getElementById('appName').value.trim(), url: document.getElementById('appUrl').value.trim(), icon: currentAppIconBase64 || defaultAppIcon };
             
-            if (id) {
-                const index = apps.findIndex(a => a.id === id);
-                if (index > -1) {
-                    apps[index].name = name;
-                    apps[index].url = url;
-                    apps[index].icon = currentAppIconBase64 || defaultAppIcon;
-                }
-            } else {
-                apps.push({
-                    id: 'app_' + Date.now(),
-                    menuId: currentAppMenuId,
-                    name: name,
-                    url: url,
-                    icon: currentAppIconBase64 || defaultAppIcon
-                });
-            }
+            if (id) { const idx = apps.findIndex(a => a.id === id); if (idx > -1) apps[idx] = { id, ...data }; }
+            else apps.push({ id: 'app_' + Date.now(), ...data });
 
             localStorage.setItem('umc_custom_apps_v1', JSON.stringify(apps));
             if(appGridModalInstance) appGridModalInstance.hide();
@@ -780,48 +585,35 @@
 
         function deleteAppItem(appId) {
             if(!confirm('確定要移除此 APP 捷徑嗎？')) return;
-            let apps = JSON.parse(localStorage.getItem('umc_custom_apps_v1')) || [];
-            apps = apps.filter(a => a.id !== appId);
-            localStorage.setItem('umc_custom_apps_v1', JSON.stringify(apps));
+            localStorage.setItem('umc_custom_apps_v1', JSON.stringify((JSON.parse(localStorage.getItem('umc_custom_apps_v1')) || []).filter(a => a.id !== appId)));
             renderAppGridList();
         }
 
         function renderEasBoard() {
             const easTime = document.getElementById('eas-time');
-            if(!easTime) return;
-            easTime.innerText = new Date().toLocaleString();
-            const container = document.getElementById('eas-grid-container');
-            if(!container) return;
-            container.innerHTML = ''; 
-
-            let prefixPool = ['M23', 'YUKA', 'TOKYO', 'SAPP', 'OSAK'];
-            const eqData = [
-                { area: '12M-D1', sec: 'SEC_01', prefix: prefixPool.slice(0,2) },
-                { area: '12M-D2', sec: 'SEC_02', prefix: prefixPool.slice(2,4) },
-                { area: '12M-ET', sec: 'SEC_ET', prefix: prefixPool.slice(4,5) }
-            ];
-            const statusClasses = ['st-run', 'st-run', 'st-run', 'st-down', 'st-pm', 'st-idle'];
+            if(easTime) easTime.innerText = new Date().toLocaleString();
             let htmlStr = '';
-
-            eqData.forEach(row => {
+            const statusClasses = ['st-run', 'st-run', 'st-run', 'st-down', 'st-pm', 'st-idle'];
+            [{ area: '12M-D1', sec: 'SEC_01', prefix: ['M23', 'YUKA'] }, { area: '12M-D2', sec: 'SEC_02', prefix: ['TOKYO', 'SAPP'] }, { area: '12M-ET', sec: 'SEC_ET', prefix: ['OSAK'] }].forEach(row => {
                 htmlStr += `<div class="eas-row"><div class="eas-col-area">${row.area}</div><div class="eas-col-sec">${row.sec}</div><div class="eas-col-items">`;
                 row.prefix.forEach(prefix => {
-                    let chamberCount = Math.floor(Math.random() * 5) + 5; 
-                    for(let i=1; i<=chamberCount; i++) {
-                        let sClass = statusClasses[Math.floor(Math.random() * statusClasses.length)];
+                    for(let i=1, len=Math.floor(Math.random()*5)+5; i<=len; i++) {
                         let cNum = i < 10 ? '0'+i : i;
-                        htmlStr += `<span class="eq-badge ${sClass}" title="${prefix}/C${cNum}">${prefix}/C${cNum}</span>`;
+                        htmlStr += `<span class="eq-badge ${statusClasses[Math.floor(Math.random() * statusClasses.length)]}" title="${prefix}/C${cNum}">${prefix}/C${cNum}</span>`;
                     }
                 });
                 htmlStr += `</div></div>`;
             });
-            container.innerHTML = htmlStr;
+            const easContainer = document.getElementById('eas-grid-container');
+            if(easContainer) easContainer.innerHTML = htmlStr;
         }
 
         // --- 啟動初始化 ---
         document.addEventListener("DOMContentLoaded", () => {
             const userRoleEl = document.getElementById('user-role');
             if(userRoleEl) userRoleEl.innerText = currentUser.role;
+            const roleDisplay = document.getElementById('dash-role-display');
+            if(roleDisplay) roleDisplay.innerText = currentUser.role;
             
             const countKey = 'eq_login_count_' + currentUser.id;
             let loginCount = parseInt(localStorage.getItem(countKey) || '0');
@@ -835,7 +627,6 @@
             const loginCountEl = document.getElementById('user-login-count');
             if(loginCountEl) loginCountEl.innerText = loginCount;
 
-            // 管理選單只有 Admin 可以看到
             const manageDash = document.getElementById('menu-manage-dash');
             if (manageDash) {
                 if (currentUser.isAdmin) {
@@ -847,13 +638,8 @@
                 }
             }
 
-            renderSidebarMenus();
-            
-            // 由於非同步渲染，必須延遲一點綁定管理畫面的初始化
             setTimeout(() => {
-                if(document.getElementById('customMenuTableBody')) {
-                    renderCustomMenus();
-                }
+                if(document.getElementById('customMenuTableBody')) renderCustomMenus();
             }, 100);
 
             const savedLang = localStorage.getItem('eq_dashboard_lang');
