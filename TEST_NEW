@@ -1,0 +1,2693 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>主系統儀表板 - EQ Performance Dashboard</title>
+
+    <!-- 引入 Bootstrap 與 FontAwesome -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-bg: #002b5e; 
+            --sidebar-width: 260px;
+            --body-bg: #f4f7f6;
+            --active-bg: #e9ecef;  
+            --border-color: #dee2e6;
+        }
+
+        /* 基礎配置 */
+        body { background-color: var(--body-bg); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; overflow-x: hidden; }
+        #wrapper { display: flex; width: 100%; height: 100vh; overflow: hidden; }
+        #sidebar { width: var(--sidebar-width); background: #fff; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; transition: all 0.3s; z-index: 1000; }
+        #content-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        #main-content { padding: 24px; overflow-y: auto; flex: 1; position: relative; background-color: var(--body-bg); }
+        .cursor-pointer { cursor: pointer; }
+
+        /* 側邊欄樣式 */
+        .sidebar-brand { padding: 18px 20px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: flex-start; font-size: 1.35rem; }
+        .sidebar-brand span.fw-bold { color: var(--primary-bg); font-weight: 800; letter-spacing: 0.5px; }
+        .sidebar-brand span.fw-light { color: #6c757d; margin-left: 6px; font-weight: 300; }
+        .menu-section { padding: 20px 20px 8px; font-size: 0.75rem; font-weight: 600; color: #adb5bd; text-transform: uppercase; letter-spacing: 1px; }
+        .menu-item { padding: 12px 20px; color: #495057; text-decoration: none; display: flex; align-items: center; border-left: 4px solid transparent; transition: all 0.2s; cursor: pointer; font-size: 0.95rem; margin-bottom: 2px; }
+        .menu-item:hover { background-color: #f8f9fa; }
+        .menu-item.active { background-color: var(--active-bg); color: var(--primary-bg); border-left-color: var(--primary-bg); font-weight: 700; }
+        .menu-item[aria-expanded="true"] .dropdown-icon { transform: rotate(180deg); }
+        .dropdown-icon { transition: transform 0.3s ease; }
+
+        /* 頂部導覽列 */
+        .top-navbar { background-color: var(--primary-bg); color: white; padding: 12px 24px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; z-index: 1001; }
+
+        /* 版面切換器 */
+        .layout-switcher { background-color: rgba(0, 0, 0, 0.25); border-radius: 30px; padding: 4px; display: flex; align-items: center; margin-right: 15px; }
+        .layout-btn { border: none; background: transparent; color: rgba(255, 255, 255, 0.6); font-size: 0.8rem; font-weight: bold; padding: 4px 14px; border-radius: 20px; transition: all 0.2s ease; }
+        .layout-btn:hover { color: white; }
+        .layout-btn.active { background-color: #0d6efd; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+        /* 廠區與語系切換器 */
+        .fab-switcher-wrapper { background-color: rgba(0, 0, 0, 0.2); border-radius: 30px; padding: 4px 6px; display: flex; align-items: center; }
+        .fab-switcher-wrapper .fab-label { font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); margin: 0 10px; }
+        .fab-btn { border: none; background: transparent; color: rgba(255, 255, 255, 0.7); font-size: 0.85rem; font-weight: 700; padding: 4px 16px; border-radius: 20px; transition: all 0.2s ease; margin: 0 2px; }
+        .fab-btn:hover { color: white; background-color: rgba(255, 255, 255, 0.1); }
+        .fab-btn.active { background-color: #fff; color: var(--primary-bg); }
+        .lang-btn { border-radius: 20px; padding: 5px 15px; background-color: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.2); font-size: 0.85rem; font-weight: 600; }
+        .lang-btn:hover { background-color: rgba(255, 255, 255, 0.2); color: white; }
+        .lang-switcher .dropdown-toggle::after { display: none; }
+        .login-count-box { background-color: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 6px; padding: 4px 10px; text-align: center; }
+
+        /* 頁面內容通用 */
+        .page-section { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .page-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card { border: none; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); margin-bottom: 20px; }
+        .welcome-alert { background-color: #e6f4ea; color: #137333; border: none; border-radius: 8px; padding: 16px 20px; display: flex; align-items: center; margin-bottom: 24px; }
+        .welcome-icon { background-color: #137333; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; margin-right: 16px; }
+        .home-card { background: #fff; border-left: 4px solid #0d6efd; height: 100%; }
+        .home-card.card-cyan { border-left-color: #0dcaf0; }
+        .manage-alert { background-color: #e0f7fa; color: #006064; border: none; border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.9rem; }
+        .manage-alert-warning { background-color: #fff8e1; color: #856404; }
+        .manage-alert-secondary { background-color: #f8f9fa; color: #495057; border: 1px solid #dee2e6; }
+        .manage-alert-personal { background-color: #e8f0fe; color: #084298; border: 1px solid #b6d4fe; }
+
+        /* 表格樣式 */
+        .table-custom { margin-bottom: 0; }
+        .table-custom th { background-color: #f8f9fa; color: #495057; font-weight: 600; border-bottom: 2px solid #dee2e6; padding: 12px 16px; }
+        .table-custom td { padding: 12px 16px; vertical-align: middle; border-bottom: 1px solid #f0f0f0; }
+        .badge-sub { background-color: white; color: #495057; border: 1px solid #dee2e6; }
+
+        /* 拖曳列表與層級圖示 UI 樣式 */
+        .draggable-row { cursor: grab; transition: background-color 0.2s; user-select: none; }
+        .draggable-row:active { cursor: grabbing; }
+        .draggable-row.dragging { opacity: 0.5; background-color: #e9ecef; }
+        .draggable-row.drag-over { border-top: 3px solid var(--primary-bg) !important; }
+        
+        .chevron-btn { 
+            display: inline-flex; align-items: center; justify-content: center; 
+            width: 28px; height: 28px; border-radius: 4px; transition: background-color 0.2s; cursor: pointer; 
+            border: none; background: transparent; padding: 0; 
+        }
+        .chevron-btn:hover { background-color: #e2e6ea; }
+        .chevron-btn i { pointer-events: none; /* 防止圖示干擾點擊事件 */ }
+
+        /* App Grid 專屬 CSS */
+        .app-grid { display: grid; grid-template-columns: repeat(3, 140px); gap: 30px 40px; padding-top: 20px; justify-content: start; }
+        .app-card { display: flex; flex-direction: column; align-items: center; position: relative; transition: all 0.2s; width: 140px; }
+        .app-icon-box { width: 100px; height: 100px; border-radius: 22px; background: #fff; border: 1px solid #e0e0e0; box-shadow: 0 4px 8px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; overflow: hidden; position: relative; }
+        .app-card:hover .app-icon-box { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.12); border-color: var(--primary-bg); }
+        .app-icon-img { width: 100%; height: 100%; object-fit: cover; }
+        .app-name { font-weight: bold; font-size: 1rem; color: #333; text-align: center; word-break: break-all; cursor: pointer; line-height: 1.3; width: 100%; }
+        .app-actions { position: absolute; top: -10px; right: 10px; display: none; gap: 6px; z-index: 10; }
+        .app-card:hover .app-actions { display: flex; }
+        .app-btn-action { width: 30px; height: 30px; border-radius: 50%; border: none; color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: transform 0.1s; cursor: pointer; }
+        .app-btn-edit { background: #0d6efd; } .app-btn-edit:hover { transform: scale(1.1); background: #0b5ed7; }
+        .app-btn-delete { background: #dc3545; } .app-btn-delete:hover { transform: scale(1.1); background: #c82333; }
+        .app-add-box { background: #f8f9fa; border: 2px dashed #ced4da; box-shadow: none; }
+        .app-add-box i { font-size: 2.5rem; color: #adb5bd; }
+        .app-card.app-add:hover .app-add-box { background: #e9ecef; border-color: #adb5bd; }
+
+        /* Iframe & 其他 */
+        #page-iframe.active { display: flex; flex-direction: column; height: calc(100vh - 74px); padding: 0; margin: 0; background: #fff; }
+        .iframe-header { padding: 15px 24px; background: #fff; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
+        #main-iframe { flex: 1; width: 100%; height: 100%; border: none; background: var(--body-bg); }
+
+        /* EAS 看板專屬 CSS */
+        .eas-table-container { background: #fff; border: 1px solid #dee2e6; border-radius: 4px; overflow: hidden; border-top: 4px solid #00a65a; transition: border-color 0.3s; }
+        .eas-row { display: flex; border-bottom: 1px solid #eee; } .eas-row:last-child { border-bottom: none; }
+        .eas-col-area { width: 80px; font-weight: bold; background: #f8f9fa; padding: 10px; border-right: 1px solid #eee; display: flex; align-items: center; justify-content: center; }
+        .eas-col-sec { width: 100px; font-weight: bold; padding: 10px; border-right: 1px solid #eee; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+        .eas-col-items { flex: 1; padding: 10px; display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; }
+        .eq-badge { padding: 2px 6px; font-size: 0.75rem; font-weight: 600; color: #fff; border-radius: 2px; cursor: pointer; white-space: nowrap; box-shadow: inset 0 -1px 0 rgba(0,0,0,0.2); }
+        .eq-badge:hover { transform: scale(1.1); z-index: 10; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        .st-run { background-color: #00a65a; } .st-down { background-color: #dd4b39; } .st-pm { background-color: #0073b7; } .st-idle { background-color: #9e9e9e; }
+
+        /* 登入畫面 */
+        #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, var(--primary-bg), #00509e); z-index: 9999; display: flex; align-items: center; justify-content: center; transition: opacity 0.5s; font-family: 'Segoe UI', sans-serif; }
+        .login-box-overlay { background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); width: 100%; max-width: 400px; }
+        
+        /* 權限選單項目拖曳特效 */
+        .role-menu-item.dragging { opacity: 0.4; }
+
+        /* 全螢幕/收合版面特效 (Fullscreen Mode) */
+        body.fullscreen-mode #sidebar { display: none !important; }
+        body.fullscreen-mode .top-navbar { display: none !important; }
+        body.fullscreen-mode #main-content { padding-top: 60px; }
+        body.fullscreen-mode #page-iframe.active { height: calc(100vh - 84px); }
+
+        .floating-toggle-btn {
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--body-bg);
+            color: var(--primary-bg);
+            border: 2px solid var(--primary-bg);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            transition: all 0.2s ease;
+        }
+        .floating-toggle-btn:hover { background: var(--primary-bg); color: #fff; transform: scale(1.05); }
+        body.fullscreen-mode .floating-toggle-btn { display: flex; }
+    </style>
+</head>
+<body>
+
+<!-- 浮動還原按鈕 (全螢幕模式專用) -->
+<button id="btn-floating-toggle" class="floating-toggle-btn" onclick="toggleFullscreen()" title="還原版面">
+    <i class="fas fa-bars fs-5"></i>
+</button>
+
+<!-- 1. 登入畫面 -->
+<div id="login-overlay" style="display:none;">
+    <div class="login-box-overlay">
+        <h3 class="text-center mb-4" style="color: var(--primary-bg); font-weight: bold;">
+            <i class="fas fa-microchip me-2"></i>EQ Dashboard
+        </h3>
+        <div class="alert alert-info py-2 fs-7 mb-4">
+            <small id="login-hint" style="line-height: 1.5; display:block;">
+                <i class="fas fa-info-circle me-1"></i> <span data-i18n="login_hint">預設帳號測試：<br><b>admin</b> (系統管理員)<br><b>user</b> (一般使用者)</span>
+            </small>
+        </div>
+        <div class="mb-3">
+            <label class="form-label text-muted small fw-bold" data-i18n="login_id">工號 (Employee ID)</label>
+            <div class="input-group">
+                <span class="input-group-text bg-light"><i class="fas fa-id-badge"></i></span>
+                <input type="text" id="empId" class="form-control" placeholder="admin / user">
+            </div>
+        </div>
+        <div class="mb-4">
+            <label class="form-label text-muted small fw-bold" data-i18n="login_pwd">密碼 (Password)</label>
+            <div class="input-group">
+                <span class="input-group-text bg-light"><i class="fas fa-lock"></i></span>
+                <input type="password" id="empPwd" class="form-control" value="123456">
+            </div>
+        </div>
+        <button class="btn w-100 py-2 fw-bold text-white" style="background-color: var(--primary-bg);" onclick="doLogin()">
+            <i class="fas fa-sign-in-alt me-2"></i><span data-i18n="login_btn">登 入 Login</span>
+        </button>
+    </div>
+</div>
+
+<!-- 2. 主系統框架 -->
+<div id="wrapper">
+    <!-- 側邊選單 -->
+    <div id="sidebar">
+        <div class="sidebar-brand">
+            <button class="btn p-0 me-3 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; color: var(--primary-bg); border: none;" onclick="toggleFullscreen()" title="收合選單以最大化版面">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div>
+                <span class="fw-bold">UMC</span><span class="fw-light">Dashboard</span>
+            </div>
+        </div>
+        <div class="flex-grow-1 overflow-auto py-2">
+            <div class="menu-section" data-i18n="menu_workspace">個人工作區</div>
+            <div class="menu-item active" onclick="navTo('page-home', this)">
+                <i class="fas fa-home fa-fw me-3"></i> <span data-i18n="menu_home">首頁總覽</span>
+            </div>
+
+            <div class="menu-section mt-2" data-i18n="menu_reports">系統看板</div>
+            <!-- 動態系統看板渲染區塊 -->
+            <div id="dynamic-sidebar-menus"></div>
+
+            <div class="menu-section mt-2" data-i18n="menu_settings">系統設定</div>
+            
+            <!-- 個人選單管理 (僅自訂版面可見) -->
+            <div class="menu-item layout-personal-only" id="menu-personal-manage" onclick="navTo('page-personal-manage', this)" style="display:none; font-weight:bold; color: var(--primary-bg); background-color: #e8f0fe; border-left-color: var(--primary-bg);">
+                <i class="fas fa-user-cog fa-fw me-3"></i> <span data-i18n="menu_personal_manage">個人頁面管理</span>
+            </div>
+
+            <!-- 動態顯示的管理選單 (Admin 或 擁有委派權限者) -->
+            <div class="menu-item" id="menu-webpage-manage" onclick="navTo('page-webpage-manage', this)" style="display:none;">
+                <i class="fas fa-file-code fa-fw me-3"></i> <span data-i18n="menu_webpage_manage">看板網頁管理</span>
+            </div>
+            <div class="menu-item" id="menu-menu-manage" onclick="navTo('page-menu-manage', this)" style="display:none;">
+                <i class="fas fa-sitemap fa-fw me-3"></i> <span data-i18n="menu_menu_manage">選單配置管理</span>
+            </div>
+
+            <div class="menu-item" id="menu-fab-manage" onclick="navTo('page-fab-manage', this)" style="display:none;">
+                <i class="fas fa-building fa-fw me-3"></i> <span data-i18n="menu_fab_manage">廠區管理</span>
+            </div>
+            <div class="menu-item" id="menu-role-manage" onclick="navTo('page-role-manage', this)" style="display:none;">
+                <i class="fas fa-users-cog fa-fw me-3"></i> <span data-i18n="menu_role_manage">權限管理</span>
+            </div>
+            <div class="menu-item" id="menu-acc-manage" onclick="navTo('page-account-manage', this)" style="display:none;">
+                <i class="fas fa-user-shield fa-fw me-3"></i> <span data-i18n="menu_account_manage">帳號管理</span>
+            </div>
+            <div class="menu-item" id="menu-audit-manage" onclick="navTo('page-audit-manage', this)" style="display:none;">
+                <i class="fas fa-clipboard-check fa-fw me-3"></i> <span data-i18n="menu_audit_manage">申請審核管理</span>
+            </div>
+            <div class="menu-item" id="menu-apply" onclick="navTo('page-apply', this)" style="display:none;">
+                <i class="fas fa-paper-plane fa-fw me-3"></i> <span data-i18n="menu_apply">需求申請</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右側內容區 -->
+    <div id="content-wrapper">
+        <!-- 頂部導覽列 -->
+        <div class="top-navbar">
+            <div class="d-flex align-items-center">
+                <span class="fs-4 fw-bold me-4" data-i18n="nav_title">EQ Performance Dashboard</span>
+                <!-- 廠區切換器 -->
+                <div class="fab-switcher-wrapper" id="fab-switcher-container">
+                    <span class="fab-label fw-bold" data-i18n="fab_label">廠區</span>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <!-- 版面切換器 -->
+                <div class="layout-switcher">
+                    <button class="layout-btn active" id="btn-layout-system" onclick="switchLayoutMode('system')">
+                        系統版面
+                    </button>
+                    <button class="layout-btn" id="btn-layout-personal" onclick="switchLayoutMode('personal')">
+                        自訂版面
+                    </button>
+                </div>
+
+                <!-- 語系切換器 -->
+                <div class="dropdown lang-switcher">
+                    <button class="btn lang-btn dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown">
+                        <span class="fw-bold" id="current-lang-code">ZH</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2" style="border-radius: 8px;">
+                        <li><a class="dropdown-item py-2 cursor-pointer d-flex justify-content-between align-items-center" onclick="changeLanguage('zh')">繁體中文 <i class="fas fa-check text-primary d-none lang-check" id="check-zh"></i></a></li>
+                        <li><a class="dropdown-item py-2 cursor-pointer d-flex justify-content-between align-items-center" onclick="changeLanguage('en')">English <i class="fas fa-check text-primary d-none lang-check" id="check-en"></i></a></li>
+                        <li><a class="dropdown-item py-2 cursor-pointer d-flex justify-content-between align-items-center" onclick="changeLanguage('ja')">日本語 <i class="fas fa-check text-primary d-none lang-check" id="check-ja"></i></a></li>
+                    </ul>
+                </div>
+
+                <!-- 使用者資訊 -->
+                <div class="dropdown d-flex align-items-center ms-3">
+                    <div class="d-flex align-items-center cursor-pointer text-white" data-bs-toggle="dropdown">
+                        <div>
+                            <div class="fs-6 fw-bold lh-1 mb-1 text-end" id="user-name">載入中...</div>
+                            <small class="text-white-50" style="font-size: 0.75rem;"><span data-i18n="role_label">權限:</span> <span id="user-role">...</span></small>
+                        </div>
+                    </div>
+                    <ul class="dropdown-menu dropdown-menu-end shadow mt-2 border-0">
+                        <li><a class="dropdown-item text-danger py-2 fw-bold cursor-pointer" onclick="logout()"><i class="fas fa-sign-out-alt me-2"></i><span data-i18n="logout">登出</span></a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 動態內容切換區 -->
+        <div id="main-content">
+
+            <!-- [頁面] 首頁總覽 -->
+            <div id="page-home" class="page-section active">
+                <div class="welcome-alert shadow-sm">
+                    <div class="welcome-icon"><i class="fas fa-check"></i></div>
+                    <div>
+                        <h5 class="mb-1 fw-bold" data-i18n="welcome_title">歡迎登入</h5>
+                        <p class="mb-0 text-muted" id="layout-status-desc">目前為 <strong>預設系統版面</strong>，請從左側選單進入各項報表。</p>
+                    </div>
+                </div>
+                <div class="row mt-4">
+                    <div class="col-md-5">
+                        <div class="card home-card shadow-sm p-4 border-start border-4 border-primary">
+                            <h6 class="text-muted fw-bold mb-3" data-i18n="my_role_title">我的系統權限層級</h6>
+                            <h3 class="mb-0 fw-bold" id="dash-role-display">Basic User</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="card home-card card-cyan shadow-sm p-4" style="border-left-color: #17a2b8;">
+                            <h6 class="text-muted fw-bold mb-3" data-i18n="current_fab_title">目前選擇廠區</h6>
+                            <h2 class="mb-0 fw-bold text-info" id="dash-fab-display">12A</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- [頁面] 需求申請 (User) -->
+            <div id="page-apply" class="page-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0 fw-bold"><i class="fas fa-paper-plane text-primary me-2"></i>需求申請</h4>
+                    <button class="btn btn-primary shadow-sm" onclick="openApplyModal()">
+                        <i class="fas fa-plus me-1"></i> 新增需求申請
+                    </button>
+                </div>
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-0">
+                        <table class="table table-hover table-custom align-middle">
+                            <thead>
+                                <tr>
+                                    <th style="width: 15%;">申請時間</th>
+                                    <th style="width: 30%;">申請內容</th>
+                                    <th style="width: 10%;">狀態</th>
+                                    <th style="width: 25%;">審核回覆意見</th>
+                                    <th class="text-center" style="width: 20%;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="applyTableBody">
+                                <!-- 動態產生 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- [頁面] 申請審核管理 (Admin Only) -->
+            <div id="page-audit-manage" class="page-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0 fw-bold"><i class="fas fa-clipboard-check text-primary me-2"></i>申請審核管理</h4>
+                </div>
+                <div class="manage-alert manage-alert-secondary mb-3">
+                    <i class="fas fa-info-circle me-2"></i> 系統管理員可在此查看使用者的需求申請，並回覆審核進度。
+                </div>
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-0">
+                        <table class="table table-hover table-custom align-middle">
+                            <thead>
+                                <tr>
+                                    <th style="width: 15%;">申請人</th>
+                                    <th style="width: 15%;">申請時間</th>
+                                    <th style="width: 35%;">申請內容</th>
+                                    <th style="width: 15%;">狀態</th>
+                                    <th class="text-center" style="width: 20%;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="auditTableBody">
+                                <!-- 動態產生 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- [頁面] 個人選單管理 (我的最愛 - 僅自訂版面生效) -->
+            <div id="page-personal-manage" class="page-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0 fw-bold text-primary"><i class="fas fa-user-cog me-2"></i>個人頁面管理 (自訂專屬版面)</h4>
+                    <div class="d-flex align-items-center">
+                        <div id="per-reorder-actions" style="display: none;" class="me-3">
+                            <button class="btn btn-warning text-dark fw-bold shadow-sm me-2" onclick="cancelPerReorder()"><i class="fas fa-undo"></i> 還原拖曳</button>
+                            <button class="btn btn-success fw-bold shadow-sm" onclick="savePerReorder()"><i class="fas fa-save"></i> 更新順序</button>
+                        </div>
+                        <button class="btn btn-outline-secondary shadow-sm" id="btn-per-toggle-all" onclick="togglePerAllMenus()">
+                            <i class="fas fa-expand-arrows-alt me-1"></i> 全部展開
+                        </button>
+                    </div>
+                </div>
+                <div class="manage-alert manage-alert-personal">
+                    <i class="fas fa-lightbulb me-2"></i> <strong>獨立個人化設定區：</strong> 這裡的設定（隱藏、開啟方式、拖曳排序）<strong>完全只對您的帳號生效</strong>。切換顯示開關會立即同步左側。<strong>如需排序，請按住清單列即可上下拖曳，拖曳後需點擊右上角的「更新順序」才會儲存！</strong>
+                </div>
+
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white border-bottom py-3">
+                        <h6 class="m-0 fw-bold"><i class="fas fa-list text-primary me-2"></i>個人看板樹狀結構</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover table-custom align-middle">
+                            <thead>
+                                <tr>
+                                    <th class="ps-4">顯示名稱 <span class="fw-normal small text-muted">(按住可拖曳)</span></th>
+                                    <th>層級</th>
+                                    <th>開啟方式偏好</th>
+                                    <th class="text-center" style="width: 100px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="personalMenuTableBody">
+                                <!-- 動態產生 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- [頁面] 1. 看板網頁管理 -->
+            <div id="page-webpage-manage" class="page-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0 fw-bold">看板網頁管理</h4>
+                    <button class="btn btn-primary shadow-sm" onclick="openAddWebpageModal()">
+                        <i class="fas fa-plus me-1"></i> 新增/註冊看板網頁
+                    </button>
+                </div>
+                <div class="manage-alert">
+                    <i class="fas fa-info-circle text-primary me-2"></i> 系統僅會顯示 <strong>您有權限編輯或檢視的看板資料</strong>。如果出現鎖頭符號，代表您僅有使用權而無法修改該項目內容。
+                </div>
+
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-0">
+                        <table class="table table-hover table-custom align-middle text-center">
+                            <thead>
+                                <tr>
+                                    <th class="text-start ps-4">系統名稱</th>
+                                    <th class="text-start">看板顯示名稱</th>
+                                    <th>類型</th>
+                                    <th class="text-start">網址 / 內容配置</th>
+                                    <th>預設開啟方式</th>
+                                    <th>預設圖示</th>
+                                    <th>顯示</th>
+                                    <th>建立者</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="webpageTableBody">
+                                <!-- 動態產生 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- [頁面] 2. 選單配置管理 -->
+            <div id="page-menu-manage" class="page-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0 fw-bold">選單配置管理</h4>
+                    <div class="d-flex align-items-center">
+                        <button class="btn btn-outline-secondary shadow-sm me-2" id="btn-sys-toggle-all" onclick="toggleSysAllMenus()">
+                            <i class="fas fa-expand-arrows-alt me-1"></i> 全部展開
+                        </button>
+                        <button class="btn btn-primary shadow-sm" onclick="openAddMenuNodeModal()">
+                            <i class="fas fa-plus me-1"></i> 新增選單節點
+                        </button>
+                    </div>
+                </div>
+                <div class="manage-alert">
+                    <i class="fas fa-sitemap text-primary me-2"></i> 系統僅會顯示 <strong>您被委派或是您自己建立的目錄</strong>。擁有編輯權限的項目才可以拖曳排序或修改。
+                </div>
+
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white border-bottom py-3">
+                        <h6 class="m-0 fw-bold"><i class="fas fa-list text-primary me-2"></i>系統看板樹狀結構 <span id="dash-manage-hint" class="small fw-normal text-muted ms-2"></span></h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover table-custom align-middle">
+                            <thead>
+                                <tr>
+                                    <th class="ps-4">系統群組/看板名稱 <span class="fw-normal small text-muted">(按住可拖曳)</span></th>
+                                    <th>前台顯示名稱</th>
+                                    <th>層級</th>
+                                    <th>類型</th>
+                                    <th>建立者</th>
+                                    <th class="text-center">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="menuConfigTableBody">
+                                <!-- 動態產生 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- [頁面] 廠區管理 -->
+            <div id="page-fab-manage" class="page-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0 fw-bold">廠區管理</h4>
+                    <button class="btn btn-primary shadow-sm admin-only-btn" onclick="openAddFabModal()"><i class="fas fa-plus me-1"></i> 新增廠區</button>
+                </div>
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-0">
+                        <table class="table table-hover table-custom text-center align-middle">
+                            <thead>
+                                <tr>
+                                    <th class="text-start ps-4">廠區名稱 (ID)</th>
+                                    <th>顯示名稱</th>
+                                    <th>預設語言</th>
+                                    <th class="text-start">套用的權限群組</th>
+                                    <th class="admin-only-col">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fabTableBody">
+                                <!-- 動態產生 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- [頁面] 權限管理 -->
+            <div id="page-role-manage" class="page-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0 fw-bold">權限管理</h4>
+                    <button class="btn btn-primary shadow-sm admin-only-btn" onclick="openAddRoleModal()"><i class="fas fa-plus me-1"></i> 新增群組</button>
+                </div>
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-0">
+                        <table class="table table-hover table-custom align-middle">
+                            <thead>
+                                <tr>
+                                    <th class="text-start ps-4">群組名稱</th>
+                                    <th class="text-start">允許的看板組合 <span class="fw-normal small text-muted">(看板會依照在此群組內的排序顯示)</span></th>
+                                    <th class="text-center admin-only-col" style="width: 100px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="roleTableBody">
+                                <!-- 動態產生 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- [頁面] 帳號管理 (支援委派) -->
+            <div id="page-account-manage" class="page-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0 fw-bold">系統帳號管理</h4>
+                    <button class="btn btn-primary shadow-sm admin-only-btn" onclick="openAddAccountModal()"><i class="fas fa-user-plus me-1"></i> 新增帳號</button>
+                </div>
+                <div class="manage-alert manage-alert-secondary mb-3">
+                    <i class="fas fa-user-shield me-2"></i> 管理使用者權限。您可以委派特定目錄的管理權限給一般使用者，讓他們協助維護內容。
+                </div>
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-0">
+                        <table class="table table-hover table-custom text-center align-middle">
+                            <thead>
+                                <tr>
+                                    <th>工號</th>
+                                    <th>姓名 / 部門</th>
+                                    <th>管理權限層級</th>
+                                    <th class="text-start">委派的維護目錄</th>
+                                    <th class="text-start">可視群組版面</th>
+                                    <th class="admin-only-col">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="accTableBody">
+                                <!-- 動態產生 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- [頁面] 應用程式集合 (App Grid) -->
+            <div id="page-app-grid" class="page-section">
+                <h4 class="mb-3 fw-bold"><i class="fas fa-th-large text-primary me-2"></i><span id="app-grid-title">應用程式集合</span></h4>
+                <div class="app-grid" id="app-grid-container"></div>
+            </div>
+
+            <!-- [頁面] 動態 Iframe 內容區 -->
+            <div id="page-iframe" class="page-section">
+                <div class="iframe-header">
+                    <h4 class="m-0 fw-bold text-primary" id="iframe-title"><i class="fas fa-globe me-2"></i>外部網頁</h4>
+                    <button class="btn btn-outline-primary fw-bold" id="iframe-popout-btn"><i class="fas fa-external-link-alt me-1"></i>在新分頁開啟</button>
+                </div>
+                <iframe id="main-iframe" src=""></iframe>
+            </div>
+
+            <!-- 靜態預設頁面 -->
+            <div id="page-eas-main" class="page-section"><h4 class="mb-3">EAS</h4><div class="manage-alert"><i class="fas fa-tools me-2"></i> 頁面內容建置中...</div></div>
+            <div id="page-eqas" class="page-section"><h4 class="mb-3">EQAS</h4><div class="manage-alert"><i class="fas fa-tools me-2"></i> 頁面內容建置中...</div></div>
+            <div id="page-daily" class="page-section"><h4 class="mb-3">日管</h4><div class="manage-alert"><i class="fas fa-tools me-2"></i> 頁面內容建置中...</div></div>
+            <div id="page-ze-content" class="page-section"><h4 class="mb-3">ZE 強化防禦看板 - <span id="ze-sub-title" class="text-primary"></span></h4><div class="manage-alert"><i class="fas fa-chart-line me-2"></i> 這是 <strong id="ze-sub-desc"></strong> 的專屬數據報表頁面。(內容建置中)</div></div>
+
+            <!-- 12M EAS 機況看板 -->
+            <div id="page-eas" class="page-section">
+                <div class="d-flex justify-content-between align-items-end mb-3">
+                    <div>
+                        <h4 class="mb-1 fw-bold"><span id="eas-title-fab" class="text-primary">12M</span> <span data-i18n="eas_title_sub">EAS 設備機況看板</span></h4>
+                        <small class="text-muted"><i class="fas fa-clock me-1"></i>最後更新時間: <span id="eas-time"></span></small>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <div class="d-flex align-items-center bg-white border rounded px-3 py-1 me-2 shadow-sm">
+                            <span class="eq-badge st-run me-1"></span> <small class="me-3">Running</small>
+                            <span class="eq-badge st-down me-1"></span> <small class="me-3">Alarm</small>
+                            <span class="eq-badge st-pm me-1"></span> <small class="me-3">PM/Test</small>
+                            <span class="eq-badge st-idle me-1"></span> <small>Idle</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="eas-table-container shadow-sm" id="eas-grid-container"></div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ================= Modal 區塊 ================= -->
+
+<!-- 需求申請 Modal -->
+<div class="modal fade" id="applyModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header bg-primary text-white border-0"><h5 class="modal-title fw-bold"><i class="fas fa-paper-plane me-2"></i>需求申請單</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body py-4"><form onsubmit="submitApplyItem(event)"><input type="hidden" id="applyReqId"><div class="mb-3"><label class="form-label fw-bold text-muted">申請原因與需求 <span class="text-danger">*</span></label><textarea id="applyReason" class="form-control" rows="4" required placeholder="請描述您需要哪些系統版面或權限，以及申請原因..."></textarea></div><div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top"><button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button><button type="submit" class="btn btn-primary"><i class="fas fa-check me-1"></i> 送出審核</button></div></form></div></div></div></div>
+
+<!-- 撤回申請 Modal -->
+<div class="modal fade" id="withdrawModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header bg-warning text-dark border-0"><h5 class="modal-title fw-bold"><i class="fas fa-undo me-2"></i>撤回需求申請</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body py-4"><form onsubmit="submitWithdrawItem(event)"><input type="hidden" id="withdrawReqId"><div class="mb-3"><label class="form-label fw-bold text-muted">撤回原因/意見 <span class="text-danger">*</span></label><textarea id="withdrawReason" class="form-control" rows="3" required placeholder="請填寫撤回此申請的原因..."></textarea></div><div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top"><button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button><button type="submit" class="btn btn-warning fw-bold text-dark"><i class="fas fa-check me-1"></i> 確定撤回</button></div></form></div></div></div></div>
+
+<!-- 申請審核管理 Modal -->
+<div class="modal fade" id="auditModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header bg-primary text-white border-0"><h5 class="modal-title fw-bold"><i class="fas fa-clipboard-check me-2"></i>回覆需求申請</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body py-4"><form onsubmit="saveAuditItem(event)"><input type="hidden" id="auditReqId"><div class="mb-3"><label class="form-label fw-bold text-muted">申請人</label><input type="text" id="auditApplicant" class="form-control bg-light" readonly></div><div class="mb-3"><label class="form-label fw-bold text-muted">申請內容</label><textarea id="auditReason" class="form-control bg-light" rows="3" readonly></textarea></div><div class="mb-3"><label class="form-label fw-bold text-muted">處理狀態 <span class="text-danger">*</span></label><select id="auditStatus" class="form-select"><option value="unreplied">尚未回覆</option><option value="processing">處理中</option><option value="pending">Pending</option><option value="rejected">拒絕</option><option value="resolved">已處理</option><option value="withdrawn" disabled>已撤回 (使用者自行撤回)</option></select></div><div class="mb-3"><label class="form-label fw-bold text-muted">審核回覆意見</label><textarea id="auditReply" class="form-control" rows="3" placeholder="請輸入回覆給申請者的意見..."></textarea></div><div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top"><button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button><button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> 儲存審核</button></div></form></div></div></div></div>
+
+<!-- 看板網頁管理的 Modal -->
+<div class="modal fade" id="webpageModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content border-0 shadow"><div class="modal-header bg-primary text-white border-0"><h5 class="modal-title fw-bold"><i class="fas fa-file-code me-2"></i>看板網頁內容配置</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body py-4"><form id="wpForm" onsubmit="saveWebpageItem(event)"><input type="hidden" id="editWpId"><div class="row g-3"><div class="col-md-12 mb-1 pb-2 border-bottom"><label class="form-label fw-bold fs-7 text-muted me-3">看板類型 <span class="text-danger">*</span></label><div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="wpMode" id="wpModeLink" value="link" checked onchange="toggleWebpageMode()"><label class="form-check-label fw-bold text-primary" for="wpModeLink"><i class="fas fa-link me-1"></i>網頁連結 (Link)</label></div><div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="wpMode" id="wpModeAppGrid" value="app_grid" onchange="toggleWebpageMode()"><label class="form-check-label fw-bold text-success" for="wpModeAppGrid"><i class="fas fa-th-large me-1"></i>應用集合 (App Grid)</label></div></div><div class="col-md-6"><label class="form-label fw-bold fs-7 text-muted">系統名稱 <span class="text-danger">*</span></label><input type="text" id="wpSysName" class="form-control" required placeholder="管理辨識用 (如: EAS_Main)"></div><div class="col-md-6"><label class="form-label fw-bold fs-7 text-muted">看板顯示名稱 <span class="text-danger">*</span></label><input type="text" id="wpDisplayName" class="form-control" required placeholder="前台預設顯示用"></div><div class="col-md-6"><label class="form-label fw-bold fs-7 text-muted">預設圖示 (Icon)</label><select id="wpIcon" class="form-select"><option value="">無/預設</option><option value="fas fa-desktop">🖥️ 電腦/主機</option><option value="fas fa-chart-bar">📊 長條圖</option><option value="fas fa-chart-line">📈 趨勢圖</option><option value="fas fa-table">📋 表格/數據</option><option value="fas fa-shield-alt">🛡️ 防禦/安全</option></select></div><div class="col-md-12" id="wpUrlGroup"><label class="form-label fw-bold fs-7 text-muted">網址 (URL) / 內部系統路由</label><input type="text" id="wpUrl" class="form-control" placeholder="http://... 或內部路由頁面ID"></div><div class="col-md-6" id="wpTargetGroup"><label class="form-label fw-bold fs-7 text-muted">預設開啟方式</label><select id="wpTarget" class="form-select"><option value="iframe">嵌入網頁 (Iframe)</option><option value="blank">另開新分頁 (Blank)</option><option value="fullscreen" class="text-primary fw-bold">全螢幕 (Fullscreen)</option></select></div><div class="col-12 d-flex justify-content-end gap-2 mt-4 pt-3 border-top"><button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button><button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> 儲存看板內容</button></div></div></form></div></div></div></div>
+
+<!-- 選單節點配置的 Modal (Tree 配置) -->
+<div class="modal fade" id="menuNodeModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header bg-primary text-white border-0"><h5 class="modal-title fw-bold"><i class="fas fa-sitemap me-2"></i>配置樹狀選單節點</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body py-4"><form id="nodeForm" onsubmit="saveMenuNodeItem(event)"><input type="hidden" id="editNodeId">
+
+<div class="mb-3 border-bottom pb-3" id="nodeModeWrapper">
+    <label class="form-label fw-bold text-muted d-block mb-2">節點模式 <span class="text-danger">*</span></label>
+    <div class="form-check form-check-inline">
+        <input class="form-check-input cursor-pointer" type="radio" name="nodeMode" id="nodeModeFolder" value="folder" checked onchange="toggleNodeMode()">
+        <label class="form-check-label fw-bold text-secondary cursor-pointer" for="nodeModeFolder"><i class="fas fa-folder"></i> 選單群組 (點選無反應)</label>
+    </div>
+    <div class="form-check form-check-inline">
+        <input class="form-check-input cursor-pointer" type="radio" name="nodeMode" id="nodeModeWebpage" value="webpage" onchange="toggleNodeMode()">
+        <label class="form-check-label fw-bold text-primary cursor-pointer" for="nodeModeWebpage"><i class="fas fa-link"></i> 配置現有看板網頁</label>
+    </div>
+</div>
+
+<div class="mb-3" id="nodeWebpageSelectGroup" style="display:none;">
+    <label class="form-label fw-bold text-muted">選擇現有的看板網頁 <span class="text-danger">*</span></label>
+    <select id="nodeWebpageSelect" class="form-select" onchange="autoFillNodeDisplayName()"></select>
+    <small class="text-muted mt-1 d-block">將在此位置連結該看板的內容。</small>
+</div>
+
+<div class="mb-3" id="nodeNameGroup">
+    <label class="form-label fw-bold text-muted">群組系統名稱 <span class="text-danger">*</span></label>
+    <input type="text" id="nodeName" class="form-control" placeholder="內部識別用，例如：ZE模組群組">
+</div>
+
+<div class="mb-3">
+    <label class="form-label fw-bold text-muted">前台顯示的選單名稱 <span class="text-danger">*</span></label>
+    <input type="text" id="nodeDisplayName" class="form-control" required>
+</div>
+
+<div class="mb-3" id="nodeIconGroup">
+    <label class="form-label fw-bold text-muted">群組圖示 (Icon)</label>
+    <select id="nodeIcon" class="form-select">
+        <option value="">無/預設</option>
+        <option value="fas fa-folder">📁 資料夾</option>
+        <option value="fas fa-desktop">🖥️ 電腦/主機</option>
+        <option value="fas fa-chart-bar">📊 長條圖</option>
+        <option value="fas fa-chart-line">📈 趨勢圖</option>
+        <option value="fas fa-table">📋 表格/數據</option>
+        <option value="fas fa-shield-alt">🛡️ 防禦/安全</option>
+    </select>
+</div>
+
+<div class="mb-3">
+    <label class="form-label fw-bold text-muted">所屬父選單</label>
+    <select id="nodeParent" class="form-select"></select>
+    <small class="text-muted mt-1 d-block">一般使用者只能選擇您被授權維護的目錄或網頁。</small>
+</div>
+
+<div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top"><button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button><button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> 儲存節點配置</button></div></form></div></div></div></div>
+
+<!-- 個人選單編輯 Modal -->
+<div class="modal fade" id="personalMenuModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header bg-primary text-white border-0"><h5 class="modal-title fw-bold"><i class="fas fa-user-edit me-2"></i>編輯個人選單設定</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body py-4"><form id="personalMenuForm" onsubmit="savePersonalMenu(event)"><input type="hidden" id="editPersonalMenuId"><div class="mb-3"><label class="form-label fw-bold text-muted">看板名稱</label><input type="text" id="personalMenuName" class="form-control" readonly disabled></div><div class="mb-3"><div class="form-check form-switch"><input class="form-check-input cursor-pointer" type="checkbox" id="personalMenuVisible"><label class="form-check-label fw-bold text-dark cursor-pointer" for="personalMenuVisible">顯示此看板在左側選單</label></div></div><div class="mb-3"><label class="form-label fw-bold text-muted">修改圖示 (Icon)</label><select id="personalMenuIcon" class="form-select"><option value="">(使用系統預設)</option><option value="fas fa-desktop">🖥️ 電腦/主機</option><option value="fas fa-chart-bar">📊 長條圖</option><option value="fas fa-chart-line">📈 趨勢圖</option><option value="fas fa-table">📋 表格/數據</option><option value="fas fa-shield-alt">🛡️ 防禦/安全</option></select></div><div class="mb-3" id="personalTargetGroup"><label class="form-label fw-bold text-muted">開啟方式偏好</label><select id="personalMenuTarget" class="form-select"><option value="">(使用系統預設)</option><option value="iframe">嵌入網頁 (Iframe)</option><option value="blank">另開新分頁 (Blank)</option><option value="fullscreen" class="text-primary fw-bold">全螢幕 (Fullscreen)</option></select></div><div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top"><button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button><button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> 儲存設定</button></div></form></div></div></div></div>
+
+<!-- 廠區 Modal -->
+<div class="modal fade" id="fabModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content border-0 shadow"><div class="modal-header bg-primary text-white border-0"><h5 class="modal-title fw-bold" id="fabModalTitle"><i class="fas fa-building me-2"></i>新增廠區配置</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body py-4"><form id="fabForm" onsubmit="saveFabItem(event)"><input type="hidden" id="editFabId"><div class="row g-3"><div class="col-md-4"><label class="form-label fw-bold fs-7 text-muted">廠區名稱 (ID)</label><input type="text" id="fabNameInput" class="form-control" required></div><div class="col-md-4"><label class="form-label fw-bold fs-7 text-muted">顯示名稱</label><input type="text" id="fabDisplayNameInput" class="form-control" required></div><div class="col-md-4"><label class="form-label fw-bold fs-7 text-muted">預設語言</label><select id="fabLangSelect" class="form-select" required><option value="zh">繁體中文</option><option value="en">English</option><option value="ja">日本語</option></select></div><div class="col-12 mt-4"><label class="form-label fw-bold fs-7 text-muted border-bottom pb-1 mb-3 d-block">套用的權限群組</label><div id="fabRoleCheckboxes" class="d-flex flex-wrap gap-3"></div></div><div class="col-12 d-flex justify-content-end gap-2 mt-4 pt-3 border-top"><button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button><button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> 儲存廠區</button></div></div></form></div></div></div></div>
+
+<!-- 群組權限 Modal -->
+<div class="modal fade" id="roleModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content border-0 shadow"><div class="modal-header bg-primary text-white border-0"><h5 class="modal-title fw-bold" id="roleModalTitle"><i class="fas fa-users-cog me-2"></i>新增群組權限</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body py-4"><form id="roleForm" onsubmit="saveRoleItem(event)"><input type="hidden" id="editRoleId"><div class="row g-3"><div class="col-md-12"><label class="form-label fw-bold fs-7 text-muted">群組名稱</label><input type="text" id="roleName" class="form-control" required></div><div class="col-12 mt-4"><label class="form-label fw-bold fs-7 text-muted border-bottom pb-1 mb-3 d-block">允許觀看的看板組合 <small class="text-primary"><i class="fas fa-info-circle"></i> 可拖曳排序</small></label><div id="roleMenuCheckboxes" class="d-flex flex-wrap gap-2"></div></div><div class="col-12 d-flex justify-content-end gap-2 mt-4 pt-3 border-top"><button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button><button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> 儲存群組</button></div></div></form></div></div></div></div>
+
+<!-- 帳號設定 Modal (包含委派權限介面) -->
+<div class="modal fade" id="accModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content border-0 shadow"><div class="modal-header bg-primary text-white border-0"><h5 class="modal-title fw-bold" id="accModalTitle"><i class="fas fa-user-plus me-2"></i>系統帳號設定</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body py-4">
+<form id="accForm" onsubmit="saveAccountItem(event)"><input type="hidden" id="editAccMode"><div class="row g-3">
+    <div class="col-md-4"><label class="form-label fw-bold fs-7 text-muted">工號 (Emp ID) <span class="text-danger">*</span></label><input type="text" id="accEmpId" class="form-control" required></div>
+    <div class="col-md-4"><label class="form-label fw-bold fs-7 text-muted">姓名</label><input type="text" id="accName" class="form-control" placeholder="選填"></div>
+    <div class="col-md-4"><label class="form-label fw-bold fs-7 text-muted">所屬部門</label><input type="text" id="accDept" class="form-control"></div>
+    
+    <div class="col-md-12 mt-4"><label class="form-label fw-bold fs-7 text-muted border-bottom pb-1 mb-2 d-block">管理權限</label>
+        <select id="accRoleLevel" class="form-select border-primary" onchange="toggleAccDelegationUI()">
+            <option value="user">一般使用者 (User) - 無系統全域設定權限</option>
+            <option value="admin" class="text-danger fw-bold">系統管理員 (Admin) - 擁有全部管理權限</option>
+        </select>
+    </div>
+    
+    <!-- 新增：委派管理區塊 (含樹狀結構勾選) -->
+    <div class="col-md-12 mt-4" id="accDelegationGroup">
+        <label class="form-label fw-bold fs-7 text-primary border-bottom border-primary pb-1 mb-2 d-block"><i class="fas fa-sitemap"></i> 委派選單管理權限 (User 專屬)</label>
+        
+        <!-- 總開關 -->
+        <div class="form-check form-switch mb-3 bg-light p-2 rounded border">
+            <input class="form-check-input cursor-pointer ms-1" type="checkbox" id="accEnableDelegation" onchange="toggleDelegationDetails()">
+            <label class="form-check-label text-primary fw-bold cursor-pointer ms-2" for="accEnableDelegation">啟用委派管理</label>
+        </div>
+
+        <!-- 細部設定 (預設隱藏) -->
+        <div id="accDelegationDetails" style="display: none;">
+            <div class="form-check form-switch mb-2">
+                <input class="form-check-input cursor-pointer" type="checkbox" id="accCanEditOthers">
+                <label class="form-check-label text-dark fw-bold cursor-pointer" for="accCanEditOthers">允許該帳號變更/刪除「其他人建立」的內容</label>
+                <small class="d-block text-muted">若關閉，該帳號僅能管理或修改「自己建立的」子選單與網頁資料。</small>
+            </div>
+            <label class="form-label fs-7 text-muted mt-2 d-block mb-1">指定可管理的系統選單目錄 (可於此目錄下新增/排序)：</label>
+            <div id="accManageMenuCheckboxes" class="border rounded p-3 bg-white shadow-sm" style="max-height: 300px; overflow-y: auto;"></div>
+        </div>
+    </div>
+    
+    <div class="col-md-12 mt-4">
+        <label class="form-label fw-bold fs-7 text-muted border-bottom pb-1 mb-2 d-block">可視群組版面</label>
+        <div id="accRoleCheckboxes" class="d-flex flex-wrap gap-2"></div>
+    </div>
+
+    <div class="col-12 d-flex justify-content-end gap-2 mt-4 pt-3 border-top"><button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button><button type="submit" class="btn btn-primary" id="submitAccBtn"><i class="fas fa-save me-1"></i> 儲存帳號</button></div></div></form>
+</div></div></div></div>
+
+<!-- 新增 APP 的 Modal -->
+<div class="modal fade" id="appGridModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header bg-primary text-white border-0"><h5 class="modal-title fw-bold"><i class="fas fa-plus-square me-2"></i>新增網頁</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body py-4"><form id="appForm" onsubmit="saveAppItem(event)"><input type="hidden" id="appIdInput"><div class="mb-3"><label class="form-label fw-bold text-muted">網頁名稱 <span class="text-danger">*</span></label><input type="text" id="appName" class="form-control" required></div><div class="mb-3"><label class="form-label fw-bold text-muted">網址 (URL) <span class="text-danger">*</span></label><input type="url" id="appUrl" class="form-control" required></div><div class="mb-3"><label class="form-label fw-bold text-muted">上傳 ICON 圖案 (選填)</label><input type="file" id="appIconUpload" class="form-control" accept="image/*" onchange="handleAppIconUpload(event)"><div class="mt-3 text-center"><img id="appIconPreview" class="shadow-sm border" style="display:none; width: 100px; height: 100px; object-fit: cover; border-radius: 22px;" src=""></div></div><div class="d-grid mt-4"><button type="submit" class="btn btn-primary fw-bold">儲存並新增</button></div></form></div></div></div></div>
+
+<!-- Alert / Confirm Modals -->
+<div class="modal fade" id="systemAlertModal" tabindex="-1" style="z-index: 1060;"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content border-0 shadow"><div class="modal-body text-center py-4"><i class="fas fa-info-circle text-info mb-3" style="font-size: 3rem;"></i><p class="fs-6 fw-bold mb-0" id="systemAlertMsg"></p></div><div class="modal-footer justify-content-center border-0 bg-light py-2"><button type="button" class="btn btn-primary btn-sm px-4" data-bs-dismiss="modal">確定</button></div></div></div></div>
+<div class="modal fade" id="systemConfirmModal" tabindex="-1" style="z-index: 1060;"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content border-0 shadow"><div class="modal-body text-center py-4"><i class="fas fa-exclamation-circle text-warning mb-3" style="font-size: 3rem;"></i><p class="fs-6 fw-bold mb-0" id="systemConfirmMsg"></p></div><div class="modal-footer justify-content-center border-0 bg-light py-2"><button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">取消</button><button type="button" class="btn btn-danger btn-sm px-3" id="systemConfirmBtn">確定</button></div></div></div></div>
+
+<!-- ================= Javascript 邏輯 ================= -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // --- 1. 字典與全域變數 ---
+    const i18n = {
+        zh: { 
+            login_id: "工號", login_pwd: "密碼", login_btn: "登 入 Login", login_hint: "測試帳號：<br><b>admin</b> (系統管理員)<br><b>user</b> (一般使用者)", menu_workspace: "個人工作區", menu_home: "首頁總覽", menu_reports: "系統看板", menu_settings: "系統設定", nav_title: "EQ Performance Dashboard", role_label: "權限:", logout: "登出", welcome_title: "歡迎登入", my_role_title: "我的系統權限層級", fab_label: "廠區", current_fab_title: "目前選擇廠區", eas_title_sub: "EAS 設備機況看板",
+            menu_personal_manage: "個人頁面管理", menu_webpage_manage: "看板網頁管理", menu_menu_manage: "選單配置管理", menu_fab_manage: "廠區管理", menu_role_manage: "權限管理", menu_account_manage: "帳號管理", menu_audit_manage: "申請審核管理", menu_apply: "需求申請",
+            dyn_m_eastest: "EASTEST", dyn_m_eqas: "EQAS 指標", dyn_m_ze: "ZE 強化防禦群組", dyn_m_ze_1: "MNOP", dyn_m_ze_2: "WL子群組", dyn_m_ze_2_1: "ScalingTEST", dyn_m_ze_2_2: "Non Scaling", dyn_m_ze_3: "BSL", dyn_m_ze_4: "Extra Sensor", dyn_m_fdc: "FDC 指標看板", dyn_m_12m: "12M EAS"
+        },
+        en: { 
+            login_id: "Employee ID", login_pwd: "Password", login_btn: "Login", login_hint: "Test accounts:<br><b>admin</b> (Admin)<br><b>user</b> (User)", menu_workspace: "Workspace", menu_home: "Dashboard Home", menu_reports: "System Dashboards", menu_settings: "Settings", nav_title: "EQ Performance Dashboard", role_label: "Role:", logout: "Logout", welcome_title: "Welcome", my_role_title: "My Access Level", fab_label: "Fab", current_fab_title: "Current Fab", eas_title_sub: "EAS Equipment Status",
+            menu_personal_manage: "Personal Pages", menu_webpage_manage: "Webpage Mgt", menu_menu_manage: "Menu Config", menu_fab_manage: "Fab Mgt", menu_role_manage: "Role Mgt", menu_account_manage: "Account Mgt", menu_audit_manage: "Audit Mgt", menu_apply: "Access Request",
+            dyn_m_eastest: "EASTEST", dyn_m_eqas: "EQAS Metrics", dyn_m_ze: "ZE Defense Group", dyn_m_ze_1: "MNOP", dyn_m_ze_2: "WL Subgroup", dyn_m_ze_2_1: "ScalingTEST", dyn_m_ze_2_2: "Non Scaling", dyn_m_ze_3: "BSL", dyn_m_ze_4: "Extra Sensor", dyn_m_fdc: "FDC Metrics", dyn_m_12m: "12M EAS"
+        },
+        ja: { 
+            login_id: "社員番号", login_pwd: "パスワード", login_btn: "ログイン", login_hint: "テスト：<br><b>admin</b> (管理者)<br><b>user</b> (一般ユーザー)", menu_workspace: "ワークスペース", menu_home: "ホーム", menu_reports: "レポート", menu_settings: "設定", nav_title: "EQ Performance Dashboard", role_label: "権限:", logout: "ログアウト", welcome_title: "ようこそ", my_role_title: "権限レベル", fab_label: "工場", current_fab_title: "選択中の工場", eas_title_sub: "EAS 装置状態モニタ",
+            menu_personal_manage: "個人ページ", menu_webpage_manage: "Webページ管理", menu_menu_manage: "メニュー構成", menu_fab_manage: "工場管理", menu_role_manage: "権限管理", menu_account_manage: "アカウント管理", menu_audit_manage: "承認管理", menu_apply: "権限申請",
+            dyn_m_eastest: "EASTEST", dyn_m_eqas: "EQAS 指標", dyn_m_ze: "ZE 防御グループ", dyn_m_ze_1: "MNOP", dyn_m_ze_2: "WL サブグループ", dyn_m_ze_2_1: "ScalingTEST", dyn_m_ze_2_2: "Non Scaling", dyn_m_ze_3: "BSL", dyn_m_ze_4: "Extra Sensor", dyn_m_fdc: "FDC 指標", dyn_m_12m: "12M EAS"
+        }
+    };
+
+    let currentUser = null;
+    let currentLang = 'zh';
+    let currentFab = '12A';
+    let currentLayoutMode = 'system'; 
+    let currentAppGridMenuId = null;
+    let modals = {};
+    let confirmActionCallback = null;
+
+    let expandedSysMenuIds = new Set();
+    let isSysAllExpanded = false;
+    let expandedPerMenuIds = new Set();
+    let isPerAllExpanded = false; 
+
+    // 原生拖曳排序所需之變數
+    let dragSrcEl = null;
+    let dragSrcId = null;
+    let dragSrcParentId = null;
+    let draggedRoleItem = null;
+
+    let pendingPerSets = null; // 個人專屬的編輯緩存，仍保留給個人頁面用
+    
+    // 取消互動元素上的拖曳干擾
+    const noDrag = `onmouseenter="this.closest('tr').setAttribute('draggable', false)" onmouseleave="this.closest('tr').setAttribute('draggable', true)"`;
+
+    // 取得包含子父層級的所有關聯看板 ID
+    function getAllowedIdsWithHierarchy(menus, initialIds) {
+        let ids = new Set(initialIds);
+        let size = 0;
+        while(ids.size > size) {
+            size = ids.size;
+            menus.forEach(m => {
+                if (m.parentId && ids.has(m.parentId)) ids.add(m.id);
+            });
+        }
+        let finalIds = new Set(ids);
+        ids.forEach(id => {
+            let m = menus.find(x => x.id === id);
+            while(m && m.parentId) { finalIds.add(m.parentId); m = menus.find(x => x.id === m.parentId); }
+        });
+        return finalIds;
+    }
+
+    // 全螢幕收縮顯示/隱藏功能
+    function toggleFullscreen() {
+        document.body.classList.toggle('fullscreen-mode');
+    }
+
+    // --- 修改核心：權限檢查 (分離檢視、編輯、新增子層權限) ---
+    function getMenuPermissions(nodeId, nodeCreatedBy) {
+        let perms = { canView: false, canEdit: false, canAddChild: false };
+        if (!currentUser) return perms;
+        if (currentUser.roleLevel === 'admin') return { canView: true, canEdit: true, canAddChild: true };
+
+        const isMyOwn = (nodeCreatedBy === currentUser.id);
+        const isDelegated = currentUser.manageableMenus && currentUser.manageableMenus.includes(nodeId);
+        
+        let isUnderDelegated = false;
+        const menus = getCustomMenus();
+        const node = menus.find(x => x.id === nodeId);
+        let currentId = node ? node.parentId : null;
+        
+        while (currentId) {
+            if (currentUser.manageableMenus && currentUser.manageableMenus.includes(currentId)) {
+                isUnderDelegated = true;
+                break;
+            }
+            const m = menus.find(x => x.id === currentId);
+            currentId = m ? m.parentId : null;
+        }
+
+        // Edit logic: 可以編輯的前提是「自己建立的」或是「在委派範圍內且允許修改他人內容」
+        if (isMyOwn) {
+            perms.canEdit = true;
+        } else if (isUnderDelegated && currentUser.canEditOthers) {
+            perms.canEdit = true;
+        } else if (isDelegated && currentUser.canEditOthers) {
+            // 如果是直接委派的目錄，且允許修改他人內容，也可以編輯
+            perms.canEdit = true;
+        }
+
+        // Add Child logic: 是否可以在此目錄下新增子選單
+        // 自己能編輯的目錄，或是被委派的目錄(即使不是自己建的)，都可以向下新增子層
+        if (perms.canEdit || isDelegated || isUnderDelegated) {
+            perms.canAddChild = true;
+        }
+
+        // View logic: 是否顯示在畫面上
+        if (perms.canAddChild || perms.canEdit) {
+            perms.canView = true;
+        } else {
+            // 若本身無編輯也無法新增，檢查是否為「被委派目錄的祖先」，需顯示以維持樹狀結構(展開用)
+            let isAncestor = false;
+            if (currentUser.manageableMenus) {
+                for (let mId of currentUser.manageableMenus) {
+                    let cId = mId;
+                    while (cId) {
+                        if (cId === nodeId) { isAncestor = true; break; }
+                        const cm = menus.find(x => x.id === cId);
+                        cId = cm ? cm.parentId : null;
+                    }
+                    if (isAncestor) break;
+                }
+            }
+            if (isAncestor) {
+                perms.canView = true;
+            }
+        }
+
+        return perms;
+    }
+
+    // --- Mock Data ---
+    function getAccounts() {
+        let accStr = localStorage.getItem('umc_accounts_v31');
+        if (!accStr) {
+            const allRoles = getRoles().map(r => r.id);
+            const def = [
+                { empId: 'admin', name: '系統管理員', department: '資訊處', roleLevel: 'admin', assignedRoles: allRoles, manageableMenus: [], canEditOthers: true },
+                { empId: 'user', name: '一般使用者', department: '製造部', roleLevel: 'user', assignedRoles: ['role_1', 'role_2'], manageableMenus: ['m_ze'], canEditOthers: false }
+            ];
+            localStorage.setItem('umc_accounts_v31', JSON.stringify(def)); return def;
+        } return JSON.parse(accStr);
+    }
+    
+    function getFabs() {
+        let fabsStr = localStorage.getItem('umc_fabs_v15');
+        if (!fabsStr) {
+            const def = [ 
+                { id: 'fab_12a', displayName: '12A', fabName: '12A', defaultLang: 'zh', assignedRoles: ['role_1'] }, 
+                { id: 'fab_12m', displayName: '12M', fabName: '12M', defaultLang: 'ja', assignedRoles: ['role_2'] },
+                { id: 'fab_12i', displayName: '12i', fabName: '12i', defaultLang: 'en', assignedRoles: ['role_3'] }
+            ];
+            localStorage.setItem('umc_fabs_v15', JSON.stringify(def)); return def;
+        } return JSON.parse(fabsStr);
+    }
+    
+    function getRoles() {
+        let rolesStr = localStorage.getItem('umc_roles_v15');
+        if (!rolesStr) {
+            const def = [ 
+                { id: 'role_1', groupName: '12A 完整模組', allowedMenuIds: ['m_eastest', 'm_eqas', 'm_ze', 'm_fdc'] }, 
+                { id: 'role_2', groupName: '12M 專用模組', allowedMenuIds: ['m_12m'] },
+                { id: 'role_3', groupName: '12i 專用模組', allowedMenuIds: ['m_fdc'] }
+            ];
+            localStorage.setItem('umc_roles_v15', JSON.stringify(def)); return def;
+        } return JSON.parse(rolesStr);
+    }
+    
+    function getCustomMenus() {
+        let menusStr = localStorage.getItem('umc_custom_menus_v31');
+        if (!menusStr) {
+            const def = [
+                { id: 'm_eastest', name: 'EASTEST', displayName: 'EASTEST', menuMode: 'link', targetPage: 'page-eas-main', icon: 'fas fa-desktop', parentId: null, enabled: true, createdBy: 'admin' },
+                { id: 'm_eqas', name: 'EQAS 指標', displayName: 'EQAS 指標', menuMode: 'link', targetPage: 'page-eqas', icon: 'fas fa-chart-line', parentId: null, enabled: true, createdBy: 'admin' },
+                { id: 'm_ze', name: 'ZE 強化防禦', displayName: 'ZE 強化防禦群組', menuMode: 'folder', icon: 'fas fa-shield-alt', parentId: null, enabled: true, createdBy: 'admin' },
+                { id: 'm_ze_1', name: 'MNOP', displayName: 'MNOP', menuMode: 'link', targetPage: 'page-ze-content', parentId: 'm_ze', enabled: true, createdBy: 'admin' },
+                { id: 'm_ze_2', name: 'WL', displayName: 'WL子群組', menuMode: 'folder', parentId: 'm_ze', enabled: true, createdBy: 'admin' },
+                { id: 'm_ze_2_1', name: 'ScalingTEST', displayName: 'ScalingTEST', menuMode: 'link', targetPage: 'page-ze-content', parentId: 'm_ze_2', enabled: true, createdBy: 'admin' },
+                { id: 'm_ze_2_2', name: 'Non Scaling', displayName: 'Non Scaling', menuMode: 'link', targetPage: 'page-ze-content', parentId: 'm_ze_2', enabled: true, createdBy: 'admin' },
+                { id: 'm_ze_3', name: 'BSL', displayName: 'BSL', menuMode: 'link', targetPage: 'page-ze-content', parentId: 'm_ze', enabled: true, createdBy: 'admin' },
+                { id: 'm_ze_4', name: 'Extra Sensor', displayName: 'Extra Sensor', menuMode: 'link', targetPage: 'page-ze-content', parentId: 'm_ze', enabled: true, createdBy: 'admin' },
+                { id: 'm_fdc', name: 'FDC 指標看板', displayName: 'FDC 指標看板', menuMode: 'link', url: 'https://tw.yahoo.com', target: 'iframe', icon: 'fas fa-table', parentId: null, enabled: true, createdBy: 'admin' },
+                { id: 'm_12m', name: '12M EAS', displayName: '12M EAS', menuMode: 'link', targetPage: 'page-eas', icon: 'fas fa-th', parentId: null, enabled: true, createdBy: 'admin' }
+            ];
+            def.forEach((m, idx) => m.order = idx * 10);
+            localStorage.setItem('umc_custom_menus_v31', JSON.stringify(def)); return def;
+        }
+        let parsed = JSON.parse(menusStr);
+        let changed = false;
+        parsed.forEach((m, idx) => {
+            if (m.order === undefined) { m.order = idx * 10; changed = true; }
+            if (!m.menuMode) {
+                if(!m.url && !m.targetPage) m.menuMode = 'folder';
+                else m.menuMode = 'link';
+                changed = true;
+            }
+            if (m.createdBy === undefined) { m.createdBy = 'admin'; changed = true; }
+        });
+        if (changed) localStorage.setItem('umc_custom_menus_v31', JSON.stringify(parsed));
+        return parsed;
+    }
+
+    function getRequests() {
+        let reqStr = localStorage.getItem('umc_requests_v1');
+        if (!reqStr) return [];
+        return JSON.parse(reqStr);
+    }
+    
+    function saveRequests(reqs) {
+        localStorage.setItem('umc_requests_v1', JSON.stringify(reqs));
+    }
+    
+    // 個人專屬的 localStorage (完全獨立不受干擾)
+    function getPersonalSettings(userId) { 
+        let sets = JSON.parse(localStorage.getItem('umc_personal_menus_' + userId)) || {}; 
+        let menus = getCustomMenus(); let changed = false;
+        menus.forEach((m, idx) => { if(!sets[m.id]) sets[m.id] = {}; if(sets[m.id].order === undefined) { sets[m.id].order = m.order || (idx * 10); changed = true; } });
+        if(changed) savePersonalSettings(userId, sets);
+        return sets;
+    }
+    function savePersonalSettings(userId, data) { localStorage.setItem('umc_personal_menus_' + userId, JSON.stringify(data)); }
+    
+    function getAppItems() { return JSON.parse(localStorage.getItem('umc_app_items_v5')) || []; }
+    function saveAppItems(items) { localStorage.setItem('umc_app_items_v5', JSON.stringify(items)); }
+
+    // --- 2. 系統啟動與登入 ---
+    document.addEventListener('DOMContentLoaded', function() {
+        const storedUser = localStorage.getItem('umc_current_user');
+        if (storedUser) {
+            currentUser = JSON.parse(storedUser);
+            const overlay = document.getElementById('login-overlay');
+            if (overlay) overlay.style.display = 'none';
+        } else {
+            const overlay = document.getElementById('login-overlay');
+            if (overlay) overlay.style.display = 'flex';
+        }
+
+        if (typeof bootstrap !== 'undefined') {
+            modals.apply = new bootstrap.Modal(document.getElementById('applyModal'));
+            modals.withdraw = new bootstrap.Modal(document.getElementById('withdrawModal'));
+            modals.audit = new bootstrap.Modal(document.getElementById('auditModal'));
+            modals.webpage = new bootstrap.Modal(document.getElementById('webpageModal'));
+            modals.menuNode = new bootstrap.Modal(document.getElementById('menuNodeModal'));
+            modals.personalMenu = new bootstrap.Modal(document.getElementById('personalMenuModal'));
+            modals.fab = new bootstrap.Modal(document.getElementById('fabModal'));
+            modals.acc = new bootstrap.Modal(document.getElementById('accModal'));
+            modals.role = new bootstrap.Modal(document.getElementById('roleModal'));
+            modals.appGrid = new bootstrap.Modal(document.getElementById('appGridModal'));
+            systemAlertModalObj = new bootstrap.Modal(document.getElementById('systemAlertModal'));
+            systemConfirmModalObj = new bootstrap.Modal(document.getElementById('systemConfirmModal'));
+        }
+        
+        const empPwdInput = document.getElementById('empPwd');
+        if (empPwdInput) empPwdInput.addEventListener('keypress', function (e) { if (e.key === 'Enter') doLogin(); });
+        
+        if (currentUser) initDashboardUI();
+    });
+
+    function doLogin() {
+        const empIdEl = document.getElementById('empId');
+        if (!empIdEl) return;
+        const empId = empIdEl.value.trim().toLowerCase();
+        const acc = getAccounts().find(a => a.empId.toLowerCase() === empId);
+
+        if (acc) {
+            currentUser = { 
+                id: acc.empId, 
+                name: acc.name, 
+                roleLevel: acc.roleLevel || 'user', 
+                assignedRoles: acc.assignedRoles || [],
+                manageableMenus: acc.manageableMenus || [],
+                canEditOthers: acc.canEditOthers || false
+            };
+            localStorage.setItem('umc_current_user', JSON.stringify(currentUser));
+            const overlay = document.getElementById('login-overlay');
+            if (overlay) { overlay.style.opacity = '0'; setTimeout(() => { overlay.style.display = 'none'; }, 500); }
+            initDashboardUI();
+        } else {
+            customAlert("找不到此帳號，請確認工號！");
+        }
+    }
+    
+    function logout() { 
+        localStorage.removeItem('umc_current_user'); 
+        currentUser = null;
+        
+        const overlay = document.getElementById('login-overlay');
+        if (overlay) {
+            overlay.style.display = 'flex';
+            overlay.style.opacity = '1';
+        }
+        
+        const pwdInput = document.getElementById('empPwd');
+        if (pwdInput) pwdInput.value = '123456';
+    }
+
+    // --- 3. UI 權限分配與切換 ---
+    function initDashboardUI() {
+        if (!currentUser) return;
+        
+        const userNameEl = document.getElementById('user-name');
+        if (userNameEl) userNameEl.innerText = currentUser.name || currentUser.id;
+
+        const role = currentUser.roleLevel;
+        const isDelegatedManager = role === 'user' && currentUser.manageableMenus && currentUser.manageableMenus.length > 0;
+        const canManage = role === 'admin' || isDelegatedManager;
+        
+        const wpManage = document.getElementById('menu-webpage-manage');
+        if (wpManage) wpManage.style.display = canManage ? 'flex' : 'none';
+        const menuManage = document.getElementById('menu-menu-manage');
+        if (menuManage) menuManage.style.display = canManage ? 'flex' : 'none';
+        
+        const auditManage = document.getElementById('menu-audit-manage');
+        if (auditManage) auditManage.style.display = (role === 'admin') ? 'flex' : 'none';
+        
+        const applyMenu = document.getElementById('menu-apply');
+        if (applyMenu) applyMenu.style.display = (role !== 'admin') ? 'flex' : 'none';
+        
+        const fabManage = document.getElementById('menu-fab-manage');
+        if (fabManage) fabManage.style.display = (role === 'admin') ? 'flex' : 'none';
+        const roleManage = document.getElementById('menu-role-manage');
+        if (roleManage) roleManage.style.display = (role === 'admin') ? 'flex' : 'none';
+        const accManage = document.getElementById('menu-acc-manage');
+        if (accManage) accManage.style.display = (role === 'admin') ? 'flex' : 'none';
+
+        if (role === 'admin') {
+            document.querySelectorAll('.admin-only-btn').forEach(el => el.style.display = 'inline-block');
+            document.querySelectorAll('.admin-only-col').forEach(el => el.style.display = 'table-cell');
+        } else {
+            document.querySelectorAll('.admin-only-btn').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.admin-only-col').forEach(el => el.style.display = 'none');
+        }
+
+        renderFabTable(); 
+        renderRoleTable();
+        renderAccountTable(); 
+        renderWebpageTable();
+        renderMenuConfigTable();
+
+        const roleEl = document.getElementById('dash-role-display');
+        const userRoleEl = document.getElementById('user-role');
+        if (role === 'admin') { 
+            if(roleEl) { roleEl.innerText = "系統管理員 (Admin)"; roleEl.className = "mb-0 fw-bold text-danger"; }
+            if(userRoleEl) userRoleEl.innerText = "Admin"; 
+        } else if (isDelegatedManager) {
+            if(roleEl) { roleEl.innerText = "委派管理員 (Delegated)"; roleEl.className = "mb-0 fw-bold text-warning text-dark"; }
+            if(userRoleEl) userRoleEl.innerText = "User (Delegated)"; 
+        } else { 
+            if(roleEl) { roleEl.innerText = "一般使用者 (User)"; roleEl.className = "mb-0 fw-bold text-info"; }
+            if(userRoleEl) userRoleEl.innerText = "User"; 
+        }
+
+        switchLayoutMode('system'); 
+        
+        const fabs = getFabs();
+        if(fabs.length > 0) switchFab(fabs[0].fabName);
+    }
+
+    function switchLayoutMode(mode) {
+        currentLayoutMode = mode;
+        const btnSys = document.getElementById('btn-layout-system');
+        const btnPer = document.getElementById('btn-layout-personal');
+        const perMenuBtn = document.getElementById('menu-personal-manage');
+        const statusDesc = document.getElementById('layout-status-desc');
+        
+        if(mode === 'system') {
+            if(btnSys) btnSys.classList.add('active'); 
+            if(btnPer) btnPer.classList.remove('active');
+            if(perMenuBtn) perMenuBtn.style.display = 'none'; 
+            if(statusDesc) statusDesc.innerHTML = '目前為 <strong>預設系統版面</strong>，請從左側選單進入各項報表。';
+            
+            const personalPage = document.getElementById('page-personal-manage');
+            if(personalPage && personalPage.classList.contains('active')) {
+                const homeBtn = document.querySelector('[onclick*="page-home"]');
+                navTo('page-home', homeBtn);
+            }
+        } else {
+            if(btnPer) btnPer.classList.add('active'); 
+            if(btnSys) btnSys.classList.remove('active');
+            if(perMenuBtn) perMenuBtn.style.display = 'flex'; 
+            if(statusDesc) statusDesc.innerHTML = '目前為 <strong class="text-primary">自訂版面模式</strong>。您可以在左側系統設定中點選「個人頁面管理」來調整。';
+        }
+        renderSidebarMenus(); 
+    }
+
+    function switchFab(fabName) {
+        currentFab = fabName;
+        const fabs = getFabs();
+        const fabObj = fabs.find(f => f.fabName === fabName);
+        
+        const displayEl = document.getElementById('dash-fab-display');
+        if(displayEl) displayEl.innerText = fabName;
+        
+        const container = document.getElementById('fab-switcher-container');
+        if(container) {
+            container.innerHTML = `<span class="fab-label fw-bold" data-i18n="fab_label">廠區</span>` + getFabs().map(f => `<button class="fab-btn ${currentFab === f.fabName ? 'active' : ''}" onclick="switchFab('${f.fabName}')">${f.displayName}</button>`).join('');
+        }
+        
+        if (fabObj) {
+            currentLang = fabObj.defaultLang;
+            changeLanguage(currentLang);
+        }
+        
+        renderSidebarMenus();
+        
+        const homeBtn = document.querySelector('[onclick*="page-home"]');
+        navTo('page-home', homeBtn);
+        
+        if(currentUser && fabName === '12M') {
+            if(typeof renderEasBoard === 'function') renderEasBoard();
+        }
+    }
+    
+    function changeLanguage(lang) {
+        currentLang = lang;
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (i18n[lang] && i18n[lang][key]) el.innerHTML = i18n[lang][key];
+        });
+        const langCodes = { 'zh': 'ZH', 'en': 'EN', 'ja': 'JA' };
+        const langEl = document.getElementById('current-lang-code');
+        if(langEl) langEl.innerText = langCodes[lang];
+        
+        document.querySelectorAll('.lang-check').forEach(el => el.classList.add('d-none'));
+        const checkEl = document.getElementById('check-' + lang);
+        if(checkEl) checkEl.classList.remove('d-none');
+        
+        if (currentUser) renderSidebarMenus();
+    }
+
+    // --- 4. 動態側邊欄渲染 ---
+    function renderSidebarMenus() {
+        if (!currentUser) return;
+        const currentFabObj = getFabs().find(f => f.fabName === currentFab);
+        if (!currentFabObj) return;
+
+        let menus = JSON.parse(JSON.stringify(getCustomMenus()));
+        let pSets = currentLayoutMode === 'personal' ? getPersonalSettings(currentUser.id) : {};
+
+        const fabRoleIds = currentFabObj.assignedRoles || [];
+        const userRoleIds = currentUser.assignedRoles || [];
+
+        const activeRoleIds = (currentUser.roleLevel === 'admin')
+            ? fabRoleIds
+            : fabRoleIds.filter(id => userRoleIds.includes(id));
+
+        const roles = getRoles();
+        let initialMenuIds = [];
+        activeRoleIds.forEach(roleId => {
+            const role = roles.find(r => r.id === roleId);
+            if (role && role.allowedMenuIds) {
+                role.allowedMenuIds.forEach(mId => {
+                    if (!initialMenuIds.includes(mId)) initialMenuIds.push(mId);
+                });
+            }
+        });
+
+        let allowedIds = getAllowedIdsWithHierarchy(menus, initialMenuIds);
+
+        if (currentLayoutMode === 'personal') {
+            menus.forEach(m => {
+                if(pSets[m.id]) {
+                    if(pSets[m.id].hidden !== undefined) m.enabled = !pSets[m.id].hidden;
+                    if(pSets[m.id].target !== undefined) m.target = pSets[m.id].target;
+                    if(pSets[m.id].icon !== undefined) m.icon = pSets[m.id].icon;
+                    if(pSets[m.id].order !== undefined) m.order = pSets[m.id].order;
+                }
+            });
+        }
+
+        // 過濾已啟用並包含在權限內的節點
+        menus = menus.filter(m => m.enabled !== false && allowedIds.has(m.id));
+
+        // 將左方選單的顯示順序
+        menus.sort((a, b) => {
+            if (currentLayoutMode === 'system' && !a.parentId && !b.parentId) {
+                let idxA = initialMenuIds.indexOf(a.id);
+                let idxB = initialMenuIds.indexOf(b.id);
+                if (idxA !== -1 || idxB !== -1) {
+                    return (idxA === -1 ? 9999 : idxA) - (idxB === -1 ? 9999 : idxB);
+                }
+            }
+            return (a.order || 0) - (b.order || 0);
+        });
+
+        const rootMenus = menus.filter(m => !m.parentId);
+        
+        let html = '';
+        rootMenus.forEach(root => html += generateSidebarMenuItem(root, menus, 0));
+        
+        const container = document.getElementById('dynamic-sidebar-menus');
+        if(container) container.innerHTML = html;
+    }
+
+    function generateSidebarMenuItem(menu, allMenus, level) {
+        const children = allMenus.filter(m => m.parentId === menu.id);
+        const hasChildren = children.length > 0;
+        const padClass = level === 1 ? 'ps-4' : (level === 2 ? 'ps-5 ms-2' : '');
+        let iconHtml = menu.icon ? `<i class="${menu.icon} fa-fw me-3"></i>` : `<i class="fas ${hasChildren?'fa-folder text-warning':'fa-chevron-right text-muted'} fa-fw me-3"></i>`;
+        
+        let actionAttr = '';
+        if (hasChildren) actionAttr = `data-bs-toggle="collapse" data-bs-target="#collapse-${menu.id}"`;
+        else if (menu.menuMode === 'app_grid') actionAttr = `onclick="openAppGridPage('${menu.id}', '${menu.displayName}', this)"`;
+        else if (menu.menuMode === 'folder') actionAttr = ''; // 純名稱群組若無子節點則無反應
+        else if (menu.url) {
+            if (menu.target === 'blank') actionAttr = `onclick="window.open('${menu.url}')"`;
+            else if (menu.target === 'fullscreen') actionAttr = `onclick="openDynamicIframe('${menu.url}', '${menu.displayName}', this, true)"`;
+            else actionAttr = `onclick="openDynamicIframe('${menu.url}', '${menu.displayName}', this, false)"`;
+        }
+        else if (menu.targetPage) actionAttr = `onclick="navTo('${menu.targetPage}', this, '${menu.displayName}')"`;
+
+        let dName = (i18n[currentLang] && i18n[currentLang]['dyn_' + menu.id]) ? i18n[currentLang]['dyn_' + menu.id] : menu.displayName;
+
+        if (hasChildren) {
+            let html = `<div class="menu-item ${padClass}" ${actionAttr}>${iconHtml}<span>${dName}</span><i class="fas fa-chevron-down ms-auto dropdown-icon" style="font-size:0.8rem;"></i></div><div class="collapse" id="collapse-${menu.id}"><div class="py-1">`;
+            children.forEach(child => html += generateSidebarMenuItem(child, allMenus, level + 1));
+            html += `</div></div>`;
+            return html;
+        } else {
+            return `<div class="menu-item ${padClass}" ${actionAttr}>${iconHtml}<span>${dName}</span></div>`;
+        }
+    }
+
+    // --- 5. 拖曳排序邏輯 (原生 HTML5 Drag & Drop) ---
+    function handleDragStart(e, id, parentId) {
+        if (e.target.closest('button') || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+            e.preventDefault();
+            return;
+        }
+        dragSrcEl = e.target.closest('tr');
+        if(!dragSrcEl) return;
+        dragSrcId = id;
+        dragSrcParentId = parentId;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', id);
+        setTimeout(() => { if (dragSrcEl) dragSrcEl.classList.add('dragging'); }, 0);
+    }
+
+    function handleDragOver(e) {
+        if (e.preventDefault) { e.preventDefault(); }
+        e.dataTransfer.dropEffect = 'move';
+        const tr = e.target.closest('tr');
+        if (tr && tr !== dragSrcEl && tr.classList.contains('draggable-row')) {
+            tr.classList.add('drag-over');
+        }
+        return false;
+    }
+
+    function handleDragLeave(e) {
+        const tr = e.target.closest('tr');
+        if (tr) tr.classList.remove('drag-over');
+    }
+
+    function handleDrop(e, targetId, targetParentId, mode) {
+        if (e.stopPropagation) { e.stopPropagation(); }
+        const tr = e.target.closest('tr');
+        if (tr) tr.classList.remove('drag-over');
+        if (dragSrcEl) dragSrcEl.classList.remove('dragging');
+
+        if (dragSrcId === targetId) return false;
+        
+        if (mode === 'system') {
+            if (dragSrcParentId !== targetParentId) { customAlert('只能在同一層級（相同的父選單）內拖曳排序！'); return false; }
+            reorderSystemMenu(dragSrcId, targetId, targetParentId);
+        } else if (mode === 'personal') {
+            if (dragSrcParentId !== targetParentId) { customAlert('只能在同一層級（相同的父選單）內拖曳排序！'); return false; }
+            reorderPersonalMenu(dragSrcId, targetId, targetParentId);
+        } else if (mode === 'webpage') {
+            reorderWebpageMenu(dragSrcId, targetId);
+        }
+        return false;
+    }
+
+    function reorderSystemMenu(srcId, targetId, parentId) {
+        let menus = getCustomMenus();
+        let siblings = menus.filter(m => (m.parentId || '') === parentId);
+        siblings.sort((a,b) => (a.order || 0) - (b.order || 0));
+        
+        const srcIdx = siblings.findIndex(m => m.id === srcId);
+        const targetIdx = siblings.findIndex(m => m.id === targetId);
+        
+        if (srcIdx > -1 && targetIdx > -1) {
+            const [movedItem] = siblings.splice(srcIdx, 1);
+            siblings.splice(targetIdx, 0, movedItem);
+            
+            siblings.forEach((s, idx) => {
+                const realMenu = menus.find(x => x.id === s.id);
+                if (realMenu) realMenu.order = idx * 10;
+            });
+            
+            localStorage.setItem('umc_custom_menus_v31', JSON.stringify(menus));
+            renderMenuConfigTable(); 
+            renderSidebarMenus(); 
+        }
+    }
+
+    function reorderWebpageMenu(srcId, targetId) {
+        let menus = getCustomMenus();
+        const srcIdx = menus.findIndex(m => m.id === srcId);
+        const targetIdx = menus.findIndex(m => m.id === targetId);
+        
+        if (srcIdx > -1 && targetIdx > -1) {
+            const [movedItem] = menus.splice(srcIdx, 1);
+            menus.splice(targetIdx, 0, movedItem);
+            
+            menus.forEach((m, idx) => m.order = idx * 10);
+            
+            localStorage.setItem('umc_custom_menus_v31', JSON.stringify(menus));
+            renderWebpageTable(); 
+            renderMenuConfigTable(); 
+            renderSidebarMenus(); 
+        }
+    }
+
+    function reorderPersonalMenu(srcId, targetId, parentId) {
+        if (!pendingPerSets) pendingPerSets = JSON.parse(JSON.stringify(getPersonalSettings(currentUser.id)));
+        let menus = getCustomMenus();
+        
+        let siblings = menus.filter(m => (m.parentId || '') === parentId);
+        siblings.forEach(s => { s.tempOrder = pendingPerSets[s.id]?.order ?? 999; });
+        siblings.sort((a,b) => a.tempOrder - b.tempOrder);
+
+        const srcIdx = siblings.findIndex(m => m.id === srcId);
+        const targetIdx = siblings.findIndex(m => m.id === targetId);
+        
+        if (srcIdx > -1 && targetIdx > -1) {
+            const [movedItem] = siblings.splice(srcIdx, 1);
+            siblings.splice(targetIdx, 0, movedItem);
+            
+            siblings.forEach((m, idx) => {
+                if(!pendingPerSets[m.id]) pendingPerSets[m.id] = {};
+                pendingPerSets[m.id].order = idx * 10;
+            });
+            
+            document.getElementById('per-reorder-actions').style.display = 'flex';
+            renderPersonalMenuManage();
+        }
+    }
+
+    // --- 6. 個人選單管理 (完全隔離於各使用者) ---
+    function renderPersonalMenuManage() {
+        const tbody = document.getElementById('personalMenuTableBody');
+        if(!tbody) return;
+        tbody.innerHTML = '';
+        
+        const currentFabObj = getFabs().find(f => f.fabName === currentFab);
+        if (!currentFabObj) return;
+
+        const roles = getRoles();
+        const menusData = getCustomMenus();
+        
+        const fabRoleIds = currentFabObj.assignedRoles || [];
+        const userRoleIds = currentUser.assignedRoles || [];
+
+        const activeRoleIds = (currentUser.roleLevel === 'admin')
+            ? fabRoleIds
+            : fabRoleIds.filter(id => userRoleIds.includes(id));
+
+        let initialMenuIds = [];
+        activeRoleIds.forEach(roleId => {
+            const role = roles.find(r => r.id === roleId);
+            if (role && role.allowedMenuIds) initialMenuIds.push(...role.allowedMenuIds);
+        });
+
+        let allowedIds = getAllowedIdsWithHierarchy(menusData, initialMenuIds);
+        let menus = JSON.parse(JSON.stringify(menusData)).filter(m => allowedIds.has(m.id));
+        let pSets = pendingPerSets || getPersonalSettings(currentUser.id);
+        
+        // 個人化排序優先
+        menus.forEach(m => { m.order = pSets[m.id]?.order ?? (m.order || 999); });
+        menus.sort((a,b) => a.order - b.order);
+
+        menus.forEach(m => {
+            if(!expandedPerMenuIds.has(m.id) && isPerAllExpanded) expandedPerMenuIds.add(m.id);
+        });
+
+        const renderRow = (menu, path, level, parentId = '', grandParentId = '') => {
+            const isHidden = pSets[menu.id] ? pSets[menu.id].hidden : false;
+            const currentTarget = pSets[menu.id] ? (pSets[menu.id].target || menu.target || 'iframe') : (menu.target || 'iframe');
+            const currentIcon = pSets[menu.id] ? (pSets[menu.id].icon || menu.icon || 'fas fa-desktop') : (menu.icon || 'fas fa-desktop');
+            const pad = level === 1 ? 'ps-4' : (level === 2 ? 'ps-5 ms-3' : 'ps-3');
+            
+            const children = menus.filter(m => m.parentId === menu.id);
+            const hasChildren = children.length > 0;
+            const isExpanded = expandedPerMenuIds.has(menu.id);
+
+            const toggleIcon = hasChildren ?
+                `<span ${noDrag}><button type="button" onclick="togglePerMenuRow('${menu.id}')" class="chevron-btn text-secondary me-2"><i class="fas fa-chevron-${isExpanded ? 'down' : 'right'}"></i></button></span>` :
+                `<span class="chevron-btn text-muted me-2" style="cursor: default; opacity: 0.3;"><i class="fas fa-minus"></i></span>`;
+
+            let isVisible = true;
+            if (level === 1 && !expandedPerMenuIds.has(parentId)) isVisible = false;
+            if (level === 2 && (!expandedPerMenuIds.has(parentId) || !expandedPerMenuIds.has(grandParentId))) isVisible = false;
+
+            const iconHtml = `<i class="${currentIcon} me-2 ${isHidden?'text-muted':'text-primary'} fs-5"></i>`;
+            const toggle = `<div class="form-check form-switch d-inline-block ms-3 mb-0" ${noDrag}><input class="form-check-input cursor-pointer" type="checkbox" onchange="togglePersonalProp('${menu.id}', 'hidden', !this.checked)" ${!isHidden ? 'checked' : ''} title="顯示/隱藏"></div>`;
+
+            let configHtml = '';
+            if (!hasChildren) {
+                configHtml = currentTarget === 'blank' ? '<span class="text-info small fw-bold">另開新分頁</span>' : (currentTarget === 'fullscreen' ? '<span class="text-success small fw-bold">全螢幕</span>' : '<span class="text-info small fw-bold">畫面內嵌</span>');
+            } else {
+                configHtml = '-';
+            }
+
+            const trAttr = `draggable="true" ondragstart="handleDragStart(event, '${menu.id}', '${parentId || ''}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '${menu.id}', '${parentId || ''}', 'personal')"`;
+
+            let rowHtml = `<tr style="${isVisible ? '' : 'display: none;'}" ${trAttr} class="draggable-row ${isHidden?'opacity-75':''}">
+                <td class="${pad}"><div class="fw-bold d-flex align-items-center">${toggleIcon} ${iconHtml} <span class="${isHidden?'text-decoration-line-through text-muted':''}">${menu.displayName}</span> ${toggle}</div></td>
+                <td><span class="badge badge-sub">${level===0?'主選單':(level===1?'子選單':'次子選單')}</span></td>
+                <td>${configHtml}</td>
+                <td class="text-center" ${noDrag}>
+                    <button class="btn btn-sm btn-outline-primary" onclick="editPersonalMenu('${menu.id}')"><i class="fas fa-edit"></i> 編輯</button>
+                </td>
+            </tr>`;
+            tbody.innerHTML += rowHtml;
+
+            children.forEach(child => renderRow(child, child.displayName, level + 1, menu.id, parentId));
+        };
+
+        menus.filter(m => !m.parentId).forEach(root => renderRow(root, root.displayName, 0));
+    }
+
+    function togglePerMenuRow(menuId) {
+        if (expandedPerMenuIds.has(menuId)) expandedPerMenuIds.delete(menuId);
+        else expandedPerMenuIds.add(menuId);
+        renderPersonalMenuManage();
+    }
+
+    function togglePerAllMenus() {
+        const menusData = getCustomMenus();
+        const menusWithChildren = menusData.filter(m => menusData.some(child => child.parentId === m.id));
+
+        if (isPerAllExpanded) {
+            expandedPerMenuIds.clear();
+            isPerAllExpanded = false;
+            const btn = document.getElementById('btn-per-toggle-all');
+            if(btn) btn.innerHTML = '<i class="fas fa-expand-arrows-alt me-1"></i> 全部展開';
+        } else {
+            menusWithChildren.forEach(m => expandedPerMenuIds.add(m.id));
+            isPerAllExpanded = true;
+            const btn = document.getElementById('btn-per-toggle-all');
+            if(btn) btn.innerHTML = '<i class="fas fa-compress-arrows-alt me-1"></i> 全部收合';
+        }
+        renderPersonalMenuManage();
+    }
+
+    function togglePersonalProp(menuId, prop, value) {
+        let pSets = getPersonalSettings(currentUser.id);
+        if(!pSets[menuId]) pSets[menuId] = {};
+        pSets[menuId][prop] = value;
+        
+        savePersonalSettings(currentUser.id, pSets);
+        
+        if (pendingPerSets && pendingPerSets[menuId]) {
+            pendingPerSets[menuId][prop] = value;
+        }
+
+        renderPersonalMenuManage();
+        renderSidebarMenus(); 
+    }
+
+    function savePerReorder() {
+        customConfirm('確定要更新並同步個人專屬選單的拖曳排序嗎？', function() {
+            savePersonalSettings(currentUser.id, pendingPerSets);
+            pendingPerSets = null;
+            document.getElementById('per-reorder-actions').style.display = 'none';
+            renderPersonalMenuManage();
+            renderSidebarMenus();
+            customAlert('個人選單已成功更新！左側導覽列已同步。');
+        });
+    }
+
+    function cancelPerReorder() {
+        pendingPerSets = null;
+        document.getElementById('per-reorder-actions').style.display = 'none';
+        renderPersonalMenuManage();
+    }
+
+    function editPersonalMenu(id) {
+        const menus = getCustomMenus();
+        const m = menus.find(x => x.id === id); if(!m) return;
+        let pSets = getPersonalSettings(currentUser.id);
+        
+        const isHidden = pSets[id] ? pSets[id].hidden : false;
+        const target = pSets[id] ? (pSets[id].target || m.target || 'iframe') : (m.target || 'iframe');
+        const icon = pSets[id] ? (pSets[id].icon || m.icon || '') : (m.icon || '');
+        
+        document.getElementById('editPersonalMenuId').value = id;
+        document.getElementById('personalMenuName').value = m.displayName;
+        document.getElementById('personalMenuVisible').checked = !isHidden;
+        document.getElementById('personalMenuIcon').value = icon;
+        
+        const hasChildren = menus.some(child => child.parentId === id);
+        document.getElementById('personalTargetGroup').style.display = hasChildren ? 'none' : 'block';
+        document.getElementById('personalMenuTarget').value = target;
+        
+        if(modals.personalMenu) modals.personalMenu.show();
+    }
+
+    function savePersonalMenu(e) {
+        e.preventDefault();
+        const id = document.getElementById('editPersonalMenuId').value;
+        if(!id) return;
+        
+        let pSets = getPersonalSettings(currentUser.id);
+        if(!pSets[id]) pSets[id] = {};
+        
+        pSets[id].hidden = !document.getElementById('personalMenuVisible').checked;
+        pSets[id].icon = document.getElementById('personalMenuIcon').value;
+        pSets[id].target = document.getElementById('personalMenuTarget').value;
+        
+        savePersonalSettings(currentUser.id, pSets);
+        if(modals.personalMenu) modals.personalMenu.hide();
+        
+        if(pendingPerSets && pendingPerSets[id]) {
+            pendingPerSets[id] = pSets[id];
+        }
+
+        renderPersonalMenuManage(); 
+        renderSidebarMenus(); 
+    }
+
+    // --- 7A. 看板網頁管理 (Flat Table) 結合委派權限 (完全隱藏無權限項目) ---
+    function renderWebpageTable() {
+        const menus = getCustomMenus();
+        const tbody = document.getElementById('webpageTableBody');
+        if(!tbody) return;
+        tbody.innerHTML = '';
+        
+        // 過濾出自己有權限檢視的所有看板
+        const webpages = menus.filter(m => m.menuMode !== 'folder').sort((a,b) => (a.order || 0) - (b.order || 0));
+
+        webpages.forEach(m => {
+            const perms = getMenuPermissions(m.id, m.createdBy);
+            if (!perms.canView) return; // 沒權限則完全隱藏
+
+            const modeMap = { 
+                'app_grid': '<span class="badge bg-success">應用集合</span>', 
+                'link': '<span class="badge bg-primary">網頁連結</span>' 
+            };
+            const modeType = m.menuMode || 'link';
+            const iconHtml = m.icon ? `<i class="${m.icon} text-primary fs-5"></i>` : '<span class="text-muted">-</span>';
+            const urlHtml = modeType === 'link' ? (m.url || m.targetPage || '<span class="text-muted">-</span>') : '<span class="text-muted">-</span>';
+            const targetMap = { 'iframe': '內嵌', 'blank': '新分頁', 'fullscreen': '全螢幕' };
+            const targetHtml = modeType === 'link' ? (targetMap[m.target] || '內嵌') : '<span class="text-muted">-</span>';
+            
+            // 是否可以編輯
+            const toggle = perms.canEdit ? `<div class="form-check form-switch d-inline-block ms-3 mb-0" ${noDrag}><input class="form-check-input cursor-pointer" type="checkbox" onchange="toggleWebpageEnable('${m.id}', this.checked)" ${m.enabled !== false ? 'checked' : ''}></div>` : `<span class="badge bg-light text-muted border ms-3">鎖定</span>`;
+            const trAttr = perms.canEdit ? `draggable="true" ondragstart="handleDragStart(event, '${m.id}', 'root')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '${m.id}', 'root', 'webpage')"` : '';
+
+            const actionBtns = perms.canEdit ? `
+                <button class="btn btn-sm btn-outline-primary me-1" onclick="editWebpage('${m.id}')"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteWebpage('${m.id}')"><i class="fas fa-trash-alt"></i></button>
+            ` : `<span class="badge bg-light text-muted border">僅檢視</span>`;
+
+            tbody.innerHTML += `<tr class="${perms.canEdit?'draggable-row':''}" ${trAttr}>
+                <td class="text-start ps-4 fw-bold text-dark">${m.name}</td>
+                <td class="text-start"><div class="fw-bold text-primary">${m.displayName}</div></td>
+                <td>${modeMap[modeType]}</td>
+                <td class="small text-muted text-start" style="max-width: 200px; word-break: break-all;">${urlHtml}</td>
+                <td>${targetHtml}</td>
+                <td>${iconHtml}</td>
+                <td ${noDrag}>${toggle}</td>
+                <td><span class="badge bg-secondary opacity-75">${m.createdBy || 'admin'}</span></td>
+                <td ${noDrag}>${actionBtns}</td>
+            </tr>`;
+        });
+    }
+
+    function toggleWebpageMode() {
+        const mode = document.querySelector('input[name="wpMode"]:checked')?.value || 'link';
+        const urlGrp = document.getElementById('wpUrlGroup');
+        const targetGrp = document.getElementById('wpTargetGroup');
+        if(mode === 'app_grid') {
+            if(urlGrp) urlGrp.style.display = 'none'; 
+            if(targetGrp) targetGrp.style.display = 'none';
+        } else {
+            if(urlGrp) urlGrp.style.display = 'block'; 
+            if(targetGrp) targetGrp.style.display = 'block';
+        }
+    }
+
+    function openAddWebpageModal() {
+        const form = document.getElementById('wpForm');
+        if(form) form.reset();
+        const editId = document.getElementById('editWpId');
+        if(editId) editId.value = '';
+        
+        const rLink = document.getElementById('wpModeLink');
+        if(rLink) rLink.checked = true;
+
+        document.getElementById('wpSysName').value = '';
+        document.getElementById('wpDisplayName').value = '';
+
+        toggleWebpageMode();
+        if(modals.webpage) modals.webpage.show();
+    }
+
+    function editWebpage(id) {
+        const m = getCustomMenus().find(x => x.id === id); if(!m) return;
+        document.getElementById('editWpId').value = m.id;
+        document.getElementById('wpSysName').value = m.name || '';
+        document.getElementById('wpDisplayName').value = m.displayName || '';
+        document.getElementById('wpUrl').value = m.url || m.targetPage || '';
+        document.getElementById('wpTarget').value = m.target || 'iframe';
+        document.getElementById('wpIcon').value = m.icon || '';
+        
+        const mode = m.menuMode || 'link';
+        const radio = document.querySelector(`input[name="wpMode"][value="${mode}"]`);
+        if(radio) radio.checked = true;
+        
+        toggleWebpageMode();
+        if(modals.webpage) modals.webpage.show();
+    }
+
+    function toggleWebpageEnable(id, isEnabled) { 
+        let menus = getCustomMenus();
+        let idx = menus.findIndex(m => m.id === id); 
+        if (idx > -1) { 
+            menus[idx].enabled = isEnabled;
+            localStorage.setItem('umc_custom_menus_v31', JSON.stringify(menus));
+            renderWebpageTable();
+            renderMenuConfigTable();
+            renderSidebarMenus();
+        } 
+    }
+
+    function saveWebpageItem(e) {
+        e.preventDefault();
+        const id = document.getElementById('editWpId').value;
+        let menus = getCustomMenus();
+        const mode = document.querySelector('input[name="wpMode"]:checked').value;
+        
+        if (id) {
+            let m = menus.find(x => x.id === id);
+            if(m) {
+                m.name = document.getElementById('wpSysName').value.trim();
+                m.displayName = document.getElementById('wpDisplayName').value.trim();
+                m.menuMode = mode;
+                m.url = mode === 'link' ? document.getElementById('wpUrl').value.trim() : '';
+                m.target = mode === 'link' ? document.getElementById('wpTarget').value : null;
+                m.icon = document.getElementById('wpIcon').value;
+            }
+        } else {
+            menus.push({
+                id: 'm_' + Date.now(),
+                name: document.getElementById('wpSysName').value.trim(),
+                displayName: document.getElementById('wpDisplayName').value.trim(), 
+                menuMode: mode,
+                url: mode === 'link' ? document.getElementById('wpUrl').value.trim() : '',
+                target: mode === 'link' ? document.getElementById('wpTarget').value : null,
+                icon: document.getElementById('wpIcon').value,
+                parentId: null, 
+                enabled: true,
+                order: menus.length * 10,
+                createdBy: currentUser.id  // 記錄建立者
+            });
+        }
+        localStorage.setItem('umc_custom_menus_v31', JSON.stringify(menus));
+        if(modals.webpage) modals.webpage.hide();
+        
+        renderWebpageTable();
+        renderMenuConfigTable();
+        renderSidebarMenus();
+    }
+
+    function deleteWebpage(id) {
+        customConfirm('確定要從系統中完全刪除此看板網頁嗎？<br><small class="text-danger">注意：刪除後將無法還原，且相關選單配置也會失效。</small>', function() {
+            let menus = getCustomMenus(); 
+            let ids = new Set([id]); let size = 0;
+            while(ids.size > size) { size = ids.size; menus.forEach(m => { if(ids.has(m.parentId)) ids.add(m.id); }); }
+            menus = menus.filter(m => !ids.has(m.id)); 
+            localStorage.setItem('umc_custom_menus_v31', JSON.stringify(menus)); 
+
+            renderWebpageTable();
+            renderMenuConfigTable();
+            renderSidebarMenus();
+        });
+    }
+
+    // --- 7B. 選單配置管理 (Tree Table) 結合委派權限 (隱藏無權限項目) ---
+    function renderMenuConfigTable() {
+        const menus = getCustomMenus();
+        const tableBody = document.getElementById('menuConfigTableBody');
+        if(!tableBody) return;
+        tableBody.innerHTML = ''; 
+
+        // 1. 嚴格過濾出使用者有權限「檢視」的所有節點
+        const viewableMenus = menus.filter(m => getMenuPermissions(m.id, m.createdBy).canView);
+
+        // 2. 找出 UI 上的「根節點」：本身沒有 parentId，或是他的 parentId 已經不在 viewableMenus 中 (表示是授權的起點)
+        let viewableRoots = viewableMenus.filter(m => !m.parentId || !viewableMenus.some(p => p.id === m.parentId));
+        
+        viewableMenus.sort((a,b) => (a.order || 0) - (b.order || 0));
+        viewableRoots.sort((a,b) => (a.order || 0) - (b.order || 0));
+
+        viewableRoots.forEach(root => {
+            const rootHtml = generateMenuConfigRow(root, 0, viewableMenus.some(m => m.parentId === root.id), root.id, '');
+            if (rootHtml) tableBody.innerHTML += rootHtml;
+            
+            const level1 = viewableMenus.filter(m => m.parentId === root.id);
+            level1.forEach(l1 => {
+                const l1Html = generateMenuConfigRow(l1, 1, viewableMenus.some(m => m.parentId === l1.id), l1.id, root.id);
+                if (l1Html) tableBody.innerHTML += l1Html;
+                
+                const level2 = viewableMenus.filter(m => m.parentId === l1.id);
+                level2.forEach(l2 => {
+                    const l2Html = generateMenuConfigRow(l2, 2, false, l2.id, l1.id, root.id);
+                    if (l2Html) tableBody.innerHTML += l2Html;
+                });
+            });
+        });
+    }
+
+    function generateMenuConfigRow(menu, level, hasChildren, selfId, parentId, grandParentId = '') {
+        const perms = getMenuPermissions(menu.id, menu.createdBy);
+        // 保險起見再次檢查，無權限則不渲染
+        if (!perms.canView) return '';
+
+        const pad = level === 1 ? 'ps-4' : (level === 2 ? 'ps-5 ms-3' : 'ps-3');
+        const isExpanded = expandedSysMenuIds.has(menu.id);
+        
+        const toggleIcon = hasChildren ?
+            `<span ${noDrag}><button type="button" onclick="toggleSysMenuRow('${menu.id}')" class="chevron-btn text-secondary me-2"><i class="fas fa-chevron-${isExpanded ? 'down' : 'right'}"></i></button></span>` :
+            `<span class="chevron-btn text-muted me-2" style="cursor: default; opacity: 0.3;"><i class="fas fa-minus"></i></span>`;
+            
+        const toggle = perms.canEdit ? `<div class="form-check form-switch d-inline-block ms-3 mb-0" ${noDrag}><input class="form-check-input cursor-pointer" type="checkbox" onchange="toggleMenuEnable('${menu.id}', this.checked)" ${menu.enabled !== false ? 'checked' : ''}></div>` : `<span class="badge bg-light text-muted border ms-3">鎖定</span>`;
+        
+        let isVisible = true;
+        if (level === 1 && !expandedSysMenuIds.has(parentId)) isVisible = false;
+        if (level === 2 && (!expandedSysMenuIds.has(parentId) || !expandedSysMenuIds.has(grandParentId))) isVisible = false;
+
+        const trAttr = perms.canEdit ? `draggable="true" ondragstart="handleDragStart(event, '${menu.id}', '${menu.parentId || ''}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '${menu.id}', '${menu.parentId || ''}', 'system')"` : '';
+
+        const actionBtns = perms.canEdit ? `
+            <button class="btn btn-sm btn-outline-primary" onclick="editMenuNode('${menu.id}')"><i class="fas fa-edit"></i> 修改</button>
+            <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteMenuNode('${menu.id}')"><i class="fas fa-trash-alt"></i></button>
+        ` : `<span class="badge bg-light text-muted border">僅檢視</span>`;
+
+        const typeMap = { 'folder': '📁 選單群組', 'app_grid': '🔗 App集合', 'link': '🔗 看板網頁' };
+        const typeText = typeMap[menu.menuMode || 'link'];
+        const badgeClass = menu.menuMode === 'folder' ? 'bg-secondary' : 'bg-primary bg-opacity-75';
+
+        return `<tr style="${isVisible ? '' : 'display: none;'}" ${trAttr} class="${perms.canEdit?'draggable-row':''}">
+            <td class="${pad}"><div class="fw-bold d-flex align-items-center">${toggleIcon} <span class="text-dark">${menu.name}</span></div></td>
+            <td><div class="fw-bold text-primary d-flex align-items-center">${menu.displayName} ${toggle}</div></td>
+            <td><span class="badge badge-sub">${level===0?'主選單':(level===1?'子選單':'次子選單')}</span></td>
+            <td><span class="badge ${badgeClass} text-white">${typeText}</span></td>
+            <td><span class="badge bg-secondary opacity-75">${menu.createdBy || 'admin'}</span></td>
+            <td class="text-center" ${noDrag}>${actionBtns}</td>
+        </tr>`;
+    }
+
+    function toggleSysMenuRow(menuId) {
+        if (expandedSysMenuIds.has(menuId)) expandedSysMenuIds.delete(menuId);
+        else expandedSysMenuIds.add(menuId);
+        renderMenuConfigTable();
+    }
+
+    function toggleSysAllMenus() {
+        const menus = getCustomMenus();
+        const menusWithChildren = menus.filter(m => menus.some(child => child.parentId === m.id));
+
+        if (isSysAllExpanded) {
+            expandedSysMenuIds.clear();
+            isSysAllExpanded = false;
+            const btn = document.getElementById('btn-sys-toggle-all');
+            if(btn) btn.innerHTML = '<i class="fas fa-expand-arrows-alt me-1"></i> 全部展開';
+        } else {
+            menusWithChildren.forEach(m => expandedSysMenuIds.add(m.id));
+            isSysAllExpanded = true;
+            const btn = document.getElementById('btn-sys-toggle-all');
+            if(btn) btn.innerHTML = '<i class="fas fa-compress-arrows-alt me-1"></i> 全部收合';
+        }
+        renderMenuConfigTable();
+    }
+
+    function toggleMenuEnable(id, isEnabled) { 
+        let menus = getCustomMenus();
+        let idx = menus.findIndex(m => m.id === id); 
+        if (idx > -1) { 
+            menus[idx].enabled = isEnabled;
+            localStorage.setItem('umc_custom_menus_v31', JSON.stringify(menus));
+            
+            renderMenuConfigTable();
+            renderSidebarMenus();
+        } 
+    }
+
+    function deleteMenuNode(id) {
+        customConfirm('確定要從系統中刪除此選單節點嗎？若是群組，其底下的「子選單」也會一併被刪除喔！', function() {
+            let menus = getCustomMenus(); 
+            let ids = new Set([id]); let size = 0;
+            while(ids.size > size) { size = ids.size; menus.forEach(m => { if(ids.has(m.parentId)) ids.add(m.id); }); }
+            menus = menus.filter(m => !ids.has(m.id)); 
+            localStorage.setItem('umc_custom_menus_v31', JSON.stringify(menus)); 
+
+            renderWebpageTable();
+            renderMenuConfigTable();
+            renderSidebarMenus();
+        });
+    }
+
+    function toggleNodeMode() {
+        const mode = document.querySelector('input[name="nodeMode"]:checked').value;
+        const nameGrp = document.getElementById('nodeNameGroup');
+        const iconGrp = document.getElementById('nodeIconGroup');
+        const wpSelGrp = document.getElementById('nodeWebpageSelectGroup');
+        
+        if (mode === 'folder') {
+            if(nameGrp) nameGrp.style.display = 'block';
+            if(iconGrp) iconGrp.style.display = 'block';
+            if(wpSelGrp) wpSelGrp.style.display = 'none';
+        } else {
+            if(nameGrp) nameGrp.style.display = 'none';
+            if(iconGrp) iconGrp.style.display = 'none';
+            if(wpSelGrp) wpSelGrp.style.display = 'block';
+        }
+    }
+
+    function autoFillNodeDisplayName() {
+        const sel = document.getElementById('nodeWebpageSelect');
+        const dnInput = document.getElementById('nodeDisplayName');
+        if (sel && sel.value && dnInput) {
+            const menus = getCustomMenus();
+            const wp = menus.find(m => m.id === sel.value);
+            if (wp && !dnInput.value) {
+                dnInput.value = wp.displayName || wp.name;
+            }
+        }
+    }
+
+    function openAddMenuNodeModal() {
+        const form = document.getElementById('nodeForm');
+        if(form) form.reset();
+        
+        document.getElementById('editNodeId').value = '';
+        
+        document.getElementById('nodeModeFolder').disabled = false;
+        document.getElementById('nodeModeWebpage').disabled = false;
+        document.getElementById('nodeWebpageSelect').disabled = false;
+
+        document.getElementById('nodeModeFolder').checked = true;
+
+        const menus = getCustomMenus();
+        
+        const wpSelect = document.getElementById('nodeWebpageSelect');
+        if(wpSelect) {
+            wpSelect.innerHTML = '<option value="">-- 請選擇準備加入的看板 --</option>';
+            // 讓使用者可以挑選他「有權限檢視/使用」的現有看板
+            menus.filter(m => m.menuMode !== 'folder').forEach(m => {
+                const perms = getMenuPermissions(m.id, m.createdBy);
+                if (perms.canView) {
+                    wpSelect.innerHTML += `<option value="${m.id}">${m.name} (預設顯示: ${m.displayName})</option>`;
+                }
+            });
+        }
+
+        const parentSelect = document.getElementById('nodeParent');
+        if(parentSelect) {
+            parentSelect.innerHTML = '';
+            if (currentUser.roleLevel === 'admin') {
+                parentSelect.innerHTML += '<option value="">無 (放置於最上層主選單)</option>';
+            }
+            // 不再限制 x.menuMode === 'folder'，任何有新增子層權限的節點都可以選為父層
+            menus.forEach(x => {
+                const perms = getMenuPermissions(x.id, x.createdBy);
+                if (perms.canAddChild) {
+                    const pIcon = x.menuMode === 'folder' ? '📂' : '🔗';
+                    parentSelect.innerHTML += `<option value="${x.id}">${pIcon} ${x.displayName} (${x.name})</option>`;
+                }
+            });
+            if (parentSelect.innerHTML === '') {
+                parentSelect.innerHTML = '<option value="" disabled>無可用的父目錄，請先等候委派</option>';
+            }
+        }
+
+        toggleNodeMode();
+        if(modals.menuNode) modals.menuNode.show();
+    }
+    
+    function editMenuNode(id) {
+        const m = getCustomMenus().find(x => x.id === id); if(!m) return;
+        const menus = getCustomMenus();
+
+        document.getElementById('editNodeId').value = m.id;
+        document.getElementById('nodeDisplayName').value = m.displayName;
+        
+        const modeFolder = document.getElementById('nodeModeFolder');
+        const modeWebpage = document.getElementById('nodeModeWebpage');
+        
+        modeFolder.disabled = true;
+        modeWebpage.disabled = true;
+        document.getElementById('nodeWebpageSelect').disabled = true;
+
+        if (m.menuMode === 'folder') {
+            modeFolder.checked = true;
+            document.getElementById('nodeName').value = m.name || '';
+            document.getElementById('nodeIcon').value = m.icon || '';
+        } else {
+            modeWebpage.checked = true;
+            const wpSelect = document.getElementById('nodeWebpageSelect');
+            wpSelect.innerHTML = `<option value="${m.id}" selected>${m.name} (已綁定)</option>`;
+        }
+
+        const parentSelect = document.getElementById('nodeParent');
+        parentSelect.innerHTML = '';
+        if (currentUser.roleLevel === 'admin') {
+            parentSelect.innerHTML += '<option value="">無 (放置於最上層主選單)</option>';
+        }
+        
+        let invalidIds = new Set([m.id]);
+        let size = 0;
+        while(invalidIds.size > size) {
+            size = invalidIds.size;
+            menus.forEach(x => { if (invalidIds.has(x.parentId)) invalidIds.add(x.id); });
+        }
+        
+        menus.filter(x => !invalidIds.has(x.id)).forEach(x => {
+            const perms = getMenuPermissions(x.id, x.createdBy);
+            if (perms.canAddChild) {
+                const pIcon = x.menuMode === 'folder' ? '📂' : '🔗';
+                parentSelect.innerHTML += `<option value="${x.id}">${pIcon} ${x.displayName} (${x.name})</option>`;
+            }
+        });
+
+        parentSelect.value = m.parentId || '';
+        
+        toggleNodeMode();
+        if(modals.menuNode) modals.menuNode.show();
+    }
+
+    function saveMenuNodeItem(e) {
+        e.preventDefault();
+        const id = document.getElementById('editNodeId').value;
+        const mode = document.querySelector('input[name="nodeMode"]:checked').value;
+        const displayName = document.getElementById('nodeDisplayName').value.trim();
+        const parentId = document.getElementById('nodeParent').value || null;
+        
+        let menus = getCustomMenus();
+
+        if (id) {
+            let m = menus.find(x => x.id === id);
+            if (m) {
+                m.displayName = displayName;
+                m.parentId = parentId;
+                if (m.menuMode === 'folder') {
+                    m.name = document.getElementById('nodeName').value.trim() || displayName;
+                    m.icon = document.getElementById('nodeIcon').value;
+                }
+            }
+        } else {
+            if (mode === 'folder') {
+                const name = document.getElementById('nodeName').value.trim() || displayName;
+                menus.push({
+                    id: 'm_' + Date.now(),
+                    name: name,
+                    displayName: displayName,
+                    menuMode: 'folder',
+                    icon: document.getElementById('nodeIcon').value,
+                    parentId: parentId,
+                    enabled: true,
+                    order: menus.length * 10,
+                    createdBy: currentUser.id
+                });
+            } else if (mode === 'webpage') {
+                const wpId = document.getElementById('nodeWebpageSelect').value;
+                let m = menus.find(x => x.id === wpId);
+                if (m) {
+                    m.displayName = displayName;
+                    m.parentId = parentId;
+                    m.order = menus.length * 10;
+                }
+            }
+        }
+        
+        localStorage.setItem('umc_custom_menus_v31', JSON.stringify(menus));
+        
+        if(modals.menuNode) modals.menuNode.hide();
+        renderMenuConfigTable();
+        renderSidebarMenus();
+    }
+
+    // --- 8. 廠區管理 ---
+    function renderFabTable() {
+        const fabs = getFabs(); const roles = getRoles(); const tbody = document.getElementById('fabTableBody'); if(!tbody) return; tbody.innerHTML = '';
+        fabs.forEach(f => {
+            let roleBadges = (f.assignedRoles || []).map(rid => { const r = roles.find(x => x.id === rid); return r ? `<span class="badge bg-primary text-white me-1 mb-1">${r.groupName}</span>` : ''; }).join('');
+            const langMap = { 'zh': '繁體中文', 'en': 'English', 'ja': '日本語' };
+            tbody.innerHTML += `<tr><td class="text-start ps-4 fw-bold text-dark">${f.fabName}</td><td>${f.displayName}</td><td>${langMap[f.defaultLang] || f.defaultLang}</td><td class="text-start">${roleBadges || '<span class="text-muted small">無分配</span>'}</td><td class="admin-only-col"><button class="btn btn-sm btn-outline-primary me-1" onclick="editFab('${f.id}')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteFab('${f.id}')"><i class="fas fa-trash-alt"></i></button></td></tr>`;
+        });
+    }
+    function renderFabRoleManageForm() { const el = document.getElementById('fabRoleCheckboxes'); if(el) el.innerHTML = getRoles().map(r => `<div class="form-check form-check-inline mb-2 border rounded px-3 py-1 bg-light"><input class="form-check-input fab-role-check cursor-pointer" type="checkbox" value="${r.id}" id="chk_fab_role_${r.id}"><label class="form-check-label fw-bold ms-1 cursor-pointer" for="chk_fab_role_${r.id}">${r.groupName}</label></div>`).join(''); }
+    function openAddFabModal() { const form=document.getElementById('fabForm'); if(form) form.reset(); const idIn=document.getElementById('editFabId'); if(idIn) idIn.value = ''; renderFabRoleManageForm(); if (modals.fab) modals.fab.show(); }
+    function editFab(id) { const fab = getFabs().find(f => f.id === id); if(!fab) return; document.getElementById('editFabId').value = fab.id; document.getElementById('fabNameInput').value = fab.fabName; document.getElementById('fabDisplayNameInput').value = fab.displayName; document.getElementById('fabLangSelect').value = fab.defaultLang; renderFabRoleManageForm(); document.querySelectorAll('.fab-role-check').forEach(cb => { if(fab.assignedRoles) cb.checked = fab.assignedRoles.includes(cb.value); }); if (modals.fab) modals.fab.show(); }
+    function saveFabItem(e) { e.preventDefault(); const id = document.getElementById('editFabId').value; let fabs = getFabs(); const rIds = Array.from(document.querySelectorAll('.fab-role-check:checked')).map(cb => cb.value); if (id) { const idx = fabs.findIndex(f => f.id === id); if (idx > -1) { fabs[idx].fabName = document.getElementById('fabNameInput').value; fabs[idx].displayName = document.getElementById('fabDisplayNameInput').value; fabs[idx].defaultLang = document.getElementById('fabLangSelect').value; fabs[idx].assignedRoles = rIds; } } else { fabs.push({ id: 'fab_' + Date.now(), fabName: document.getElementById('fabNameInput').value, displayName: document.getElementById('fabDisplayNameInput').value, defaultLang: document.getElementById('fabLangSelect').value, assignedRoles: rIds }); } localStorage.setItem('umc_fabs_v15', JSON.stringify(fabs)); if (modals.fab) modals.fab.hide(); renderFabTable(); if(typeof renderFabSwitcher === 'function') renderFabSwitcher(); renderSidebarMenus(); }
+    function deleteFab(id) { customConfirm("確定要刪除此廠區嗎？", function() { let fabs = getFabs().filter(f => f.id !== id); localStorage.setItem('umc_fabs_v15', JSON.stringify(fabs)); renderFabTable(); if(typeof renderFabSwitcher === 'function') renderFabSwitcher(); }); }
+
+    // --- 9. 權限管理 (包含拖曳邏輯) ---
+    function renderRoleTable() {
+        const roles = getRoles(); const menus = getCustomMenus(); const tbody = document.getElementById('roleTableBody'); if(!tbody) return; tbody.innerHTML = '';
+        roles.forEach(r => {
+            let menuBadges = r.allowedMenuIds.map(mid => { const m = menus.find(x => x.id === mid); return m ? `<span class="badge bg-primary text-white me-1 mb-1">${m.name}</span>` : ''; }).join('');
+            tbody.innerHTML += `<tr><td class="text-start ps-4 fw-bold text-dark">${r.groupName}</td><td class="text-start">${menuBadges || '<span class="text-muted small">無分配</span>'}</td><td class="text-center admin-only-col"><button class="btn btn-sm btn-outline-primary me-1" onclick="editRole('${r.id}')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteRole('${r.id}')"><i class="fas fa-trash-alt"></i></button></td></tr>`;
+        });
+    }
+
+    function handleRoleDragStart(e) {
+        draggedRoleItem = e.target.closest('.role-menu-item');
+        e.dataTransfer.effectAllowed = 'move';
+        setTimeout(() => { draggedRoleItem.classList.add('dragging'); }, 0);
+    }
+    
+    function handleRoleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        return false;
+    }
+    
+    function handleRoleDrop(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const dropTarget = e.target.closest('.role-menu-item');
+        if (draggedRoleItem && dropTarget && draggedRoleItem !== dropTarget) {
+            const container = document.getElementById('roleMenuCheckboxes');
+            const allItems = Array.from(container.children);
+            const draggedIdx = allItems.indexOf(draggedRoleItem);
+            const targetIdx = allItems.indexOf(dropTarget);
+            if (draggedIdx < targetIdx) {
+                dropTarget.after(draggedRoleItem);
+            } else {
+                dropTarget.before(draggedRoleItem);
+            }
+        }
+        return false;
+    }
+    
+    function handleRoleDragEnd(e) {
+        if (draggedRoleItem) draggedRoleItem.classList.remove('dragging');
+        draggedRoleItem = null;
+    }
+
+    function renderRoleManageForm(orderedIds = []) { 
+        const el = document.getElementById('roleMenuCheckboxes'); 
+        if(!el) return; 
+        let menus = getCustomMenus().filter(m => !m.parentId); 
+        
+        menus.sort((a, b) => {
+            let idxA = orderedIds.indexOf(a.id);
+            let idxB = orderedIds.indexOf(b.id);
+            if (idxA === -1) idxA = 9999;
+            if (idxB === -1) idxB = 9999;
+            return idxA - idxB;
+        });
+
+        el.innerHTML = '<small class="text-primary mt-2 d-block w-100"><i class="fas fa-info-circle"></i> 提示：可按住項目進行拖曳排序，越前面的項目將顯示在側邊選單越上方。</small>' + 
+            menus.map(m => `
+            <div class="role-menu-item d-inline-block mt-2" draggable="true" ondragstart="handleRoleDragStart(event)" ondragover="handleRoleDragOver(event)" ondrop="handleRoleDrop(event)" ondragend="handleRoleDragEnd(event)">
+                <input type="checkbox" class="btn-check role-menu-check" id="chk_role_${m.id}" value="${m.id}">
+                <label class="btn btn-outline-primary rounded-pill fw-bold shadow-sm px-3 py-1 cursor-pointer" for="chk_role_${m.id}" style="border-width: 2px;">
+                    <i class="fas fa-grip-vertical text-muted me-1" style="cursor: grab;"></i> ${m.name}
+                </label>
+            </div>
+        `).join(''); 
+    }
+
+    function openAddRoleModal() { const form=document.getElementById('roleForm'); if(form) form.reset(); const idIn=document.getElementById('editRoleId'); if(idIn) idIn.value = ''; renderRoleManageForm([]); if (modals.role) modals.role.show(); }
+    function editRole(id) { 
+        const role = getRoles().find(r => r.id === id); if(!role) return; 
+        document.getElementById('editRoleId').value = role.id; 
+        document.getElementById('roleName').value = role.groupName; 
+        renderRoleManageForm(role.allowedMenuIds); 
+        document.querySelectorAll('.role-menu-check').forEach(cb => { cb.checked = role.allowedMenuIds.includes(cb.value); }); 
+        if (modals.role) modals.role.show(); 
+    }
+    
+    function saveRoleItem(e) { 
+        e.preventDefault(); 
+        const id = document.getElementById('editRoleId').value; 
+        let roles = getRoles(); 
+        
+        const aIds = Array.from(document.querySelectorAll('.role-menu-check:checked')).map(cb => cb.value); 
+        
+        if (id) { 
+            const idx = roles.findIndex(r => r.id === id); 
+            if (idx > -1) { 
+                roles[idx].groupName = document.getElementById('roleName').value; 
+                roles[idx].allowedMenuIds = aIds; 
+            } 
+        } else { 
+            roles.push({ id: 'role_' + Date.now(), groupName: document.getElementById('roleName').value, allowedMenuIds: aIds }); 
+        } 
+        localStorage.setItem('umc_roles_v15', JSON.stringify(roles)); 
+        if (modals.role) modals.role.hide(); 
+        renderRoleTable(); 
+        renderSidebarMenus(); 
+    }
+    function deleteRole(id) { customConfirm("確定要刪除此群組配置嗎？", function() { let roles = getRoles().filter(r => r.id !== id); localStorage.setItem('umc_roles_v15', JSON.stringify(roles)); renderRoleTable(); renderSidebarMenus(); }); }
+
+    // --- 10. 帳號管理 (整合委派功能) ---
+    function renderAccountTable() {
+        const accounts = getAccounts(); const roles = getRoles(); const menus = getCustomMenus(); const tbody = document.getElementById('accTableBody'); if(!tbody) return; tbody.innerHTML = '';
+        accounts.forEach(acc => {
+            let roleBadge = acc.roleLevel === 'admin' ? `<span class="badge bg-danger rounded-pill px-3 py-2">系統管理員</span>` : `<span class="badge bg-info text-white rounded-pill px-3 py-2">一般使用者</span>`;
+            let groupBadges = (acc.assignedRoles || []).map(rid => { 
+                const r = roles.find(x => x.id === rid); 
+                return r ? `<span class="badge bg-secondary rounded-pill px-2 py-1 me-1 mb-1">${r.groupName}</span>` : ''; 
+            }).join('');
+            if (!groupBadges) groupBadges = '<span class="text-muted small">-</span>';
+
+            // 顯示委派管理的目錄名稱
+            let delBadges = '';
+            if (acc.roleLevel === 'user' && acc.manageableMenus && acc.manageableMenus.length > 0) {
+                delBadges = acc.manageableMenus.map(mid => {
+                    const m = menus.find(x => x.id === mid);
+                    return m ? `<span class="badge bg-warning text-dark me-1 mb-1">📂 ${m.displayName}</span>` : '';
+                }).join('');
+            }
+            if (!delBadges && acc.roleLevel !== 'admin') delBadges = '<span class="text-muted small">無委派權限</span>';
+            if (acc.roleLevel === 'admin') delBadges = '<span class="text-muted small">最高權限 (全部可見)</span>';
+
+            const deleteBtn = acc.empId === 'admin' ? '' : `<button class="btn btn-sm btn-outline-danger" onclick="deleteAccount('${acc.empId}')"><i class="fas fa-trash-alt"></i></button>`;
+            tbody.innerHTML += `<tr>
+                <td class="fw-bold">${acc.empId}</td>
+                <td>${acc.name} <br> <small class="text-muted">${acc.department || ''}</small></td>
+                <td>${roleBadge}</td>
+                <td class="text-start">${delBadges}</td>
+                <td class="text-start">${groupBadges}</td>
+                <td class="admin-only-col">
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="editAccount('${acc.empId}')"><i class="fas fa-edit"></i></button>
+                    ${deleteBtn}
+                </td>
+            </tr>`;
+        });
+    }
+    
+    function renderAccRoleManageForm() { 
+        const el = document.getElementById('accRoleCheckboxes'); 
+        if(el) el.innerHTML = getRoles().map(r => `<div class="form-check form-check-inline mb-2 border rounded px-3 py-1 bg-light"><input class="form-check-input acc-role-check cursor-pointer" type="checkbox" value="${r.id}" id="chk_acc_role_${r.id}"><label class="form-check-label fw-bold ms-1 cursor-pointer" for="chk_acc_role_${r.id}">${r.groupName}</label></div>`).join(''); 
+    }
+
+    function toggleAccDelegationUI() {
+        const role = document.getElementById('accRoleLevel').value;
+        const group = document.getElementById('accDelegationGroup');
+        if (group) group.style.display = role === 'admin' ? 'none' : 'block';
+        toggleDelegationDetails();
+    }
+
+    function toggleDelegationDetails() {
+        const isEnabled = document.getElementById('accEnableDelegation').checked;
+        const details = document.getElementById('accDelegationDetails');
+        if (details) details.style.display = isEnabled ? 'block' : 'none';
+    }
+
+    function renderAccManageMenuForm(selectedIds = []) {
+        const el = document.getElementById('accManageMenuCheckboxes');
+        if (!el) return;
+        
+        // 取得所有選單並依賴 order 排序
+        const menus = getCustomMenus().sort((a, b) => (a.order || 0) - (b.order || 0));
+        
+        // 遞迴產生樹狀結構 HTML
+        function buildTree(parentId) {
+            const children = menus.filter(m => m.parentId === parentId);
+            if (children.length === 0) return '';
+            
+            // 若為子層級，加上左側邊線與縮排
+            let html = `<ul class="list-unstyled ${parentId ? 'ms-4 border-start border-2 border-primary border-opacity-25 ps-3 mt-2' : ''}">`;
+            
+            children.forEach(m => {
+                const isChecked = selectedIds.includes(m.id) ? 'checked' : '';
+                const icon = m.menuMode === 'folder' ? 'fas fa-folder text-warning' : (m.icon || 'fas fa-link text-primary');
+                
+                html += `
+                    <li class="mb-2">
+                        <div class="form-check d-flex align-items-center mb-1">
+                            <input class="form-check-input acc-manage-menu-check cursor-pointer mt-0 me-2 border-secondary shadow-sm" type="checkbox" value="${m.id}" id="chk_am_${m.id}" ${isChecked} onchange="handleManageMenuCheck(this, '${m.id}')">
+                            <label class="form-check-label cursor-pointer fw-bold text-dark d-flex align-items-center" for="chk_am_${m.id}">
+                                <i class="${icon} me-2 fs-6"></i> ${m.displayName}
+                                <span class="badge bg-secondary bg-opacity-10 text-muted ms-2 fw-normal border" style="font-size: 0.7rem;">${m.name}</span>
+                            </label>
+                        </div>
+                        ${buildTree(m.id)}
+                    </li>
+                `;
+            });
+            html += `</ul>`;
+            return html;
+        }
+
+        const treeHtml = buildTree(null);
+        el.innerHTML = treeHtml || '<div class="text-muted small py-2 text-center">尚無任何選單可供委派</div>';
+    }
+
+    // 新增：處理委派目錄勾選時的上下層連動邏輯
+    function handleManageMenuCheck(checkbox, menuId) {
+        const isChecked = checkbox.checked;
+        const menus = getCustomMenus();
+        
+        // 1. 向下連動：勾選/取消所有子目錄與看板
+        function getDescendants(parentId) {
+            let descendants = [];
+            const children = menus.filter(m => m.parentId === parentId);
+            children.forEach(child => {
+                descendants.push(child.id);
+                descendants = descendants.concat(getDescendants(child.id));
+            });
+            return descendants;
+        }
+        
+        const allDescendantIds = getDescendants(menuId);
+        allDescendantIds.forEach(id => {
+            const childCb = document.getElementById('chk_am_' + id);
+            if (childCb) childCb.checked = isChecked;
+        });
+
+        // 2. 向上連動：若「取消勾選」，則所有的父目錄也必須自動取消勾選
+        // (因為只要父目錄被勾選，系統就會默認底下所有子節點皆具有權限)
+        if (!isChecked) {
+            let currentId = menuId;
+            while (currentId) {
+                const m = menus.find(x => x.id === currentId);
+                if (m && m.parentId) {
+                    const parentCb = document.getElementById('chk_am_' + m.parentId);
+                    if (parentCb) parentCb.checked = false;
+                    currentId = m.parentId;
+                } else {
+                    currentId = null;
+                }
+            }
+        }
+    }
+    
+    function openAddAccountModal() { 
+        const form=document.getElementById('accForm'); if(form) form.reset(); 
+        const e=document.getElementById('editAccMode'); if(e) e.value = ''; 
+        const eid=document.getElementById('accEmpId'); if(eid) eid.readOnly = false; 
+        document.getElementById('accRoleLevel').value = 'user'; 
+        document.getElementById('accEnableDelegation').checked = false;
+        document.getElementById('accCanEditOthers').checked = false;
+        renderAccRoleManageForm();
+        renderAccManageMenuForm([]);
+        toggleAccDelegationUI();
+        if(modals.acc) modals.acc.show(); 
+    }
+    
+    function editAccount(empId) {
+        const acc = getAccounts().find(a => a.empId === empId); if(!acc) return; 
+        const form=document.getElementById('accForm'); if(form) form.reset();
+        
+        const formIds = ['editAccMode', 'accEmpId', 'accName', 'accDept', 'accRoleLevel']; 
+        const values = [acc.empId, acc.empId, acc.name || '', acc.department||'', acc.roleLevel||'user'];
+        formIds.forEach((fid, i) => { const el = document.getElementById(fid); if(el) el.value = values[i]; });
+        
+        const eid=document.getElementById('accEmpId'); if(eid) eid.readOnly = true; 
+        
+        // 判斷是否曾開啟委派
+        const hasDelegation = (acc.manageableMenus && acc.manageableMenus.length > 0) || acc.canEditOthers;
+        document.getElementById('accEnableDelegation').checked = hasDelegation;
+        document.getElementById('accCanEditOthers').checked = acc.canEditOthers || false;
+
+        renderAccRoleManageForm();
+        document.querySelectorAll('.acc-role-check').forEach(cb => {
+            if(acc.assignedRoles) cb.checked = acc.assignedRoles.includes(cb.value);
+        });
+        
+        renderAccManageMenuForm(acc.manageableMenus || []);
+        toggleAccDelegationUI();
+
+        if(modals.acc) modals.acc.show();
+    }
+    
+    function saveAccountItem(e) {
+        e.preventDefault(); 
+        const idEl = document.getElementById('editAccMode'); if(!idEl) return; 
+        const id = idEl.value; let accounts = getAccounts(); 
+        const roleLevel = document.getElementById('accRoleLevel').value;
+        const assignedRoles = Array.from(document.querySelectorAll('.acc-role-check:checked')).map(cb => cb.value);
+        const accName = document.getElementById('accName')?.value || ''; 
+        const accDept = document.getElementById('accDept')?.value || '';
+        
+        const isDelegatedEnabled = document.getElementById('accEnableDelegation').checked;
+        const manageableMenus = (roleLevel === 'admin' || !isDelegatedEnabled) ? [] : Array.from(document.querySelectorAll('.acc-manage-menu-check:checked')).map(cb => cb.value);
+        const canEditOthers = (roleLevel === 'admin' || !isDelegatedEnabled) ? false : document.getElementById('accCanEditOthers').checked;
+
+        if (id) { 
+            const idx = accounts.findIndex(a => a.empId === id); 
+            if (idx > -1) { 
+                accounts[idx].name = accName; 
+                accounts[idx].department = accDept; 
+                accounts[idx].roleLevel = roleLevel; 
+                accounts[idx].assignedRoles = assignedRoles; 
+                accounts[idx].manageableMenus = manageableMenus;
+                accounts[idx].canEditOthers = canEditOthers;
+            } 
+        } else { 
+            accounts.push({ 
+                empId: document.getElementById('accEmpId')?.value, 
+                name: accName, 
+                department: accDept, 
+                roleLevel: roleLevel, 
+                assignedRoles: assignedRoles,
+                manageableMenus: manageableMenus,
+                canEditOthers: canEditOthers
+            }); 
+        }
+        localStorage.setItem('umc_accounts_v31', JSON.stringify(accounts)); 
+        if(modals.acc) modals.acc.hide(); 
+        renderAccountTable();
+
+        // 若編輯的是自己，重整權限
+        if (currentUser.id === id) {
+            doLogin();
+        }
+    }
+    
+    function deleteAccount(empId) { if (empId === 'admin') { customAlert("無法刪除最高管理者 admin 帳號！"); return; } customConfirm("確定要刪除此帳號嗎？", function() { let accounts = getAccounts().filter(a => a.empId !== empId); localStorage.setItem('umc_accounts_v31', JSON.stringify(accounts)); renderAccountTable(); }); }
+
+    // --- 11. 需求申請與審核管理 (Apply & Audit) ---
+    function renderApplyTable() {
+        const tbody = document.getElementById('applyTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        
+        const reqs = getRequests().filter(r => r.empId === currentUser.id).sort((a,b) => b.timestamp - a.timestamp);
+        
+        if (reqs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">目前沒有任何申請紀錄。</td></tr>`;
+            return;
+        }
+
+        const statusMap = {
+            'unreplied': '<span class="badge bg-secondary">尚未回覆</span>',
+            'processing': '<span class="badge bg-primary">處理中</span>',
+            'pending': '<span class="badge bg-warning text-dark">Pending</span>',
+            'rejected': '<span class="badge bg-danger">拒絕</span>',
+            'resolved': '<span class="badge bg-success">已處理</span>',
+            'withdrawn': '<span class="badge bg-dark">已撤回</span>'
+        };
+
+        reqs.forEach(r => {
+            const dateStr = new Date(r.timestamp).toLocaleString();
+            const replyMsg = r.reply ? r.reply : '<span class="text-muted">-</span>';
+            
+            let actionBtns = '';
+            if (r.status === 'withdrawn') {
+                actionBtns = `
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="openApplyModal('${r.id}')"><i class="fas fa-edit"></i> 重新編輯</button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteApplyItem('${r.id}')"><i class="fas fa-trash"></i> 刪除</button>
+                `;
+            } else if (r.status !== 'resolved' && r.status !== 'rejected') {
+                actionBtns = `<button class="btn btn-sm btn-outline-warning" onclick="openWithdrawModal('${r.id}')"><i class="fas fa-undo"></i> 撤回</button>`;
+            }
+
+            let wdInfo = r.status === 'withdrawn' ? `<br><small class="text-danger mt-1 d-block"><i class="fas fa-info-circle"></i> 撤回原因: ${r.withdrawReason}</small>` : '';
+
+            tbody.innerHTML += `<tr>
+                <td class="small text-muted">${dateStr}</td>
+                <td>${r.reason}${wdInfo}</td>
+                <td>${statusMap[r.status]}</td>
+                <td>${replyMsg}</td>
+                <td class="text-center">${actionBtns}</td>
+            </tr>`;
+        });
+    }
+
+    function openApplyModal(id = null) {
+        const reasonInput = document.getElementById('applyReason');
+        const idInput = document.getElementById('applyReqId');
+        if (id) {
+            const req = getRequests().find(r => r.id === id);
+            if (req) {
+                reasonInput.value = req.reason;
+                idInput.value = req.id;
+            }
+        } else {
+            reasonInput.value = '';
+            idInput.value = '';
+        }
+        if (modals.apply) modals.apply.show();
+    }
+
+    function submitApplyItem(e) {
+        e.preventDefault();
+        const id = document.getElementById('applyReqId').value;
+        const reason = document.getElementById('applyReason').value.trim();
+        if (!reason) return;
+
+        let reqs = getRequests();
+        if (id) {
+            let idx = reqs.findIndex(r => r.id === id);
+            if (idx > -1) {
+                reqs[idx].reason = reason;
+                reqs[idx].status = 'unreplied';
+                reqs[idx].timestamp = Date.now();
+                reqs[idx].withdrawReason = ''; 
+            }
+        } else {
+            reqs.push({
+                id: 'req_' + Date.now(),
+                empId: currentUser.id,
+                empName: currentUser.name,
+                reason: reason,
+                timestamp: Date.now(),
+                status: 'unreplied',
+                reply: ''
+            });
+        }
+        saveRequests(reqs);
+
+        if (modals.apply) modals.apply.hide();
+        renderApplyTable();
+        customAlert(id ? '需求申請已重新送出！' : '您的需求申請已成功送出！');
+    }
+
+    function openWithdrawModal(id) {
+        document.getElementById('withdrawReqId').value = id;
+        document.getElementById('withdrawReason').value = '';
+        if (modals.withdraw) modals.withdraw.show();
+    }
+
+    function submitWithdrawItem(e) {
+        e.preventDefault();
+        const id = document.getElementById('withdrawReqId').value;
+        const reason = document.getElementById('withdrawReason').value.trim();
+        if (!reason) return;
+
+        let reqs = getRequests();
+        let idx = reqs.findIndex(r => r.id === id);
+        if (idx > -1) {
+            reqs[idx].status = 'withdrawn';
+            reqs[idx].withdrawReason = reason;
+            saveRequests(reqs);
+        }
+
+        if (modals.withdraw) modals.withdraw.hide();
+        renderApplyTable();
+    }
+
+    function deleteApplyItem(id) {
+        customConfirm('確定要刪除這筆已撤回的申請紀錄嗎？', function() {
+            let reqs = getRequests().filter(r => r.id !== id);
+            saveRequests(reqs);
+            renderApplyTable();
+        });
+    }
+
+    function renderAuditTable() {
+        const tbody = document.getElementById('auditTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        
+        const reqs = getRequests().sort((a,b) => b.timestamp - a.timestamp);
+        
+        if (reqs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">目前沒有任何使用者的申請紀錄。</td></tr>`;
+            return;
+        }
+
+        const statusMap = {
+            'unreplied': '<span class="badge bg-secondary">尚未回覆</span>',
+            'processing': '<span class="badge bg-primary">處理中</span>',
+            'pending': '<span class="badge bg-warning text-dark">Pending</span>',
+            'rejected': '<span class="badge bg-danger">拒絕</span>',
+            'resolved': '<span class="badge bg-success">已處理</span>',
+            'withdrawn': '<span class="badge bg-dark">已撤回</span>'
+        };
+
+        reqs.forEach(r => {
+            const dateStr = new Date(r.timestamp).toLocaleString();
+            let wdInfo = r.status === 'withdrawn' ? `<br><small class="text-danger mt-1 d-block"><i class="fas fa-info-circle"></i> 撤回原因: ${r.withdrawReason}</small>` : '';
+            
+            tbody.innerHTML += `<tr>
+                <td class="fw-bold">${r.empName} <br><small class="text-muted fw-normal">${r.empId}</small></td>
+                <td class="small text-muted">${dateStr}</td>
+                <td style="max-width: 300px;" class="text-truncate" title="${r.reason}">${r.reason}${wdInfo}</td>
+                <td>${statusMap[r.status]}</td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-outline-primary" onclick="openAuditModal('${r.id}')"><i class="fas fa-reply"></i> 回覆審核</button>
+                </td>
+            </tr>`;
+        });
+    }
+
+    function openAuditModal(id) {
+        const r = getRequests().find(x => x.id === id);
+        if (!r) return;
+
+        document.getElementById('auditReqId').value = r.id;
+        document.getElementById('auditApplicant').value = `${r.empName} (${r.empId})`;
+        document.getElementById('auditReason').value = r.reason;
+        document.getElementById('auditStatus').value = r.status;
+        document.getElementById('auditReply').value = r.reply || '';
+
+        if (modals.audit) modals.audit.show();
+    }
+
+    function saveAuditItem(e) {
+        e.preventDefault();
+        const id = document.getElementById('auditReqId').value;
+        const status = document.getElementById('auditStatus').value;
+        const reply = document.getElementById('auditReply').value.trim();
+
+        let reqs = getRequests();
+        let idx = reqs.findIndex(x => x.id === id);
+        if (idx > -1) {
+            reqs[idx].status = status;
+            reqs[idx].reply = reply;
+            saveRequests(reqs);
+        }
+
+        if (modals.audit) modals.audit.hide();
+        renderAuditTable();
+    }
+
+    // --- 12. 應用程式集合 (App Grid) ---
+    function openAppGridPage(menuId, title, element) { navTo('page-app-grid', element, title); document.getElementById('app-grid-title').innerText = title; currentAppGridMenuId = menuId; renderAppGrid(); }
+    function renderAppGrid() {
+        const container = document.getElementById('app-grid-container'); if(!container) return;
+        const apps = getAppItems().filter(a => a.menuId === currentAppGridMenuId); let html = '';
+        apps.forEach(app => { const iconSrc = app.iconBase64 || 'https://placehold.co/100x100/e9ecef/495057?text=Web'; html += `<div class="app-card"><div class="app-actions"><button class="app-btn-action app-btn-edit" onclick="editAppItem('${app.id}', event)"><i class="fas fa-edit"></i></button><button class="app-btn-action app-btn-delete" onclick="deleteAppItem('${app.id}', event)"><i class="fas fa-trash"></i></button></div><div class="app-icon-box" onclick="window.open('${app.url}', '${app.target || '_blank'}')"><img src="${iconSrc}" class="app-icon-img" onerror="this.src='https://placehold.co/100x100/e9ecef/495057?text=Error'"></div><div class="app-name" onclick="window.open('${app.url}', '${app.target || '_blank'}')">${app.name}</div></div>`; });
+        if (currentUser.roleLevel === 'admin') { html += `<div class="app-card app-add" onclick="openAddAppModal()"><div class="app-icon-box app-add-box"><i class="fas fa-plus"></i></div><div class="app-name text-muted">新增網頁</div></div>`; }
+        container.innerHTML = html;
+    }
+    function openAddAppModal() { 
+        document.getElementById('appForm').reset(); 
+        document.getElementById('appIdInput').value = ''; 
+        const defIcon = 'https://placehold.co/100x100/e9ecef/495057?text=Web';
+        document.getElementById('appIconPreview').src = defIcon; 
+        document.getElementById('appIconPreview').style.display = 'inline-block'; 
+        if(modals.appGrid) modals.appGrid.show(); 
+    }
+    function editAppItem(appId, e) { e.stopPropagation(); const app = getAppItems().find(a => a.id === appId); if(!app) return; document.getElementById('appIdInput').value = app.id; document.getElementById('appName').value = app.name; document.getElementById('appUrl').value = app.url; if(app.iconBase64) { document.getElementById('appIconPreview').src = app.iconBase64; document.getElementById('appIconPreview').style.display = 'inline-block'; } else { document.getElementById('appIconPreview').style.display = 'none'; } if(modals.appGrid) modals.appGrid.show(); }
+    function handleAppIconUpload(e) { const file = e.target.files[0]; if(file) { const reader = new FileReader(); reader.onload = function(evt) { document.getElementById('appIconPreview').src = evt.target.result; document.getElementById('appIconPreview').style.display = 'inline-block'; }; reader.readAsDataURL(file); } }
+    function saveAppItem(e) { 
+        e.preventDefault(); 
+        const id = document.getElementById('appIdInput').value; 
+        const name = document.getElementById('appName').value; 
+        const url = document.getElementById('appUrl').value; 
+        const iconBase64 = document.getElementById('appIconPreview').src; 
+        let apps = getAppItems(); 
+        if(id) { 
+            const idx = apps.findIndex(a => a.id === id); 
+            if(idx > -1) { 
+                apps[idx].name = name; 
+                apps[idx].url = url; 
+                if (iconBase64 && iconBase64.startsWith('data:')) { apps[idx].iconBase64 = iconBase64; } 
+            } 
+        } else { 
+            apps.push({ id: 'app_' + Date.now(), menuId: currentAppGridMenuId, name: name, url: url, iconBase64: iconBase64, target: '_blank' }); 
+        } 
+        saveAppItems(apps); 
+        if(modals.appGrid) modals.appGrid.hide(); 
+        renderAppGrid(); 
+    }
+    function deleteAppItem(appId, e) { e.stopPropagation(); customConfirm('確定要刪除此網頁嗎？', function() { let apps = getAppItems().filter(a => a.id !== appId); saveAppItems(apps); renderAppGrid(); }); }
+
+    // --- 13. EAS & 其他共用邏輯 ---
+    function renderEasBoard() {
+        const now = new Date(); const timeEl = document.getElementById('eas-time'); if(timeEl) timeEl.innerText = now.toLocaleString();
+        const container = document.getElementById('eas-grid-container'); if(!container) return; container.innerHTML = '';
+        const prefixPool = ['M23', 'YUKA', 'TOKYO', 'SAPP', 'OSAK'];
+        const eqData = [ { area: '12M-D1', sec: 'SEC_01', prefix: prefixPool.slice(0,2) }, { area: '12M-D2', sec: 'SEC_02', prefix: prefixPool.slice(2,4) }, { area: '12M-ET', sec: 'SEC_ET', prefix: prefixPool.slice(4,5) } ];
+        const statusClasses = ['st-run', 'st-run', 'st-run', 'st-down', 'st-pm', 'st-idle'];
+        let htmlStr = '';
+        eqData.forEach(row => {
+            htmlStr += `<div class="eas-row"><div class="eas-col-area">${row.area}</div><div class="eas-col-sec">${row.sec}</div><div class="eas-col-items">`;
+            row.prefix.forEach(prefix => {
+                let chamberCount = Math.floor(Math.random() * 5) + 5;
+                for(let i=1; i<=chamberCount; i++) {
+                    let sClass = statusClasses[Math.floor(Math.random() * statusClasses.length)];
+                    let cNum = i < 10 ? '0'+i : i;
+                    htmlStr += `<span class="eq-badge ${sClass}">${prefix}/C${cNum}</span>`;
+                }
+            });
+            htmlStr += `</div></div>`;
+        });
+        container.innerHTML = htmlStr;
+    }
+
+    function navTo(pageId, element, subTitle = '') {
+        document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+        if(element) element.classList.add('active');
+        document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+        const targetPage = document.getElementById(pageId);
+        if(targetPage) targetPage.classList.add('active');
+        
+        pendingPerSets = null;
+        const perActions = document.getElementById('per-reorder-actions');
+        if(perActions) perActions.style.display = 'none';
+
+        if(pageId === 'page-personal-manage') renderPersonalMenuManage();
+        if(pageId === 'page-webpage-manage') renderWebpageTable();
+        if(pageId === 'page-menu-manage') renderMenuConfigTable();
+        if(pageId === 'page-apply') renderApplyTable();
+        if(pageId === 'page-audit-manage') renderAuditTable();
+        
+        if (pageId === 'page-ze-content') { 
+            const titleEl = document.getElementById('ze-sub-title');
+            const descEl = document.getElementById('ze-sub-desc');
+            if(titleEl) titleEl.innerText = subTitle; 
+            if(descEl) descEl.innerText = subTitle; 
+        }
+    }
+
+    function openDynamicIframe(url, title, element, isFullscreen = false) { 
+        if (!url) return; navTo('page-iframe', element);
+        const iframeTitle = document.getElementById('iframe-title');
+        if(iframeTitle) iframeTitle.innerHTML = `<i class="fas fa-globe me-2"></i>${title}`;
+        const iframe = document.getElementById('main-iframe');
+        if(iframe) iframe.src = url;
+        
+        if (isFullscreen) {
+            document.body.classList.add('fullscreen-mode');
+        } else {
+            document.body.classList.remove('fullscreen-mode');
+        }
+    }
+
+    function customAlert(msg) { const alertMsg = document.getElementById('systemAlertMsg'); if(alertMsg) alertMsg.innerHTML = msg; if(systemAlertModalObj) systemAlertModalObj.show(); }
+    function customConfirm(msg, cb) { const confirmMsg = document.getElementById('systemConfirmMsg'); if(confirmMsg) confirmMsg.innerHTML = msg; confirmActionCallback = cb; if(systemConfirmModalObj) systemConfirmModalObj.show(); }
+    
+    // Bind Confirm Button action
+    document.addEventListener('DOMContentLoaded', function() {
+        const confirmBtn = document.getElementById('systemConfirmBtn');
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', function() {
+                if (confirmActionCallback && typeof confirmActionCallback === 'function') {
+                    confirmActionCallback();
+                }
+                if (systemConfirmModalObj) systemConfirmModalObj.hide();
+            });
+        }
+    });
+</script>
+</body>
+</html>
