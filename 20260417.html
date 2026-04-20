@@ -1,3 +1,129 @@
+```javascript
+    // ===== 1. 新增：點擊上方主選單的切換邏輯 =====
+    window.currentActiveTopMenuId = window.currentActiveTopMenuId || null;
+
+    function selectTopMenu(menuId) {
+        window.currentActiveTopMenuId = menuId;
+        renderSidebarMenus(); 
+
+        const menus = getCustomMenus();
+        const activeRoot = menus.find(m => m.id === menuId);
+        if(!activeRoot) return;
+        const children = menus.filter(m => m.parentId === activeRoot.id || (m.parentIds && m.parentIds.includes(activeRoot.id)));
+        
+        // 若該主選單沒有底下子層，則直接觸發頁面跳轉
+        if (children.length === 0) {
+            let dName = activeRoot.displayName;
+            if (typeof i18n !== 'undefined' && i18n[currentLang] && i18n[currentLang]['dyn_' + activeRoot.id] && !activeRoot.isEdited) {
+                dName = i18n[currentLang]['dyn_' + activeRoot.id];
+            }
+            if (activeRoot.menuMode === 'app_grid') openAppGridPage(activeRoot.id, dName, null);
+            else if (activeRoot.url) {
+                if (activeRoot.target === 'blank') window.open(activeRoot.url, '_blank');
+                else if (activeRoot.target === 'fullscreen') openDynamicIframe(activeRoot.url, dName, null, true);
+                else openDynamicIframe(activeRoot.url, dName, null, false);
+            }
+            else if (activeRoot.targetPage) navTo(activeRoot.targetPage, null, dName);
+        }
+    }
+
+    // ===== 2. 替換原有的 renderSidebarMenus 函式 =====
+    function renderSidebarMenus() {
+        if (!currentUser) return;
+        const currentFabObj = getFabs().find(f => f.fabName === currentFab);
+        if (!currentFabObj) return;
+
+        let menus = JSON.parse(JSON.stringify(getCustomMenus()));
+        let pSets = currentLayoutMode === 'personal' ? getPersonalSettings(currentUser.id) : {};
+
+        const fabRoleIds = currentFabObj.assignedRoles || [];
+        const userRoleIds = currentUser.assignedRoles || [];
+        const activeRoleIds = (currentUser.roleLevel === 'admin') ? fabRoleIds : fabRoleIds.filter(id => userRoleIds.includes(id));
+
+        const roles = getRoles();
+        let initialMenuIds = [];
+        activeRoleIds.forEach(roleId => {
+            const role = roles.find(r => r.id === roleId);
+            if (role && role.allowedMenuIds) {
+                role.allowedMenuIds.forEach(mId => {
+                    if (!initialMenuIds.includes(mId)) initialMenuIds.push(mId);
+                });
+            }
+        });
+
+        let allowedIds = getAllowedIdsWithHierarchy(menus, initialMenuIds);
+        
+        if (currentLayoutMode === 'personal') {
+            menus.forEach(m => {
+                if(pSets[m.id]) {
+                    if(pSets[m.id].hidden !== undefined) m.enabled = !pSets[m.id].hidden;
+                    if(pSets[m.id].target !== undefined) m.target = pSets[m.id].target;
+                    if(pSets[m.id].order !== undefined) m.order = pSets[m.id].order;
+                }
+            });
+        }
+        
+        menus = menus.filter(m => m.enabled !== false && allowedIds.has(m.id));
+        
+        menus.sort((a, b) => {
+            if (currentLayoutMode === 'system') {
+                if ((!a.parentId && (!a.parentIds || a.parentIds.length === 0)) && (!b.parentId && (!b.parentIds || b.parentIds.length === 0))) {
+                    let idxA = initialMenuIds.indexOf(a.id);
+                    let idxB = initialMenuIds.indexOf(b.id);
+                    return (idxA === -1 ? 9999 : idxA) - (idxB === -1 ? 9999 : idxB);
+                }
+                return (a.order || 0) - (b.order || 0); 
+            }
+            return (a.order || 0) - (b.order || 0); 
+        });
+
+        const rootMenus = menus.filter(m => m.isPoolItem === false && !m.parentId && (!m.parentIds || m.parentIds.length === 0));
+        
+        // 防呆保護：若未選擇任何頂部選單，預設選取第一個
+        if ((!window.currentActiveTopMenuId || !rootMenus.find(m => m.id === window.currentActiveTopMenuId)) && rootMenus.length > 0) {
+            window.currentActiveTopMenuId = rootMenus[0].id;
+        }
+
+        // --- 渲染上方主選單 ---
+        let topLinksHtml = '';
+        rootMenus.forEach(root => {
+            let dName = root.displayName;
+            if (typeof i18n !== 'undefined' && i18n[currentLang] && i18n[currentLang]['dyn_' + root.id] && !root.isEdited) {
+                dName = i18n[currentLang]['dyn_' + root.id];
+            }
+            
+            const isActive = (root.id === window.currentActiveTopMenuId) ? 'active' : '';
+            const actionAttr = `onclick="selectTopMenu('${root.id}')"`;
+            topLinksHtml += `<a class="top-menu-link text-truncate ${isActive}" ${actionAttr} title="${dName}">${dName}</a>`;
+        });
+
+        const topMenusContainer = document.getElementById('top-dynamic-menus');
+        if (topMenusContainer) topMenusContainer.innerHTML = topLinksHtml;
+
+        // --- 渲染左側系統看板 (工程師 UI 版) ---
+        let html = '';
+        const activeRoot = rootMenus.find(m => m.id === window.currentActiveTopMenuId);
+        
+        if (activeRoot) {
+            let dName = activeRoot.displayName;
+            if (typeof i18n !== 'undefined' && i18n[currentLang] && i18n[currentLang]['dyn_' + activeRoot.id] && !activeRoot.isEdited) {
+                dName = i18n[currentLang]['dyn_' + activeRoot.id];
+            }
+            
+            const iconHtml = generateIconHtml(activeRoot.icon, '', '', activeRoot.menuMode === 'folder');
+            html += `<div class="eng-header" title="${dName}">${iconHtml} <span>${dName}</span></div>`;
+            
+            const children = menus.filter(m => m.parentId === activeRoot.id || (m.parentIds && m.parentIds.includes(activeRoot.id)));
+            children.sort((a,b) => (a.parentOrders?.[activeRoot.id] ?? a.order ?? 0) - (b.parentOrders?.[activeRoot.id] ?? b.order ?? 0));
+            
+            children.forEach(child => {
+                html += generateSidebarMenuItem(child, menus, 1, false);
+            });
+        }
+        document.getElementById('dynamic-sidebar-menus').innerHTML = html;
+    }
+
+    // ===== 3. 替換原有的 generateSidebarMenuItem 函式 =====
     function generateSidebarMenuItem(menu, allMenus, level, forceExpand = false) {
         const children = allMenus.filter(m => m.parentId === menu.id || (m.parentIds && m.parentIds.includes(menu.id)));
         children.sort((a,b) => (a.parentOrders?.[menu.id] ?? a.order ?? 0) - (b.parentOrders?.[menu.id] ?? b.order ?? 0));
@@ -59,3 +185,5 @@
         }
         return '';
     }
+
+```
