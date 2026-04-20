@@ -1,96 +1,80 @@
-    function renderSidebarMenus() {
-        if (!currentUser) return;
-        const currentFabObj = getFabs().find(f => f.fabName === currentFab);
-        if (!currentFabObj) return;
-
-        let menus = JSON.parse(JSON.stringify(getCustomMenus()));
-        let pSets = currentLayoutMode === 'personal' ? getPersonalSettings(currentUser.id) : {};
-
-        const fabRoleIds = currentFabObj.assignedRoles || [];
-        const userRoleIds = currentUser.assignedRoles || [];
-        const activeRoleIds = (currentUser.roleLevel === 'admin') ? fabRoleIds : fabRoleIds.filter(id => userRoleIds.includes(id));
-
-        const roles = getRoles();
-        let initialMenuIds = [];
-        activeRoleIds.forEach(roleId => {
-            const role = roles.find(r => r.id === roleId);
-            if (role && role.allowedMenuIds) {
-                role.allowedMenuIds.forEach(mId => {
-                    if (!initialMenuIds.includes(mId)) initialMenuIds.push(mId);
-                });
-            }
-        });
-
-        let allowedIds = getAllowedIdsWithHierarchy(menus, initialMenuIds);
-        
-        if (currentLayoutMode === 'personal') {
-            menus.forEach(m => {
-                if(pSets[m.id]) {
-                    if(pSets[m.id].hidden !== undefined) m.enabled = !pSets[m.id].hidden;
-                    if(pSets[m.id].target !== undefined) m.target = pSets[m.id].target;
-                    if(pSets[m.id].order !== undefined) m.order = pSets[m.id].order;
-                }
-            });
+        /* ================= 新增：工程師專屬左側選單樣式 ================= */
+        .eng-header {
+            background-color: #0f172a; 
+            color: #f8fafc;
+            padding: 16px 20px;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            border-bottom: 3px solid #0ea5e9; 
+            display: flex;
+            align-items: center;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            margin-bottom: 0px;
+            white-space: nowrap;
         }
-        
-        menus = menus.filter(m => m.enabled !== false && allowedIds.has(m.id));
-        
-        menus.sort((a, b) => {
-            if (currentLayoutMode === 'system') {
-                if ((!a.parentId && (!a.parentIds || a.parentIds.length === 0)) && (!b.parentId && (!b.parentIds || b.parentIds.length === 0))) {
-                    let idxA = initialMenuIds.indexOf(a.id);
-                    let idxB = initialMenuIds.indexOf(b.id);
-                    return (idxA === -1 ? 9999 : idxA) - (idxB === -1 ? 9999 : idxB);
-                }
-                return (a.order || 0) - (b.order || 0); 
-            }
-            return (a.order || 0) - (b.order || 0); 
-        });
+        .eng-header i:first-child { color: #38bdf8; margin-right: 12px; font-size: 1.15rem; }
 
-        const rootMenus = menus.filter(m => m.isPoolItem === false && !m.parentId && (!m.parentIds || m.parentIds.length === 0));
-        
-        // 防呆：如果沒有目前選中的主選單，預設選取第一個
-        if ((!currentActiveTopMenuId || !rootMenus.find(m => m.id === currentActiveTopMenuId)) && rootMenus.length > 0) {
-            currentActiveTopMenuId = rootMenus[0].id;
+        /* 第一層子選單 (客製化) */
+        .menu-item.eng-nav-item {
+            padding: 12px 20px;
+            border-bottom: 1px solid #e2e8f0;
+            transition: all 0.15s ease-in-out;
         }
-
-        // ================= 1. 渲染上方主選單 =================
-        let topLinksHtml = '';
-        rootMenus.forEach(root => {
-            let dName = root.displayName;
-            if (typeof i18n !== 'undefined' && i18n[currentLang] && i18n[currentLang]['dyn_' + root.id] && !root.isEdited) {
-                dName = i18n[currentLang]['dyn_' + root.id];
-            }
-            
-            const isActive = (root.id === currentActiveTopMenuId) ? 'active' : '';
-            const actionAttr = `onclick="selectTopMenu('${root.id}')"`;
-            topLinksHtml += `<a class="top-menu-link text-truncate ${isActive}" ${actionAttr} title="${dName}">${dName}</a>`;
-        });
-
-        const topMenusContainer = document.getElementById('top-dynamic-menus');
-        if (topMenusContainer) topMenusContainer.innerHTML = topLinksHtml;
-
-        // ================= 2. 渲染左側系統看板 (工程師 UI 版) =================
-        let html = '';
-        const activeRoot = rootMenus.find(m => m.id === currentActiveTopMenuId);
-        
-        if (activeRoot) {
-            let dName = activeRoot.displayName;
-            if (typeof i18n !== 'undefined' && i18n[currentLang] && i18n[currentLang]['dyn_' + activeRoot.id] && !activeRoot.isEdited) {
-                dName = i18n[currentLang]['dyn_' + activeRoot.id];
-            }
-            
-            // 產生深色的頂部標題 (Header)
-            const iconHtml = generateIconHtml(activeRoot.icon, '', '', activeRoot.menuMode === 'folder');
-            html += `<div class="eng-header" title="${dName}">${iconHtml} <span>${dName}</span></div>`;
-            
-            // 產生其底下展開的子選單
-            const children = menus.filter(m => m.parentId === activeRoot.id || (m.parentIds && m.parentIds.includes(activeRoot.id)));
-            children.sort((a,b) => (a.parentOrders?.[activeRoot.id] ?? a.order ?? 0) - (b.parentOrders?.[activeRoot.id] ?? b.order ?? 0));
-            
-            children.forEach(child => {
-                html += generateSidebarMenuItem(child, menus, 1, false);
-            });
+        .menu-item.eng-nav-item i:first-child { margin-right: 10px; color: #64748b; font-size: 1rem; width: 16px; text-align: center; }
+        .menu-item.eng-nav-item:hover, .menu-item.eng-nav-item.active {
+            background-color: #f8fafc; color: #0369a1; border-left-color: #0ea5e9;
         }
-        document.getElementById('dynamic-sidebar-menus').innerHTML = html;
-    }
+        .menu-item.eng-nav-item:hover i:first-child, .menu-item.eng-nav-item.active i:first-child { color: #0284c7; }
+
+        /* 子群組(Folder)標題 */
+        .eng-folder-title {
+            padding: 10px 20px;
+            color: #475569;
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background-color: #f1f5f9;
+            border-top: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex; 
+            align-items: center;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .eng-folder-title i:first-child { margin-right: 8px; color: #94a3b8; font-size: 0.9rem; width: 16px; text-align: center; }
+        .eng-folder-title:hover { color: #0f172a; }
+        .eng-folder-title[aria-expanded="true"] .dropdown-icon { transform: rotate(90deg); }
+
+        /* 樹狀結構 (Tree View) */
+        .eng-tree-container {
+            list-style: none; 
+            padding: 4px 0 8px 0; 
+            margin: 0 0 0 28px; 
+            border-left: 1px dashed #cbd5e1; 
+        }
+        .menu-item.eng-tree-item {
+            padding: 8px 16px 8px 24px;
+            position: relative;
+            color: #475569; 
+            font-size: 0.85rem; 
+            font-weight: 500; 
+            border: none;
+            background: transparent;
+        }
+        .menu-item.eng-tree-item::before {
+            content: ''; position: absolute; left: 0; top: 50%; width: 16px; height: 1px; border-top: 1px dashed #cbd5e1;
+        }
+        /* 避免最後一個節點虛線往下長 */
+        .menu-item.eng-tree-item:last-child::after {
+            content: ''; position: absolute; left: -1px; top: 50%; bottom: 0; width: 2px; background-color: #ffffff; 
+        }
+        .menu-item.eng-tree-item i:first-child { margin-right: 8px; color: #94a3b8; font-size: 0.8rem; }
+        .menu-item.eng-tree-item:hover, .menu-item.eng-tree-item.active { 
+            color: #0284c7; font-weight: 600; background-color: #f0f9ff; border-radius: 0 4px 4px 0; border-left: none;
+        }
+        .menu-item.eng-tree-item:hover::before, .menu-item.eng-tree-item.active::before { border-top-color: #0284c7; border-top-style: solid; }
+        .menu-item.eng-tree-item:hover i:first-child, .menu-item.eng-tree-item.active i:first-child { color: #0284c7; }
+        .menu-item.eng-tree-item[aria-expanded="true"] .dropdown-icon { transform: rotate(90deg); }
+        /* ================================================================ */
