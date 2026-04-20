@@ -1,44 +1,124 @@
-        .top-menu-link:hover { 
-            color: #ffffff; 
-            background-color: rgba(255, 255, 255, 0.15); 
-            border-bottom: 3px solid rgba(255,255,255,0.7); 
-        }
-        /* ===== 新增這行：上方被選中時的恆亮狀態 ===== */
-        .top-menu-link.active {
-            color: #ffffff;
-            border-bottom: 3px solid #ffffff;
-        }
+    function renderSidebarMenus() {
+        if (!currentUser) return;
+        const currentFabObj = getFabs().find(f => f.fabName === currentFab);
+        if (!currentFabObj) return;
 
+        let menus = JSON.parse(JSON.stringify(getCustomMenus()));
+        let pSets = currentLayoutMode === 'personal' ? getPersonalSettings(currentUser.id) : {};
 
-    // ====== 全域變數 ======
-    let currentUser = null; let currentLang = 'zh'; let currentFab = '12A'; let currentLayoutMode = 'system'; 
-    let currentAppGridMenuId = null;
-    let currentActiveTopMenuId = null; // 新增這行：記錄目前點選的上方主選單
+        const fabRoleIds = currentFabObj.assignedRoles || [];
+        const userRoleIds = currentUser.assignedRoles || [];
+        const activeRoleIds = (currentUser.roleLevel === 'admin') ? fabRoleIds : fabRoleIds.filter(id => userRoleIds.includes(id));
 
+        const roles = getRoles();
+        let initialMenuIds = [];
+        activeRoleIds.forEach(roleId => {
+            const role = roles.find(r => r.id === roleId);
+            if (role && role.allowedMenuIds) {
+                role.allowedMenuIds.forEach(mId => {
+                    if (!initialMenuIds.includes(mId)) initialMenuIds.push(mId);
+                });
+            }
+        });
 
-    // 新增功能：點選上方主選單時，切換左側看板內容
-    function selectTopMenu(menuId) {
-        currentActiveTopMenuId = menuId;
-        renderSidebarMenus(); // 重新渲染側邊欄與上方選單狀態
-
-        // 判斷如果該主選單「沒有任何子選單 (為獨立網頁/APP)」，則一併觸發跳轉畫面
-        const menus = getCustomMenus();
-        const activeRoot = menus.find(m => m.id === menuId);
-        if(!activeRoot) return;
-        const children = menus.filter(m => m.parentId === activeRoot.id || (m.parentIds && m.parentIds.includes(activeRoot.id)));
+        let allowedIds = getAllowedIdsWithHierarchy(menus, initialMenuIds);
         
-        if (children.length === 0) {
-            let dName = activeRoot.displayName;
-            if (typeof i18n !== 'undefined' && i18n[currentLang] && i18n[currentLang]['dyn_' + activeRoot.id] && !activeRoot.isEdited) {
-                dName = i18n[currentLang]['dyn_' + activeRoot.id];
-            }
-            if (activeRoot.menuMode === 'app_grid') openAppGridPage(activeRoot.id, dName, null);
-            else if (activeRoot.url) {
-                if (activeRoot.target === 'blank') window.open(activeRoot.url, '_blank');
-                else if (activeRoot.target === 'fullscreen') openDynamicIframe(activeRoot.url, dName, null, true);
-                else openDynamicIframe(activeRoot.url, dName, null, false);
-            }
-            else if (activeRoot.targetPage) navTo(activeRoot.targetPage, null, dName);
+        if (currentLayoutMode === 'personal') {
+            menus.forEach(m => {
+                if(pSets[m.id]) {
+                    if(pSets[m.id].hidden !== undefined) m.enabled = !pSets[m.id].hidden;
+                    if(pSets[m.id].target !== undefined) m.target = pSets[m.id].target;
+                    if(pSets[m.id].order !== undefined) m.order = pSets[m.id].order;
+                }
+            });
         }
+        
+        menus = menus.filter(m => m.enabled !== false && allowedIds.has(m.id));
+        
+        menus.sort((a, b) => {
+            if (currentLayoutMode === 'system') {
+                if ((!a.parentId && (!a.parentIds || a.parentIds.length === 0)) && (!b.parentId && (!b.parentIds || b.parentIds.length === 0))) {
+                    let idxA = initialMenuIds.indexOf(a.id);
+                    let idxB = initialMenuIds.indexOf(b.id);
+                    return (idxA === -1 ? 9999 : idxA) - (idxB === -1 ? 9999 : idxB);
+                }
+                return (a.order || 0) - (b.order || 0); 
+            }
+            return (a.order || 0) - (b.order || 0); 
+        });
+
+        const rootMenus = menus.filter(m => m.isPoolItem === false && !m.parentId && (!m.parentIds || m.parentIds.length === 0));
+        
+        // 防呆：如果沒有目前選中的主選單，或者切換廠區後找不到原來的選單，則預設選取第一個
+        if ((!currentActiveTopMenuId || !rootMenus.find(m => m.id === currentActiveTopMenuId)) && rootMenus.length > 0) {
+            currentActiveTopMenuId = rootMenus[0].id;
+        }
+
+        // ================= 1. 渲染上方主選單 =================
+        let topLinksHtml = '';
+        rootMenus.forEach(root => {
+            let dName = root.displayName;
+            if (typeof i18n !== 'undefined' && i18n[currentLang] && i18n[currentLang]['dyn_' + root.id] && !root.isEdited) {
+                dName = i18n[currentLang]['dyn_' + root.id];
+            }
+            
+            const isActive = (root.id === currentActiveTopMenuId) ? 'active' : '';
+            const actionAttr = `onclick="selectTopMenu('${root.id}')"`;
+            topLinksHtml += `<a class="top-menu-link text-truncate ${isActive}" ${actionAttr} title="${dName}">${dName}</a>`;
+        });
+
+        const topMenusContainer = document.getElementById('top-dynamic-menus');
+        if (topMenusContainer) topMenusContainer.innerHTML = topLinksHtml;
+
+        // ================= 2. 渲染左側系統看板 =================
+        let html = '';
+        const activeRoot = rootMenus.find(m => m.id === currentActiveTopMenuId);
+        if (activeRoot) {
+            // 傳入 forceExpand = true，強制展開被選取的主選單 (第一層)
+            html += generateSidebarMenuItem(activeRoot, menus, 0, true);
+        }
+        document.getElementById('dynamic-sidebar-menus').innerHTML = html;
     }
 
+    // 新增第四個參數 forceExpand 來控制是否預設展開
+    function generateSidebarMenuItem(menu, allMenus, level, forceExpand = false) {
+        const children = allMenus.filter(m => m.parentId === menu.id || (m.parentIds && m.parentIds.includes(menu.id)));
+        children.sort((a,b) => (a.parentOrders?.[menu.id] ?? a.order ?? 0) - (b.parentOrders?.[menu.id] ?? b.order ?? 0));
+        const hasChildren = children.length > 0;
+        
+        let iconHtml = generateIconHtml(menu.icon, '', 'fa-fw me-3', hasChildren);
+        let actionAttr = '';
+        
+        if (hasChildren) actionAttr = `data-bs-toggle="collapse" data-bs-target="#collapse-${menu.id.replace(/\./g, '_')}"`;
+        else if (menu.menuMode === 'app_grid') actionAttr = `onclick="openAppGridPage('${menu.id}', '${menu.displayName}', this)"`;
+        else if (menu.url) {
+            if (menu.target === 'blank') actionAttr = `onclick="window.open('${menu.url}', '_blank')"`
+            else if (menu.target === 'fullscreen') actionAttr = `onclick="openDynamicIframe('${menu.url}', '${menu.displayName}', this, true)"`;
+            else actionAttr = `onclick="openDynamicIframe('${menu.url}', '${menu.displayName}', this, false)"`;
+        }
+        else if (menu.targetPage) actionAttr = `onclick="navTo('${menu.targetPage}', this, '${menu.displayName}')"`;
+
+        let dName = menu.displayName;
+        if (typeof i18n !== 'undefined' && i18n[currentLang] && i18n[currentLang]['dyn_' + menu.id] && !menu.isEdited) {
+            dName = i18n[currentLang]['dyn_' + menu.id];
+        }
+
+        if (hasChildren) {
+            // 若 forceExpand 為 true，自動帶上 show class (展開狀態)
+            const expandClass = forceExpand ? 'show' : '';
+            const ariaAttr = forceExpand ? 'true' : 'false';
+
+            let html = `<div class="menu-item" ${actionAttr} title="${dName}" aria-expanded="${ariaAttr}">
+                            ${iconHtml}<span class="menu-text">${dName}</span>
+                            <i class="fas fa-chevron-right ms-auto dropdown-icon"></i>
+                        </div>
+                        <div class="collapse ${expandClass}" id="collapse-${menu.id.replace(/\./g, '_')}">
+                            <div class="menu-sub-container">`;
+            // 子選單預設不強制展開 (forceExpand: false)，達成「子子選單先隱藏」的需求
+            children.forEach(child => html += generateSidebarMenuItem(child, allMenus, level + 1, false));
+            html += `</div></div>`;
+            return html;
+        } else {
+            return `<div class="menu-item" ${actionAttr} title="${dName}">${iconHtml}<span class="menu-text">${dName}</span></div>`;
+        }
+    }
