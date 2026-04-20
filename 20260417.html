@@ -1,93 +1,30 @@
-    function renderSidebarMenus() {
-        if (!currentUser) return;
-        const currentFabObj = getFabs().find(f => f.fabName === currentFab);
-        if (!currentFabObj) return;
-
-        let menus = JSON.parse(JSON.stringify(getCustomMenus()));
-        let pSets = currentLayoutMode === 'personal' ? getPersonalSettings(currentUser.id) : {};
-
-        const fabRoleIds = currentFabObj.assignedRoles || [];
-        const userRoleIds = currentUser.assignedRoles || [];
-        const activeRoleIds = (currentUser.roleLevel === 'admin') ? fabRoleIds : fabRoleIds.filter(id => userRoleIds.includes(id));
-
-        const roles = getRoles();
-        let initialMenuIds = [];
-        activeRoleIds.forEach(roleId => {
-            const role = roles.find(r => r.id === roleId);
-            if (role && role.allowedMenuIds) {
-                role.allowedMenuIds.forEach(mId => {
-                    if (!initialMenuIds.includes(mId)) initialMenuIds.push(mId);
-                });
-            }
-        });
-
-        let allowedIds = getAllowedIdsWithHierarchy(menus, initialMenuIds);
-        
-        if (currentLayoutMode === 'personal') {
-            menus.forEach(m => {
-                if(pSets[m.id]) {
-                    if(pSets[m.id].hidden !== undefined) m.enabled = !pSets[m.id].hidden;
-                    if(pSets[m.id].target !== undefined) m.target = pSets[m.id].target;
-                    if(pSets[m.id].order !== undefined) m.order = pSets[m.id].order;
-                }
-            });
+        /* ===== 修改：上方動態選單樣式 (靠底對齊設計) ===== */
+        .top-menu-link { 
+            color: rgba(255, 255, 255, 0.75); 
+            text-decoration: none; 
+            font-size: 0.9rem; 
+            font-weight: 600; 
+            padding: 8px 14px 6px 14px; /* 調整上下留白，讓文字更貼底 */
+            border-radius: 6px 6px 0 0; /* 讓底部平貼變為直角 */
+            transition: all 0.2s; 
+            cursor: pointer; 
+            white-space: nowrap; 
+            user-select: none; 
+            border-bottom: 3px solid transparent; /* 預留底線空間 */
         }
-        
-        menus = menus.filter(m => m.enabled !== false && allowedIds.has(m.id));
-        
-        menus.sort((a, b) => {
-            if (currentLayoutMode === 'system') {
-                if ((!a.parentId && (!a.parentIds || a.parentIds.length === 0)) && (!b.parentId && (!b.parentIds || b.parentIds.length === 0))) {
-                    let idxA = initialMenuIds.indexOf(a.id);
-                    let idxB = initialMenuIds.indexOf(b.id);
-                    return (idxA === -1 ? 9999 : idxA) - (idxB === -1 ? 9999 : idxB);
-                }
-                return (a.order || 0) - (b.order || 0); 
-            }
-            return (a.order || 0) - (b.order || 0); 
-        });
-
-        let html = '';
-        let topLinksHtml = ''; // 用來儲存上方導覽列的 HTML 結構
-
-        // 篩選出第一層 (主選單) 的項目
-        const rootMenus = menus.filter(m => m.isPoolItem === false && !m.parentId && (!m.parentIds || m.parentIds.length === 0));
-
-        rootMenus.forEach(root => {
-            // 1. 生成左側邊欄項目
-            html += generateSidebarMenuItem(root, menus, 0);
-
-            // 2. 同步生成上方選單列按鈕
-            let dName = root.displayName;
-            if (typeof i18n !== 'undefined' && i18n[currentLang] && i18n[currentLang]['dyn_' + root.id] && !root.isEdited) {
-                dName = i18n[currentLang]['dyn_' + root.id];
-            }
-
-            const children = menus.filter(m => m.parentId === root.id || (m.parentIds && m.parentIds.includes(root.id)));
-            let actionAttr = '';
-            
-            // 根據選單類型，綁定與左側欄完全相同的點擊行為
-            if (children.length > 0) {
-                actionAttr = `data-bs-toggle="collapse" data-bs-target="#collapse-${root.id.replace(/\./g, '_')}"`;
-            } else if (root.menuMode === 'app_grid') {
-                actionAttr = `onclick="openAppGridPage('${root.id}', '${dName}', this)"`;
-            } else if (root.url) {
-                if (root.target === 'blank') actionAttr = `onclick="window.open('${root.url}', '_blank')"`;
-                else if (root.target === 'fullscreen') actionAttr = `onclick="openDynamicIframe('${root.url}', '${dName}', this, true)"`;
-                else actionAttr = `onclick="openDynamicIframe('${root.url}', '${dName}', this, false)"`;
-            } else if (root.targetPage) {
-                actionAttr = `onclick="navTo('${root.targetPage}', this, '${dName}')"`;
-            }
-
-            // 越前面的迴圈代表排序越靠上，加到 topLinksHtml 裡自然就會靠左
-            topLinksHtml += `<a class="top-menu-link text-truncate" ${actionAttr} title="${dName}">${dName}</a>`;
-        });
-
-        document.getElementById('dynamic-sidebar-menus').innerHTML = html;
-        
-        // 渲染到上方導覽列的容器
-        const topMenusContainer = document.getElementById('top-dynamic-menus');
-        if (topMenusContainer) {
-            topMenusContainer.innerHTML = topLinksHtml;
+        .top-menu-link:hover { 
+            color: #ffffff; 
+            background-color: rgba(255, 255, 255, 0.15); 
+            border-bottom: 3px solid rgba(255,255,255,0.7); /* 滑過時顯示底部邊線 */
         }
-    }
+        /* 隱藏滾動條但保留橫向滑動功能 */
+        #top-dynamic-menus::-webkit-scrollbar { display: none; }
+        #top-dynamic-menus { -ms-overflow-style: none; scrollbar-width: none; overflow-x: auto; }
+
+
+            <!-- ===== 修改：動態選單容器 (改為靠底對齊並往下延伸) ===== -->
+            <div class="d-none d-lg-flex align-items-end flex-grow-1 px-4 gap-1" id="top-dynamic-menus" style="align-self: stretch; margin-bottom: -8px; mask-image: linear-gradient(to right, black 95%, transparent); -webkit-mask-image: linear-gradient(to right, black 95%, transparent);">
+                <!-- JS 會自動把主選單同步產生在這裡 -->
+            </div>
+
+
