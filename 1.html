@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大型企業級網頁權限系統 - 架構與流程深度解析</title>
+    <!-- 引入 Bootstrap 5 用於排版 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- 引入 Mermaid JS 繪圖引擎 -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        // 初始化 Mermaid (安全層級調低以允許 br 換行標籤)
+        mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+    </script>
+    <style>
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .header { background-color: #0b1120; color: white; padding: 25px 0; box-shadow: 0 4px 10px rgba(0,0,0,0.15); border-bottom: 4px solid #38bdf8; }
+        .card { border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border-radius: 12px; margin-bottom: 30px; overflow: hidden; }
+        .card-header { background-color: #ffffff; border-bottom: 2px solid #f1f5f9; font-weight: 800; font-size: 1.25rem; color: #0f172a; padding: 18px 24px; }
+        /* 強化：加入 white-space: pre-wrap 確保排版不會被瀏覽器擠壓破壞 */
+        .mermaid { text-align: center; padding: 20px; overflow-x: auto; background-color: #ffffff; white-space: pre-wrap; }
+        .step-box { background: #f8fafc; border-left: 4px solid #38bdf8; padding: 15px 20px; margin-bottom: 15px; border-radius: 0 8px 8px 0; }
+        .scenario-box { background: #fff; border: 1px solid #e2e8f0; border-top: 4px solid #10b981; padding: 20px; border-radius: 8px; height: 100%; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        
+        /* Table Styles */
+        .schema-table th { background-color: #f8fafc; color: #334155; font-size: 0.85rem; white-space: nowrap; }
+        .schema-table td { font-size: 0.85rem; vertical-align: middle; color: #475569; }
+        .table-title-box { padding: 10px 15px; border-radius: 6px 6px 0 0; font-weight: bold; color: white; margin-bottom: 0; }
+        .bg-hr { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .bg-resource { background: linear-gradient(135deg, #10b981, #059669); }
+        .bg-acl { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .schema-container { background: #fff; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 6px 6px; padding: 0; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body>
+
+    <div class="header mb-4">
+        <div class="container">
+            <h2 class="mb-2 fw-bold"><i class="fas fa-project-diagram me-2 text-info"></i>大型企業級網頁權限系統 - 架構與流程深度解析</h2>
+            <p class="mb-0 text-white-50 fs-5">報告重點：資安預設防護 ｜ 群組常態管理 ｜ ESI 特例委派 ｜ 彈性資料庫架構</p>
+        </div>
+    </div>
+
+    <div class="container">
+        
+        <!-- 第一部分：全域權限控管概念 -->
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <i class="fas fa-sitemap text-primary me-3 fs-3"></i> 
+                <div>
+                    <div class="mb-0">1. 全域權限控管概念 (High-Level Concept)</div>
+                    <div class="text-muted fs-6 fw-normal mt-1">「MSD 管大群組標準配備，ESI 管小團隊特例需求」</div>
+                </div>
+            </div>
+            <div class="card-body bg-light">
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="step-box h-100" style="border-left-color: #ef4444;">
+                            <h5 class="fw-bold text-danger"><i class="fas fa-lock me-2"></i>Step 1: 預設隱藏 (Deny by Default)</h5>
+                            <p class="text-muted small mb-0">MSD 預設上架任何新看板與選單時，全公司員工皆無權限瀏覽。保障機密資料在設定完成前絕不外洩。</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="step-box h-100" style="border-left-color: #3b82f6;">
+                            <h5 class="fw-bold text-primary"><i class="fas fa-users-cog me-2"></i>Step 2: 群組常態授權 (RBAC)</h5>
+                            <p class="text-muted small mb-0">MSD 設定多個「權限群組」(如: 12A_FAB1)，指定該群組能看哪些看板。接著將廠區特定部門的員工批次綁入該群組，自動生效。</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="step-box h-100" style="border-left-color: #10b981;">
+                            <h5 class="fw-bold text-success"><i class="fas fa-user-shield me-2"></i>Step 3: 委派與特例 (ACL)</h5>
+                            <p class="text-muted small mb-0">MSD 將特定看板目錄的「委派權」下放給各廠 ESI。ESI 即可針對特定 Module 或跨區申請者，單獨指派特例權限 (檢視/編輯/自建)。</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mermaid shadow-sm rounded border">
+                    graph TD
+                        classDef msdClass fill:#fef08a,stroke:#ca8a04,stroke-width:2px;
+                        classDef sysClass fill:#e0f2fe,stroke:#0284c7,stroke-width:2px;
+                        classDef roleClass fill:#dcfce7,stroke:#16a34a,stroke-width:2px;
+                        classDef esiClass fill:#ffedd5,stroke:#ea580c,stroke-width:2px;
+                        classDef userClass fill:#f1f5f9,stroke:#64748b,stroke-width:2px;
+
+                        MSD["MSD 管理員"]:::msdClass -->|"1. 上架新看板"| SYS("網頁核心庫 <br/> 預設全廠隱藏"):::sysClass
+                        
+                        MSD ==>|"2. 建立標準群組與配置看板"| ROLES["廠區/部門群組<br/>例如: 12A_FAB1"]:::roleClass
+                        ROLES -.->|"自動套用標準權限"| USERS_GRP("該群組內的所有員工"):::userClass
+                        
+                        MSD ==>|"3. 賦予特定目錄委派權"| ESI["各廠區 ESI"]:::esiClass
+                        ESI -->|"4. 指派特例權限或細部編輯權"| USERS_IND("特定 Module 成員"):::userClass
+                </div>
+            </div>
+        </div>
+
+        <!-- 第二部分：資料庫架構 (Database Architecture) -->
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <i class="fas fa-database text-info me-3 fs-3"></i> 
+                <div>
+                    <div class="mb-0">2. 核心資料庫架構 (DB Schema Design)</div>
+                    <div class="text-muted fs-6 fw-normal mt-1">「以五張核心表，完美支撐彈性委派與資料隔離，取代舊有寫死在程式碼的設定」</div>
+                </div>
+            </div>
+            <div class="card-body bg-light">
+
+                <!-- 資料表關聯圖 (ER Diagram) -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="table-title-box bg-dark text-white rounded-top mb-0 px-3 py-2">
+                            <i class="fas fa-project-diagram me-2"></i> 核心資料表實體關聯圖 (ER Diagram)
+                        </div>
+                        <div class="schema-container p-3 border border-top-0 rounded-bottom bg-white text-center">
+                            <div class="mermaid">
+                                erDiagram
+                                    tb_Employees ||--o{ tb_UserRoles : "加入群組 (EmpID)"
+                                    tb_Roles ||--o{ tb_UserRoles : "包含人員 (RoleID)"
+
+                                    tb_Resources ||--o{ tb_Resources : "父目錄 (ParentID)"
+                                    tb_Employees ||--o{ tb_Resources : "建立者 (CreatorEmpID)"
+
+                                    tb_Roles ||--o{ tb_ACL : "群組常態授權 (GranteeID)"
+                                    tb_Employees ||--o{ tb_ACL : "個人特例/委派 (GranteeID)"
+                                    tb_Resources ||--o{ tb_ACL : "指定目標資源 (ResID)"
+
+                                    tb_Employees ||--o{ tb_ACL : "權限發放者 (GrantedBy)"
+                            </div>
+                            <div class="text-muted small mt-3 text-start px-3 border-top pt-3">
+                                <strong><i class="fas fa-info-circle text-primary"></i> 關聯圖連動說明：</strong><br>
+                                <ul class="mb-0 mt-1 ps-3">
+                                    <li><strong>混合型授權樞紐：</strong> <code>tb_ACL</code> 是權限引擎的核心。它的受權者 (Grantee) 透過不同的 <code>GranteeType</code>，可靈活對應到 <code>tb_Roles</code> (整廠/整批群組) 或是 <code>tb_Employees</code> (單一工程師)。</li>
+                                    <li><strong>自建資料保護：</strong> <code>tb_Resources</code> 表直接與 <code>tb_Employees</code> 建立關聯 (CreatorEmpID)。當 <code>tb_ACL</code> 發放了「限改自建」權限給某人時，系統就會比對這條關聯來開啟/隱藏編輯按鈕。</li>
+                                    <li><strong>委派與稽核溯源：</strong> <code>tb_ACL</code> 中的 <code>GrantedBy</code> 連回了員工表，能清楚記錄每一項例外權限是哪位 ESI 下放的，完美解決權責追蹤問題。</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- 左半部：人事與群組結構 -->
+                    <div class="col-lg-6">
+                        <div class="table-title-box bg-hr"><i class="fas fa-users me-2"></i> 人事與群組 (常態維護)</div>
+                        <div class="schema-container">
+                            <table class="table table-hover table-bordered schema-table mb-0">
+                                <thead class="table-light">
+                                    <tr><th colspan="4" class="text-center text-primary">tb_Employees (員工基本檔 - 同步自 HR)</th></tr>
+                                    <tr><th>欄位名稱</th><th>型態</th><th>主/外鍵</th><th>說明</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>EmpID</td><td>VARCHAR</td><td><span class="badge bg-warning text-dark">PK</span></td><td>工號 (例: E12345)</td></tr>
+                                    <tr><td>EmpName</td><td>NVARCHAR</td><td></td><td>姓名</td></tr>
+                                    <tr><td>Dept</td><td>NVARCHAR</td><td></td><td>部門 (例: 12A_設備部)</td></tr>
+                                    <tr><td>IsActive</td><td>BIT</td><td></td><td>是否在職 (離職即自動停權)</td></tr>
+                                </tbody>
+                            </table>
+                            <table class="table table-hover table-bordered schema-table mb-0 border-top-0">
+                                <thead class="table-light">
+                                    <tr><th colspan="4" class="text-center text-primary">tb_Roles (系統權限群組檔)</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>RoleID</td><td>VARCHAR</td><td><span class="badge bg-warning text-dark">PK</span></td><td>群組代碼 (例: R_12A_FAB1)</td></tr>
+                                    <tr><td>RoleName</td><td>NVARCHAR</td><td></td><td>群組名稱 (例: 12A_FAB1 群組)</td></tr>
+                                    <tr><td>FabScope</td><td>VARCHAR</td><td></td><td>歸屬廠區，方便 MSD 過濾管理</td></tr>
+                                </tbody>
+                            </table>
+                            <table class="table table-hover table-bordered schema-table mb-0 border-top-0">
+                                <thead class="table-light">
+                                    <tr><th colspan="4" class="text-center text-primary">tb_UserRoles (人員與群組關聯表)</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>EmpID</td><td>VARCHAR</td><td><span class="badge bg-secondary">FK</span></td><td>關聯員工工號</td></tr>
+                                    <tr><td>RoleID</td><td>VARCHAR</td><td><span class="badge bg-secondary">FK</span></td><td>關聯群組代碼</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 右半部：資源與 ACL 結構 -->
+                    <div class="col-lg-6">
+                        <div class="table-title-box bg-resource"><i class="fas fa-sitemap me-2"></i> 資源與選單 (結構配置)</div>
+                        <div class="schema-container">
+                            <table class="table table-hover table-bordered schema-table mb-0">
+                                <thead class="table-light">
+                                    <tr><th colspan="4" class="text-center text-success">tb_Resources (系統選單與看板資源表)</th></tr>
+                                    <tr><th>欄位名稱</th><th>型態</th><th>主/外鍵</th><th>說明</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>ResID</td><td>VARCHAR</td><td><span class="badge bg-warning text-dark">PK</span></td><td>資源代碼 (例: MENU_YIELD_01)</td></tr>
+                                    <tr><td>ResName</td><td>NVARCHAR</td><td></td><td>顯示名稱 (例: 良率分析看板)</td></tr>
+                                    <tr><td>ResType</td><td>VARCHAR</td><td></td><td>類型 (Folder / Dashboard / AppLink)</td></tr>
+                                    <tr><td>ParentID</td><td>VARCHAR</td><td></td><td>父節點 ID (構建左側樹狀選單用)</td></tr>
+                                    <tr><td>ResURL</td><td>VARCHAR</td><td></td><td>點擊後開啟的網址或路由</td></tr>
+                                    <tr><td>CreatorEmpID</td><td>VARCHAR</td><td></td><td><span class="text-danger fw-bold">建立者工號</span> (判斷是否為「自建」資料的關鍵)</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="table-title-box bg-acl"><i class="fas fa-key me-2"></i> 權限引擎 (動態委派與粒度控制)</div>
+                        <div class="schema-container mb-0">
+                            <table class="table table-hover table-bordered schema-table mb-0">
+                                <thead class="table-light">
+                                    <tr><th colspan="4" class="text-center text-danger">tb_ACL (存取控制核心表) <i class="fas fa-star text-warning"></i></th></tr>
+                                    <tr><th>欄位名稱</th><th>型態</th><th>主/外鍵</th><th>說明</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>ACL_ID</td><td>INT</td><td><span class="badge bg-warning text-dark">PK</span></td><td>自動編號流水號</td></tr>
+                                    <tr><td>GranteeType</td><td>VARCHAR</td><td></td><td>授權對象類型：'Role' (群組) 或 'User' (個人)</td></tr>
+                                    <tr><td>GranteeID</td><td>VARCHAR</td><td></td><td>填入 RoleID 或 EmpID</td></tr>
+                                    <tr><td>ResID</td><td>VARCHAR</td><td><span class="badge bg-secondary">FK</span></td><td>目標看版或目錄代碼</td></tr>
+                                    <tr><td>AccessLevel</td><td>INT</td><td></td><td><span class="text-primary fw-bold">1:純檢視 2:限改自建 3:編輯他人/所有 4:全權管理</span><br>(取代舊有 accCanEditOthers 邏輯)</td></tr>
+                                    <tr><td>CanDelegate</td><td>BIT</td><td></td><td><span class="text-danger fw-bold">是否允許委派</span> (True: 該員可將此資源權限下放)</td></tr>
+                                    <tr><td>GrantedBy</td><td>VARCHAR</td><td></td><td>授權者工號 (稽核軌跡：誰給他權限的？)</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第三部分：實務運作情境 (Scenarios) -->
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <i class="fas fa-tasks text-success me-3 fs-3"></i> 
+                <div>
+                    <div class="mb-0">3. 實務情境解析 (Scenarios Validation)</div>
+                    <div class="text-muted fs-6 fw-normal mt-1">「架構如何完美解決工廠日常營運痛點」</div>
+                </div>
+            </div>
+            <div class="card-body bg-light">
+                <div class="row g-4">
+                    <!-- 情境 A -->
+                    <div class="col-md-4">
+                        <div class="scenario-box">
+                            <h6 class="fw-bold text-dark"><i class="fas fa-users me-2 text-success"></i>情境 A：批次人員異動 (新人到職)</h6>
+                            <hr class="my-2">
+                            <p class="small text-muted mb-2"><strong>挑戰：</strong> 12A 廠新進 50 位工程師，需要立即看到 20 個標準看板，MSD 會不會設定到手軟？</p>
+                            <p class="small text-dark fw-bold mb-0"><i class="fas fa-check-circle text-success me-1"></i> 解法 (低維護成本)：</p>
+                            <p class="small text-muted mb-0">MSD 早已將那 20 個看板授權給群組 <code>12A_FAB1</code> (tb_ACL 只有 20 筆設定)。現在只需將這 50 人的工號加入關聯表 (tb_UserRoles)，這 50 人登入後立刻擁有一切標準權限。</p>
+                        </div>
+                    </div>
+                    <!-- 情境 B -->
+                    <div class="col-md-4">
+                        <div class="scenario-box" style="border-top-color: #f59e0b;">
+                            <h6 class="fw-bold text-dark"><i class="fas fa-sitemap me-2" style="color: #f59e0b;"></i>情境 B：Module 權限粒度與自主管理</h6>
+                            <hr class="my-2">
+                            <p class="small text-muted mb-2"><strong>挑戰：</strong> 12A ESI 想讓特定 Module 管理自己的目錄，但不希望他們亂改別人建的看板。</p>
+                            <p class="small text-dark fw-bold mb-0"><i class="fas fa-check-circle text-success me-1"></i> 解法 (精細控制)：</p>
+                            <p class="small text-muted mb-0">ESI 透過介面將該目錄授權給該 Module (寫入 tb_ACL，GranteeType='User')。並將 <code>AccessLevel</code> 設為 <strong>「2: 限改自建」</strong>。該 Module 登入後可新增看板 (tb_Resources.CreatorEmpID 記錄為他)，但無法修改 Creator 不是自己的資料。</p>
+                        </div>
+                    </div>
+                    <!-- 情境 C -->
+                    <div class="col-md-4">
+                        <div class="scenario-box" style="border-top-color: #3b82f6;">
+                            <h6 class="fw-bold text-dark"><i class="fas fa-paper-plane me-2 text-primary"></i>情境 C：跨廠區特例申請</h6>
+                            <hr class="my-2">
+                            <p class="small text-muted mb-2"><strong>挑戰：</strong> 12M 廠的工程師臨時需要調閱 12A 的良率資料，MSD 需要介入處理嗎？</p>
+                            <p class="small text-dark fw-bold mb-0"><i class="fas fa-check-circle text-success me-1"></i> 解法 (動態簽核)：</p>
+                            <p class="small text-muted mb-0">不需要。12M 工程師在系統送出申請，系統自動通知 12A ESI。ESI 點擊「核准」後，系統自動在 tb_ACL 寫入一筆針對該工號的「純檢視 (Level 1)」紀錄。事後也可隨時透過 ESI 介面註銷該權限。</p>
+                        </div>
+                    </div>
+                    <!-- 情境 D -->
+                    <div class="col-md-4">
+                        <div class="scenario-box" style="border-top-color: #ef4444;">
+                            <h6 class="fw-bold text-dark"><i class="fas fa-user-secret me-2 text-danger"></i>情境 D：機密看板限縮瀏覽</h6>
+                            <hr class="my-2">
+                            <p class="small text-muted mb-2"><strong>挑戰：</strong> 某高階看板預設絕對不能開放給群組，只允許「指定的 3 位主管」可以瀏覽。</p>
+                            <p class="small text-dark fw-bold mb-0"><i class="fas fa-check-circle text-success me-1"></i> 解法 (點對點精準授權)：</p>
+                            <p class="small text-muted mb-0">針對該資源，<strong>不設定任何 Role 授權</strong>。僅在 <code>tb_ACL</code> 中寫入 3 筆紀錄，設定 <code>GranteeType='User'</code>、填入這 3 人的工號，並設定 <code>AccessLevel=1 (純檢視)</code>。全公司其餘員工在左側選單完全看不到該看板的存在。</p>
+                        </div>
+                    </div>
+                    <!-- 情境 E -->
+                    <div class="col-md-4">
+                        <div class="scenario-box" style="border-top-color: #06b6d4;">
+                            <h6 class="fw-bold text-dark"><i class="fas fa-crown me-2 text-info"></i>情境 E：目錄全權委派 (當區 Admin)</h6>
+                            <hr class="my-2">
+                            <p class="small text-muted mb-2"><strong>挑戰：</strong> 12A ESI 想讓特定 Module 完全接管某個子目錄，可以任意新增、修改、刪除該目錄下的「所有」看板與資料。</p>
+                            <p class="small text-dark fw-bold mb-0"><i class="fas fa-check-circle text-success me-1"></i> 解法 (賦予最高管理權)：</p>
+                            <p class="small text-muted mb-0">12A ESI 在系統中將該目錄授權給此 Module，關鍵是將 <code>AccessLevel</code> 設為 <strong>「4: 全權管理」</strong>。系統判定此等級後，將無視 <code>CreatorEmpID</code> 的限制，全面解鎖該目錄下所有看板的編輯與刪除按鈕。</p>
+                        </div>
+                    </div>
+                    <!-- 情境 F -->
+                    <div class="col-md-4">
+                        <div class="scenario-box" style="border-top-color: #8b5cf6;">
+                            <h6 class="fw-bold text-dark"><i class="fas fa-layer-group me-2" style="color: #8b5cf6;"></i>情境 F：複合型跨區與管理申請</h6>
+                            <hr class="my-2">
+                            <p class="small text-muted mb-2"><strong>挑戰：</strong> 使用者送出一張複雜申請：想看 12A 特定看板、看 12M 跨區看板，還要 12A 某目錄的管理權限。</p>
+                            <p class="small text-dark fw-bold mb-0"><i class="fas fa-check-circle text-success me-1"></i> 解法 (自動拆分與派發)：</p>
+                            <p class="small text-muted mb-0">系統將申請單自動拆分路由：12M 權限由 12M ESI 審核；12A 的檢視與管理權限由 12A ESI 審核。兩方 ESI 核准時，可各自調整 <code>AccessLevel</code>。系統最終會在 <code>tb_ACL</code> 產生 3 筆不同等級的權限紀錄，完美滿足複合需求。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第四部分：權限下放與登入檢核流程 -->
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <i class="fas fa-shield-alt text-danger me-3 fs-3"></i> 
+                <div>
+                    <div class="mb-0">4. 系統底層防護與運作流程 (Workflow & Security)</div>
+                    <div class="text-muted fs-6 fw-normal mt-1">「員工登入後，系統如何做到『只給看該看的』」</div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- 左半部：主管委派流程 -->
+                    <div class="col-md-6 border-end">
+                        <h6 class="fw-bold text-center mb-3 px-2 py-1 bg-light rounded text-primary">ESI 授權給同仁的流程 (委派)</h6>
+                        <div class="mermaid border rounded shadow-sm">
+                            sequenceDiagram
+                                actor ESI as "12A ESI (具委派權的主管)"
+                                participant Sys as "權限管理系統"
+                                actor Module as "廠區同仁 (Module)"
+        
+                                ESI->>Sys: 選擇看板，並指定要開放給哪位同仁
+                                ESI->>Sys: 設定他能做什麼：純看、只能改自己建的、或全權管理
+                                Sys->>Sys: 系統將紀錄存入資料庫 (並記下是誰放行的，以供後續追蹤)
+                                Sys-->>Module: 該同仁下次登入網頁後，就能看到對應的看板
+                        </div>
+                    </div>
+                    
+                    <!-- 右半部：員工登入防護 -->
+                    <div class="col-md-6">
+                        <h6 class="fw-bold text-center mb-3 px-2 py-1 bg-light rounded text-danger">員工登入後的安全檢核流程 (毫秒級自動判斷)</h6>
+                        <div class="mermaid border rounded shadow-sm">
+                            graph TD
+                                classDef action fill:#d4e6f1,stroke:#2980b9,stroke-width:2px;
+                                classDef decision fill:#fdebd0,stroke:#e67e22,stroke-width:2px;
+                                classDef allow fill:#d5f5e3,stroke:#27ae60,stroke-width:2px;
+                                classDef deny fill:#fadbd8,stroke:#c0392b,stroke-width:2px;
+        
+                                START(["員工登入公司網頁"]) --> STEP1["系統自動取得員工工號"]:::action
+                                STEP1 --> STEP2{"系統自動前往資料庫<br/>比對權限資料"}:::decision
+                                STEP2 --> PATH_A["查詢：該員工『所屬部門群組』<br/>預設可以看哪些看板？"]:::action
+                                STEP2 --> PATH_B["查詢：該員工有被主管『特准』<br/>看哪些額外的看板？"]:::action
+                                PATH_A --> MERGE(("統整出該員工的<br/>『專屬看板清單』"))
+                                PATH_B --> MERGE
+                                MERGE --> CHECK{"系統判斷：<br/>這個看板他能看嗎？"}:::decision
+                                CHECK -->|"可以看 (有權限)"| ALLOW["網頁自動產生專屬選單<br>顯示對應的看板與資料"]:::allow
+                                CHECK -->|"不能看 (無權限)"| DENY["選單完全隱藏<br>偷貼網址也會被防護機制阻擋"]:::deny
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>
