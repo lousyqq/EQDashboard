@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大型企業級網頁權限系統 - 架構與流程深度解析</title>
+    <!-- 僅保留企業標準前端框架：Bootstrap 5 用於排版, FontAwesome 用於文字圖示 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .header { background-color: #0b1120; color: white; padding: 25px 0; box-shadow: 0 4px 10px rgba(0,0,0,0.15); border-bottom: 4px solid #38bdf8; }
+        .card { border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border-radius: 12px; margin-bottom: 30px; overflow: hidden; }
+        .card-header { background-color: #ffffff; border-bottom: 2px solid #f1f5f9; font-weight: 800; font-size: 1.25rem; color: #0f172a; padding: 18px 24px; }
+        .step-box { background: #f8fafc; border-left: 4px solid #38bdf8; padding: 15px 20px; margin-bottom: 15px; border-radius: 0 8px 8px 0; }
+        .scenario-box { background: #fff; border: 1px solid #e2e8f0; border-top: 4px solid #10b981; padding: 20px; border-radius: 8px; height: 100%; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: transform 0.2s; }
+        .scenario-box:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
+        
+        /* Table Styles */
+        .schema-table th { background-color: #f8fafc; color: #334155; font-size: 0.85rem; white-space: nowrap; }
+        .schema-table td { font-size: 0.85rem; vertical-align: middle; color: #475569; }
+        .table-title-box { padding: 10px 15px; border-radius: 6px 6px 0 0; font-weight: bold; color: white; margin-bottom: 0; }
+        .bg-hr { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .bg-resource { background: linear-gradient(135deg, #10b981, #059669); }
+        .bg-acl { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .schema-container { background: #fff; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 6px 6px; padding: 0; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+
+        /* ================= 核心：原生 SVG 節點與標籤樣式 ================= */
+        .svg-container { width: 100%; overflow-x: auto; text-align: center; padding: 20px 0; background: white; border-radius: 8px; }
+        .svg-container svg { max-width: 100%; height: auto; }
+        
+        /* 節點共通樣式 (放入 foreignObject 中) */
+        .svg-node { 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            width: 100%; height: 100%; border-radius: 8px; font-weight: bold; text-align: center; 
+            box-shadow: 0 3px 6px rgba(0,0,0,0.08); border: 2px solid transparent; background: white; 
+            padding: 5px 10px; font-size: 0.95rem; line-height: 1.3;
+        }
+        .svg-node-row { flex-direction: row; gap: 8px; }
+        .svg-node-small { font-size: 0.8rem; font-weight: normal; color: #64748b; margin-top: 4px; }
+        
+        /* 各角色與元件的配色主題 */
+        .node-msd { background-color: #fef08a; color: #854d0e; border-color: #eab308; }
+        .node-sys { background-color: #e0f2fe; color: #0369a1; border-color: #38bdf8; }
+        .node-role { background-color: #dcfce7; color: #166534; border-color: #4ade80; }
+        .node-esi { background-color: #ffedd5; color: #c2410c; border-color: #fb923c; }
+        .node-user { background-color: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+        .node-action { background-color: #f8fafc; color: #334155; border-color: #94a3b8; border-style: dashed; }
+        .node-decision { background-color: #fef3c7; color: #b45309; border-color: #fbbf24; border-radius: 30px; }
+        .node-allow { background-color: #ecfdf5; color: #047857; border-color: #34d399; }
+        .node-deny { background-color: #fef2f2; color: #b91c1c; border-color: #f87171; }
+        .node-core { background-color: #fee2e2; color: #b91c1c; border-color: #ef4444; border-width: 3px; font-size: 1.1rem; }
+        
+        /* SVG 連線上的文字標籤 */
+        .svg-label { 
+            display: flex; align-items: center; justify-content: center; 
+            width: 100%; height: 100%; background: white; font-size: 0.75rem; 
+            font-weight: bold; color: #475569; border: 1px dashed #cbd5e1; 
+            border-radius: 12px; padding: 2px 5px; text-align: center;
+        }
+        .text-primary { color: #0d6efd !important; }
+        .text-success { color: #198754 !important; }
+        .text-danger { color: #dc3545 !important; }
+    </style>
+</head>
+<body>
+
+    <!-- 全域 SVG 定義：定義箭頭樣式，供所有流程圖共用 -->
+    <svg width="0" height="0" style="position:absolute;">
+        <defs>
+            <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b" />
+            </marker>
+            <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" />
+            </marker>
+            <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+            </marker>
+            <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
+            </marker>
+        </defs>
+    </svg>
+
+    <div class="header mb-4">
+        <div class="container">
+            <h2 class="mb-2 fw-bold"><i class="fas fa-project-diagram me-2 text-info"></i>大型企業級網頁權限系統 - 架構與流程深度解析</h2>
+            <p class="mb-0 text-white-50 fs-5">報告重點：資安預設防護 ｜ 群組常態管理 ｜ ESI 特例委派 ｜ 彈性資料庫架構</p>
+        </div>
+    </div>
+
+    <div class="container">
+        
+        <!-- 第一部分：全域權限控管概念 -->
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <i class="fas fa-sitemap text-primary me-3 fs-3"></i> 
+                <div>
+                    <div class="mb-0">1. 全域權限控管概念 (High-Level Concept)</div>
+                    <div class="text-muted fs-6 fw-normal mt-1">「MSD 管大群組標準配備，ESI 管小團隊特例需求」</div>
+                </div>
+            </div>
+            <div class="card-body bg-light">
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="step-box h-100" style="border-left-color: #ef4444;">
+                            <h5 class="fw-bold text-danger"><i class="fas fa-lock me-2"></i>Step 1: 預設隱藏 (Deny by Default)</h5>
+                            <p class="text-muted small mb-0">MSD 預設上架任何新看板與選單時，全公司員工皆無權限瀏覽。保障機密資料在設定完成前絕不外洩。</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="step-box h-100" style="border-left-color: #3b82f6;">
+                            <h5 class="fw-bold text-primary"><i class="fas fa-users-cog me-2"></i>Step 2: 群組常態授權 (RBAC)</h5>
+                            <p class="text-muted small mb-0">MSD 設定多個「權限群組」(如: 12A_FAB1)，指定該群組能看哪些看板。接著將廠區特定部門的員工批次綁入該群組，自動生效。</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="step-box h-100" style="border-left-color: #10b981;">
+                            <h5 class="fw-bold text-success"><i class="fas fa-user-shield me-2"></i>Step 3: 委派與特例 (ACL)</h5>
+                            <p class="text-muted small mb-0">MSD 將特定看板目錄的「委派權」下放給各廠 ESI。ESI 即可針對特定 Module 或跨區申請者，單獨指派特例權限 (檢視/編輯/自建)。</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 原生 SVG 流程圖 1 -->
+                <div class="svg-container border shadow-sm">
+                    <svg viewBox="0 0 1000 380">
+                        <!-- 連接線 -->
+                        <path d="M 500 60 L 500 100 L 180 100 L 180 150" stroke="#ef4444" stroke-width="2" fill="none" marker-end="url(#arrow-red)" />
+                        <path d="M 500 60 L 500 150" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)" />
+                        <path d="M 500 60 L 500 100 L 820 100 L 820 150" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#arrow-green)" />
+                        
+                        <path d="M 180 230 L 180 300" stroke="#64748b" stroke-width="2" stroke-dasharray="5,5" fill="none" marker-end="url(#arrow-solid)" />
+                        <path d="M 500 230 L 500 300" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)" />
+                        <path d="M 820 230 L 820 300" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#arrow-green)" />
+
+                        <!-- 線上標籤 -->
+                        <foreignObject x="90" y="85" width="180" height="28"><div class="svg-label text-danger" style="border-color: #ef4444;">1. 上架新看板</div></foreignObject>
+                        <foreignObject x="400" y="105" width="200" height="28"><div class="svg-label text-primary" style="border-color: #3b82f6;">2. 建立標準群組與配置</div></foreignObject>
+                        <foreignObject x="730" y="85" width="180" height="28"><div class="svg-label text-success" style="border-color: #10b981;">3. 賦予目錄委派權</div></foreignObject>
+                        <foreignObject x="430" y="255" width="140" height="28"><div class="svg-label text-primary" style="border-color: #3b82f6;">自動套用權限</div></foreignObject>
+                        <foreignObject x="750" y="255" width="140" height="28"><div class="svg-label text-success" style="border-color: #10b981;">4. 指派細部特例</div></foreignObject>
+
+                        <!-- 頂端節點 -->
+                        <foreignObject x="380" y="10" width="240" height="50">
+                            <div class="svg-node svg-node-row node-msd fs-5"><i class="fas fa-user-tie text-warning"></i> MSD 管理員</div>
+                        </foreignObject>
+                        
+                        <!-- 中間節點 -->
+                        <foreignObject x="60" y="150" width="240" height="80">
+                            <div class="svg-node node-sys"><i class="fas fa-database fs-4"></i> 網頁核心庫<div class="svg-node-small text-danger"><i class="fas fa-lock"></i> 預設全廠隱藏</div></div>
+                        </foreignObject>
+                        <foreignObject x="380" y="150" width="240" height="80">
+                            <div class="svg-node node-role"><i class="fas fa-users fs-4"></i> 廠區/部門群組<div class="svg-node-small text-success">例如: 12A_FAB1</div></div>
+                        </foreignObject>
+                        <foreignObject x="700" y="150" width="240" height="80">
+                            <div class="svg-node node-esi"><i class="fas fa-user-shield fs-4"></i> 各廠區 ESI<div class="svg-node-small text-danger">目錄負責人</div></div>
+                        </foreignObject>
+
+                        <!-- 底部節點 -->
+                        <foreignObject x="60" y="300" width="240" height="50">
+                            <div class="svg-node svg-node-row node-user"><i class="fas fa-users-slash text-danger"></i> 全公司無權限員工</div>
+                        </foreignObject>
+                        <foreignObject x="380" y="300" width="240" height="50">
+                            <div class="svg-node svg-node-row node-user"><i class="fas fa-users text-primary"></i> 該群組內所有員工</div>
+                        </foreignObject>
+                        <foreignObject x="700" y="300" width="240" height="50">
+                            <div class="svg-node svg-node-row node-user"><i class="fas fa-user text-success"></i> 特定 Module 同仁</div>
+                        </foreignObject>
+                    </svg>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- 第二部分：資料庫架構 (Database Architecture) -->
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <i class="fas fa-database text-info me-3 fs-3"></i> 
+                <div>
+                    <div class="mb-0">2. 核心資料庫架構 (DB Schema Design)</div>
+                    <div class="text-muted fs-6 fw-normal mt-1">「以五張核心表，完美支撐彈性委派與資料隔離，取代舊有寫死在程式碼的設定」</div>
+                </div>
+            </div>
+            <div class="card-body bg-light">
+
+                <!-- 原生 SVG ER 關聯圖 -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="table-title-box bg-dark text-white rounded-top mb-0 px-3 py-2">
+                            <i class="fas fa-project-diagram me-2"></i> 核心資料表實體關聯圖 (ER Diagram)
+                        </div>
+                        <div class="schema-container p-4 border border-top-0 rounded-bottom bg-white text-center">
+                            
+                            <div class="svg-container pt-2 pb-0">
+                                <svg viewBox="0 0 1000 350">
+                                    <!-- ER 連接線 -->
+                                    <path d="M 300 70 L 300 130 L 500 130 L 500 170" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)" />
+                                    <path d="M 700 70 L 700 130 L 500 130 L 500 170" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#arrow-green)" />
+                                    <path d="M 500 250 L 500 300" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#arrow-solid)" />
+                                    <path d="M 420 50 L 580 50" stroke="#94a3b8" stroke-width="2" fill="none" stroke-dasharray="4,4" />
+                                    <path d="M 180 50 L 100 50 L 100 320 L 380 320" stroke="#ef4444" stroke-width="2" fill="none" stroke-dasharray="4,4" marker-end="url(#arrow-red)" />
+
+                                    <!-- ER 標籤 -->
+                                    <foreignObject x="210" y="100" width="160" height="26"><div class="svg-label text-primary" style="border-color:#3b82f6;">個人特例/委派發放</div></foreignObject>
+                                    <foreignObject x="630" y="100" width="160" height="26"><div class="svg-label text-success" style="border-color:#10b981;">群組常態綁定</div></foreignObject>
+                                    <foreignObject x="510" y="260" width="160" height="26"><div class="svg-label">指定目標看板資源</div></foreignObject>
+                                    <foreignObject x="430" y="25" width="140" height="26"><div class="svg-label">tb_UserRoles 關聯</div></foreignObject>
+                                    <foreignObject x="110" y="290" width="180" height="26"><div class="svg-label text-danger" style="border-color:#ef4444;">建立者卡控 (CreatorEmpID)</div></foreignObject>
+
+                                    <!-- ER 節點 -->
+                                    <foreignObject x="180" y="20" width="240" height="50">
+                                        <div class="svg-node svg-node-row text-primary" style="border-color: #3b82f6;"><i class="fas fa-user me-2"></i> tb_Employees (員工)</div>
+                                    </foreignObject>
+                                    <foreignObject x="580" y="20" width="240" height="50">
+                                        <div class="svg-node svg-node-row text-success" style="border-color: #10b981;"><i class="fas fa-users me-2"></i> tb_Roles (群組)</div>
+                                    </foreignObject>
+                                    <foreignObject x="350" y="170" width="300" height="80">
+                                        <div class="svg-node node-core"><i class="fas fa-key fs-4 mb-1"></i> tb_ACL<div class="svg-node-small text-danger fw-bold">(權限控制核心樞紐)</div></div>
+                                    </foreignObject>
+                                    <foreignObject x="380" y="300" width="240" height="50">
+                                        <div class="svg-node svg-node-row text-dark" style="border-color: #f59e0b;"><i class="fas fa-sitemap text-warning me-2"></i> tb_Resources (網頁看板)</div>
+                                    </foreignObject>
+                                </svg>
+                            </div>
+
+                            <div class="text-muted small mt-2 text-start px-3 border-top pt-3">
+                                <strong><i class="fas fa-info-circle text-primary"></i> 關聯圖連動說明：</strong><br>
+                                <ul class="mb-0 mt-1 ps-3">
+                                    <li><strong>混合型授權樞紐：</strong> <code>tb_ACL</code> 是權限引擎的核心。受權者 (Grantee) 透過不同的 <code>GranteeType</code>，靈活對應到 <code>tb_Roles</code> (整批群組) 或 <code>tb_Employees</code> (單一個人)。</li>
+                                    <li><strong>自建資料保護：</strong> 左側紅色虛線展示 <code>tb_Resources</code> 直接與 <code>tb_Employees</code> 建立關聯 (CreatorEmpID)。當發放「限改自建」權限時，系統自動比對此關聯。</li>
+                                    <li><strong>委派與稽核溯源：</strong> <code>tb_ACL</code> 中的 <code>GrantedBy</code> 連回員工表，清楚記錄每一項例外權限是哪位 ESI 下放的，完美解決權責追蹤問題。</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- 左半部：人事與群組結構 -->
+                    <div class="col-lg-6">
+                        <div class="table-title-box bg-hr"><i class="fas fa-users me-2"></i> 人事與群組 (常態維護)</div>
+                        <div class="schema-container">
+                            <table class="table table-hover table-bordered schema-table mb-0">
+                                <thead class="table-light">
+                                    <tr><th colspan="4" class="text-center text-primary">tb_Employees (員工基本檔 - 同步自 HR)</th></tr>
+                                    <tr><th>欄位名稱</th><th>型態</th><th>主/外鍵</th><th>說明</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>EmpID</td><td>VARCHAR</td><td><span class="badge bg-warning text-dark">PK</span></td><td>工號 (例: E12345)</td></tr>
+                                    <tr><td>EmpName</td><td>NVARCHAR</td><td></td><td>姓名</td></tr>
+                                    <tr><td>Dept</td><td>NVARCHAR</td><td></td><td>部門 (例: 12A_設備部)</td></tr>
+                                    <tr><td>IsActive</td><td>BIT</td><td></td><td>是否在職 (離職即自動停權)</td></tr>
+                                </tbody>
+                            </table>
+                            <table class="table table-hover table-bordered schema-table mb-0 border-top-0">
+                                <thead class="table-light">
+                                    <tr><th colspan="4" class="text-center text-primary">tb_Roles (系統權限群組檔)</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>RoleID</td><td>VARCHAR</td><td><span class="badge bg-warning text-dark">PK</span></td><td>群組代碼 (例: R_12A_FAB1)</td></tr>
+                                    <tr><td>RoleName</td><td>NVARCHAR</td><td></td><td>群組名稱 (例: 12A_FAB1 群組)</td></tr>
+                                    <tr><td>FabScope</td><td>VARCHAR</td><td></td><td>歸屬廠區，方便 MSD 過濾管理</td></tr>
+                                </tbody>
+                            </table>
+                            <table class="table table-hover table-bordered schema-table mb-0 border-top-0">
+                                <thead class="table-light">
+                                    <tr><th colspan="4" class="text-center text-primary">tb_UserRoles (人員與群組關聯表)</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>EmpID</td><td>VARCHAR</td><td><span class="badge bg-secondary">FK</span></td><td>關聯員工工號</td></tr>
+                                    <tr><td>RoleID</td><td>VARCHAR</td><td><span class="badge bg-secondary">FK</span></td><td>關聯群組代碼</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 右半部：資源與 ACL 結構 -->
+                    <div class="col-lg-6">
+                        <div class="table-title-box bg-resource"><i class="fas fa-sitemap me-2"></i> 資源與選單 (結構配置)</div>
+                        <div class="schema-container">
+                            <table class="table table-hover table-bordered schema-table mb-0">
+                                <thead class="table-light">
+                                    <tr><th colspan="4" class="text-center text-success">tb_Resources (系統選單與看板資源表)</th></tr>
+                                    <tr><th>欄位名稱</th><th>型態</th><th>主/外鍵</th><th>說明</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>ResID</td><td>VARCHAR</td><td><span class="badge bg-warning text-dark">PK</span></td><td>資源代碼 (例: MENU_YIELD_01)</td></tr>
+                                    <tr><td>ResName</td><td>NVARCHAR</td><td></td><td>顯示名稱 (例: 良率分析看板)</td></tr>
+                                    <tr><td>ResType</td><td>VARCHAR</td><td></td><td>類型 (Folder / Dashboard / AppLink)</td></tr>
+                                    <tr><td>ParentID</td><td>VARCHAR</td><td></td><td>父節點 ID (構建左側樹狀選單用)</td></tr>
+                                    <tr><td>ResURL</td><td>VARCHAR</td><td></td><td>點擊後開啟的網址或路由</td></tr>
+                                    <tr><td>CreatorEmpID</td><td>VARCHAR</td><td></td><td><span class="text-danger fw-bold">建立者工號</span> (判斷是否為「自建」資料的關鍵)</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="table-title-box bg-acl"><i class="fas fa-key me-2"></i> 權限引擎 (動態委派與粒度控制)</div>
+                        <div class="schema-container mb-0">
+                            <table class="table table-hover table-bordered schema-table mb-0">
+                                <thead class="table-light">
+                                    <tr><th colspan="4" class="text-center text-danger">tb_ACL (存取控制核心表) <i class="fas fa-star text-warning"></i></th></tr>
+                                    <tr><th>欄位名稱</th><th>型態</th><th>主/外鍵</th><th>說明</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>ACL_ID</td><td>INT</td><td><span class="badge bg-warning text-dark">PK</span></td><td>自動編號流水號</td></tr>
+                                    <tr><td>GranteeType</td><td>VARCHAR</td><td></td><td>授權對象類型：'Role' (群組) 或 'User' (個人)</td></tr>
+                                    <tr><td>GranteeID</td><td>VARCHAR</td><td></td><td>填入 RoleID 或 EmpID</td></tr>
+                                    <tr><td>ResID</td><td>VARCHAR</td><td><span class="badge bg-secondary">FK</span></td><td>目標看版或目錄代碼</td></tr>
+                                    <tr><td>AccessLevel</td><td>INT</td><td></td><td><span class="text-primary fw-bold">1:純檢視 2:限改自建 3:編輯他人/所有 4:全權管理</span><br>(取代舊有 accCanEditOthers 邏輯)</td></tr>
+                                    <tr><td>CanDelegate</td><td>BIT</td><td></td><td><span class="text-danger fw-bold">是否允許委派</span> (True: 該員可將此資源權限下放)</td></tr>
+                                    <tr><td>GrantedBy</td><td>VARCHAR</td><td></td><td>授權者工號 (稽核軌跡：誰給他權限的？)</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第三部分：實務運作情境 (Scenarios) -->
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <i class="fas fa-tasks text-success me-3 fs-3"></i> 
+                <div>
+                    <div class="mb-0">3. 實務情境解析 (Scenarios Validation)</div>
+                    <div class="text-muted fs-6 fw-normal mt-1">「架構如何完美解決工廠日常營運痛點」</div>
+                </div>
+            </div>
+            <div class="card-body bg-light">
+                <div class="row g-4">
+                    <!-- 情境 A -->
+                    <div class="col-md-4">
+                        <div class="scenario-box">
+                            <h6 class="fw-bold text-dark"><i class="fas fa-users me-2 text-success"></i>情境 A：批次人員異動 (新人到職)</h6>
+                            <hr class="my-2">
+                            <p class="small text-muted mb-2"><strong>挑戰：</strong> 12A 廠新進 50 位工程師，需要立即看到 20 個標準看板，MSD 會不會設定到手軟？</p>
+                            <p class="small text-dark fw-bold mb-0"><i class="fas fa-check-circle text-success me-1"></i> 解法 (低維護成本)：</p>
+                            <p class="small text-muted mb-0">MSD 早已將看板授權給群組 <code>12A_FAB1</code>。只需將這 50 人的工號加入關聯表，登入後立刻擁有一切標準權限。</p>
+                        </div>
+                    </div>
+                    <!-- 情境 B -->
+                    <div class="col-md-4">
+                        <div class="scenario-box" style="border-top-color: #f59e0b;">
+                            <h6 class="fw-bold text-dark"><i class="fas fa-sitemap me-2" style="color: #f59e0b;"></i>情境 B：Module 權限粒度與自主管理</h6>
+                            <hr class="my-2">
+                            <p class="small text-muted mb-2"><strong>挑戰：</strong> 12A ESI 想讓特定 Module 管理目錄，但不希望他們亂改別人建的看板。</p>
+                            <p class="small text-dark fw-bold mb-0"><i class="fas fa-check-circle text-success me-1"></i> 解法 (精細控制)：</p>
+                            <p class="small text-muted mb-0">ESI 透過介面授權給 Module，並將 <code>AccessLevel</code> 設為 <strong>「2: 限改自建」</strong>。Module 可新增看板，但無法修改建立者不是自己的資料。</p>
+                        </div>
+                    </div>
+                    <!-- 情境 C -->
+                    <div class="col-md-4">
+                        <div class="scenario-box" style="border-top-color: #3b82f6;">
+                            <h6 class="fw-bold text-dark"><i class="fas fa-paper-plane me-2 text-primary"></i>情境 C：跨廠區特例申請</h6>
+                            <hr class="my-2">
+                            <p class="small text-muted mb-2"><strong>挑戰：</strong> 12M 廠工程師臨時需要調閱 12A 資料，MSD 需要介入處理嗎？</p>
+                            <p class="small text-dark fw-bold mb-0"><i class="fas fa-check-circle text-success me-1"></i> 解法 (動態簽核)：</p>
+                            <p class="small text-muted mb-0">不需要。系統通知 12A ESI。ESI 點擊「核准」後，系統自動在 tb_ACL 寫入一筆「純檢視」紀錄。事後也可隨時註銷該權限。</p>
+                        </div>
+                    </div>
+                    <!-- 情境 D -->
+                    <div class="col-md-4">
+                        <div class="scenario-box" style="border-top-color: #ef4444;">
+                            <h6 class="fw-bold text-dark"><i class="fas fa-user-secret me-2 text-danger"></i>情境 D：機密看板限縮瀏覽</h6>
+                            <hr class="my-2">
+                            <p class="small text-muted mb-2"><strong>挑戰：</strong> 某高階看板絕對不能開放給群組，只允許「指定的 3 位主管」可以瀏覽。</p>
+                            <p class="small text-dark fw-bold mb-0"><i class="fas fa-check-circle text-success me-1"></i> 解法 (精準授權)：</p>
+                            <p class="small text-muted mb-0">不設定任何 Role 授權。僅在 <code>tb_ACL</code> 寫入這 3 人的工號，設為純檢視。全公司其餘員工完全看不到該看板。</p>
+                        </div>
+                    </div>
+                    <!-- 情境 E -->
+                    <div class="col-md-4">
+                        <div class="scenario-box" style="border-top-color: #06b6d4;">
+                            <h6 class="fw-bold text-dark"><i class="fas fa-crown me-2 text-info"></i>情境 E：目錄全權委派 (當區 Admin)</h6>
+                            <hr class="my-2">
+                            <p class="small text-muted mb-2"><strong>挑戰：</strong> 12A ESI 想讓特定 Module 完全接管子目錄，可以任意新增、修改、刪除所有資料。</p>
+                            <p class="small text-dark fw-bold mb-0"><i class="fas fa-check-circle text-success me-1"></i> 解法 (最高管理權)：</p>
+                            <p class="small text-muted mb-0">將目錄授權給 Module，關鍵是將 <code>AccessLevel</code> 設為 <strong>「4: 全權管理」</strong>。系統將無視 Creator 限制，全面解鎖編輯刪除按鈕。</p>
+                        </div>
+                    </div>
+                    <!-- 情境 F -->
+                    <div class="col-md-4">
+                        <div class="scenario-box" style="border-top-color: #8b5cf6;">
+                            <h6 class="fw-bold text-dark"><i class="fas fa-layer-group me-2" style="color: #8b5cf6;"></i>情境 F：複合型跨區與管理申請</h6>
+                            <hr class="my-2">
+                            <p class="small text-muted mb-2"><strong>挑戰：</strong> 使用者申請想看 12A、看 12M 跨區看板，還要 12A 某目錄的管理權。</p>
+                            <p class="small text-dark fw-bold mb-0"><i class="fas fa-check-circle text-success me-1"></i> 解法 (自動拆分派發)：</p>
+                            <p class="small text-muted mb-0">系統將申請單自動拆分路由：分別交由 12M ESI 與 12A ESI 審核。核准時各自調整 AccessLevel。完美滿足複合需求。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第四部分：權限下放與登入檢核流程 -->
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <i class="fas fa-shield-alt text-danger me-3 fs-3"></i> 
+                <div>
+                    <div class="mb-0">4. 系統底層防護與運作流程 (Workflow & Security)</div>
+                    <div class="text-muted fs-6 fw-normal mt-1">「員工登入後，系統如何做到『只給看該看的』」</div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- 左半部：主管委派流程 -->
+                    <div class="col-md-5 border-end pe-4">
+                        <h6 class="fw-bold text-center mb-4 px-2 py-2 bg-light rounded text-primary border">ESI 授權給同仁的流程 (委派)</h6>
+                        
+                        <div class="svg-container text-center pt-0">
+                            <svg viewBox="0 0 450 350">
+                                <!-- 時序圖垂直線 -->
+                                <path d="M 80 50 L 80 340" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4,4" fill="none" />
+                                <path d="M 225 50 L 225 340" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4,4" fill="none" />
+                                <path d="M 370 50 L 370 340" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4,4" fill="none" />
+                                
+                                <!-- 橫向訊息箭頭 -->
+                                <path d="M 80 100 L 215 100" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)" />
+                                <path d="M 80 150 L 215 150" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)" />
+                                <path d="M 225 200 L 260 200 L 260 240 L 235 240" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#arrow-solid)" />
+                                <path d="M 225 300 L 360 300" stroke="#10b981" stroke-width="2" stroke-dasharray="5,5" fill="none" marker-end="url(#arrow-green)" />
+                                
+                                <!-- 訊息文字 -->
+                                <text x="150" y="90" font-size="12" font-weight="bold" fill="#334155" text-anchor="middle">選擇看板與對象</text>
+                                <text x="150" y="140" font-size="12" font-weight="bold" fill="#334155" text-anchor="middle">設定權限粒度</text>
+                                <text x="315" y="225" font-size="12" font-weight="bold" fill="#b45309" text-anchor="middle">寫入資料庫</text>
+                                <text x="295" y="290" font-size="12" font-weight="bold" fill="#047857" text-anchor="middle">下次登入即顯示看板</text>
+                                
+                                <!-- 頂端角色節點 -->
+                                <foreignObject x="10" y="0" width="140" height="40">
+                                    <div class="svg-node node-esi" style="font-size:0.8rem; padding:5px;"><i class="fas fa-user-shield"></i> 12A ESI</div>
+                                </foreignObject>
+                                <foreignObject x="155" y="0" width="140" height="40">
+                                    <div class="svg-node node-sys" style="font-size:0.8rem; padding:5px;"><i class="fas fa-server"></i> 權限平台</div>
+                                </foreignObject>
+                                <foreignObject x="300" y="0" width="140" height="40">
+                                    <div class="svg-node node-user" style="font-size:0.8rem; padding:5px;"><i class="fas fa-user"></i> 廠區同仁</div>
+                                </foreignObject>
+                            </svg>
+                        </div>
+
+                    </div>
+                    
+                    <!-- 右半部：員工登入防護 -->
+                    <div class="col-md-7 ps-4">
+                        <h6 class="fw-bold text-center mb-4 px-2 py-2 bg-light rounded text-danger border">員工登入後的安全檢核流程 (毫秒級判斷)</h6>
+                        
+                        <div class="svg-container text-center pt-0">
+                            <svg viewBox="0 0 600 550">
+                                <!-- 垂直主幹連線 -->
+                                <path d="M 300 40 L 300 80" stroke="#94a3b8" stroke-width="2" fill="none" marker-end="url(#arrow-solid)" />
+                                <path d="M 300 130 L 300 170" stroke="#94a3b8" stroke-width="2" fill="none" marker-end="url(#arrow-solid)" />
+                                <path d="M 300 360 L 300 400" stroke="#94a3b8" stroke-width="2" fill="none" marker-end="url(#arrow-solid)" />
+                                <path d="M 300 460 L 300 480" stroke="#94a3b8" stroke-width="2" fill="none" />
+                                
+                                <!-- 分支連線 1 (比對資料) -->
+                                <path d="M 300 230 L 300 250" stroke="#94a3b8" stroke-width="2" fill="none" />
+                                <path d="M 150 250 L 450 250" stroke="#94a3b8" stroke-width="2" fill="none" />
+                                <path d="M 150 250 L 150 270" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#arrow-solid)" />
+                                <path d="M 450 250 L 450 270" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#arrow-solid)" />
+                                
+                                <!-- 匯聚連線 1 -->
+                                <path d="M 150 330 L 150 350" stroke="#94a3b8" stroke-width="2" fill="none" />
+                                <path d="M 450 330 L 450 350" stroke="#94a3b8" stroke-width="2" fill="none" />
+                                <path d="M 150 350 L 450 350" stroke="#94a3b8" stroke-width="2" fill="none" />
+                                <path d="M 300 350 L 300 360" stroke="#94a3b8" stroke-width="2" fill="none" />
+
+                                <!-- 分支連線 2 (終極審判) -->
+                                <path d="M 150 480 L 450 480" stroke="#94a3b8" stroke-width="2" fill="none" />
+                                <path d="M 150 480 L 150 500" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#arrow-green)" />
+                                <path d="M 450 480 L 450 500" stroke="#ef4444" stroke-width="2" fill="none" marker-end="url(#arrow-red)" />
+                                
+                                <!-- 終極審判文字標籤 -->
+                                <foreignObject x="170" y="468" width="100" height="24"><div class="svg-label text-success" style="border-color:#10b981;">可以看</div></foreignObject>
+                                <foreignObject x="330" y="468" width="100" height="24"><div class="svg-label text-danger" style="border-color:#ef4444;">不能看</div></foreignObject>
+
+                                <!-- 節點群 -->
+                                <foreignObject x="180" y="0" width="240" height="40">
+                                    <div class="svg-node svg-node-row node-action"><i class="fas fa-sign-in-alt text-primary fs-5"></i> 員工登入公司網頁</div>
+                                </foreignObject>
+                                <foreignObject x="180" y="80" width="240" height="50">
+                                    <div class="svg-node svg-node-row node-sys"><i class="fas fa-id-badge text-info fs-5"></i> 系統取得員工工號</div>
+                                </foreignObject>
+                                <foreignObject x="150" y="170" width="300" height="60">
+                                    <div class="svg-node node-decision shadow"><i class="fas fa-cogs fs-5 mb-1"></i> 系統自動前往資料庫，比對權限資料</div>
+                                </foreignObject>
+                                
+                                <foreignObject x="50" y="270" width="200" height="60">
+                                    <div class="svg-node node-action">查詢該員工<br>『所屬部門群組』權限</div>
+                                </foreignObject>
+                                <foreignObject x="350" y="270" width="200" height="60">
+                                    <div class="svg-node node-action">查詢該員工<br>『主管特准』權限</div>
+                                </foreignObject>
+                                
+                                <foreignObject x="150" y="360" width="300" height="40">
+                                    <div class="svg-node svg-node-row node-sys"><i class="fas fa-layer-group fs-5"></i> 統整出該員工的「專屬看板清單」</div>
+                                </foreignObject>
+                                <foreignObject x="150" y="400" width="300" height="60">
+                                    <div class="svg-node border-danger border-2 text-danger shadow" style="font-size:1.1rem;"><i class="fas fa-shield-alt fs-4 mb-1"></i> 系統判斷：這個看板他能看嗎？</div>
+                                </foreignObject>
+                                
+                                <foreignObject x="30" y="500" width="240" height="50">
+                                    <div class="svg-node svg-node-row node-allow text-center"><i class="fas fa-check-circle fs-4 me-2"></i><div>網頁動態產生選單<div class="svg-node-small text-dark mt-0">正常顯示看板</div></div></div>
+                                </foreignObject>
+                                <foreignObject x="330" y="500" width="240" height="50">
+                                    <div class="svg-node svg-node-row node-deny text-center"><i class="fas fa-times-circle fs-4 me-2"></i><div>選單徹底隱藏<div class="svg-node-small text-dark mt-0">直連網址也會阻擋</div></div></div>
+                                </foreignObject>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>
