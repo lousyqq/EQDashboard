@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>代辦中心 (C# DB Master-Detail 版)</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'], mono: ['ui-monospace', 'monospace'], } } }
+    }
+  </script>
+
+  <style>
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #f8fafc; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; border: 2px solid #f8fafc; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .sticky-left-shadow { box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.05); }
+    .sticky-right-shadow { box-shadow: -4px 0 8px -2px rgba(0, 0, 0, 0.05); }
+    .table-row-hover:hover td { background-color: #f0f9ff; }
+    @keyframes slideInUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+    .toast-enter { animation: slideInUp 0.3s ease-out forwards; }
+    .toast-leave { animation: fadeOut 0.3s ease-out forwards; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col antialiased selection:bg-blue-200 selection:text-blue-900">
+
+  <header class="sticky top-0 z-40 flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="p-2 rounded-lg bg-blue-600 shadow-sm"><i data-lucide="cpu" class="w-5 h-5 text-white"></i></div>
+      <div>
+        <h1 class="text-xl font-bold text-slate-900 tracking-wide">代辦中心</h1>
+        <p class="text-xs text-slate-500 font-medium">GenAI Empowered Task Control (C# Master-Detail DB)</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-5">
+      <button onclick="importInitialData()" class="px-3 py-1.5 text-xs font-bold rounded bg-amber-100 text-amber-700 hover:bg-amber-200 transition">
+        匯入初始範例資料至 DB
+      </button>
+      <div class="w-9 h-9 flex items-center justify-center rounded-full bg-blue-100 text-blue-700 font-bold border border-blue-200">主</div>
+    </div>
+  </header>
+
+  <main class="flex-1 p-6 max-w-[1800px] w-full mx-auto space-y-6 flex flex-col relative">
+    <div id="kpi-container" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 shrink-0"></div>
+
+    <div class="flex flex-col p-4 rounded-xl border shrink-0 bg-white border-slate-200 shadow-sm gap-4">
+      <div class="flex flex-wrap justify-between items-center gap-4">
+        <div class="flex items-center gap-2">
+          <i data-lucide="layout-list" class="w-5 h-5 text-blue-600"></i>
+          <h2 class="text-lg font-bold text-slate-800">任務追蹤清單</h2>
+        </div>
+        <div class="flex flex-wrap gap-3 w-full sm:w-auto justify-end">
+          <button onclick="exportToExcel()" class="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 shadow-sm transition-all active:scale-95">
+            <i data-lucide="download" class="w-4 h-4"></i> 匯出 Excel
+          </button>
+          <button onclick="openModal('add')" class="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all active:scale-95">
+            <i data-lucide="plus" class="w-4 h-4"></i> 新增需求
+          </button>
+        </div>
+      </div>
+      <hr class="border-slate-100">
+      <div class="flex flex-wrap justify-between items-center gap-4">
+        <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+          <div class="relative flex items-center px-3 py-2 rounded-lg border bg-slate-50 border-slate-200 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all w-full sm:w-72">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
+            <input type="text" id="search-input" placeholder="搜尋申請人、需求、負責人..." class="ml-2 bg-transparent outline-none text-sm w-full text-slate-800 placeholder-slate-400" oninput="handleSearch(this.value)"/>
+          </div>
+          <select id="status-filter" onchange="handleStatusFilter(this.value)" class="text-sm px-3 py-2 rounded-lg border outline-none cursor-pointer bg-slate-50 border-slate-200 text-slate-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all w-full sm:w-auto">
+            <option value="All">全部狀態</option>
+            <option value="已上線">已上線</option>
+            <option value="處理中">處理中</option>
+            <option value="缺欄位">缺欄位</option>
+          </select>
+        </div>
+        <div class="flex p-1 rounded-lg border bg-slate-100 border-slate-200 shrink-0 w-full sm:w-auto justify-center">
+          <button id="btn-view-table" onclick="setView('table')" class="flex items-center gap-2 px-6 py-1.5 text-sm font-medium rounded-md transition-colors bg-white text-slate-800 shadow-sm"><i data-lucide="list" class="w-4 h-4"></i> 總覽</button>
+          <button id="btn-view-card" onclick="setView('card')" class="flex items-center gap-2 px-6 py-1.5 text-sm font-medium rounded-md transition-colors text-slate-500 hover:text-slate-700"><i data-lucide="layout-dashboard" class="w-4 h-4"></i> 卡片</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex-1 flex flex-col min-h-[500px]">
+      <div id="content-container" class="flex-1 flex flex-col overflow-hidden"></div>
+      <div id="pagination-container" class="shrink-0 mt-4"></div>
+    </div>
+  </main>
+
+  <div id="toast-container" class="fixed bottom-6 right-6 z-[120] flex flex-col gap-3 pointer-events-none"></div>
+
+  <!-- CRUD Modal -->
+  <div id="crud-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="closeModal('crud-modal')"></div>
+    <div id="crud-modal-content" class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl flex flex-col transform transition-all scale-95 opacity-0 duration-200 border border-slate-200 max-h-[90vh]">
+      <div class="flex justify-between items-center p-5 border-b border-slate-100 shrink-0">
+        <h3 id="modal-title" class="text-lg font-bold text-slate-800 flex items-center gap-2"></h3>
+        <button type="button" onclick="closeModal('crud-modal')" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="p-5 overflow-y-auto custom-scrollbar">
+        <form id="crud-form" onsubmit="saveData(event)" class="space-y-6">
+          <input type="hidden" id="modal-mode" value="add">
+          <input type="hidden" id="modal-regid" value="">
+          
+          <div>
+            <h4 class="text-sm font-bold text-slate-800 border-b border-slate-200 pb-2 mb-4">基礎資訊</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div class="relative"><label class="block text-sm font-semibold text-slate-600 mb-1.5">DEPT <span class="text-rose-500">*</span></label><input type="text" id="form-dept" required class="w-full px-4 py-2 border rounded-xl outline-none bg-slate-50 border-slate-200 text-slate-900 disabled:bg-slate-100/50 disabled:text-slate-500 disabled:cursor-not-allowed"></div>
+              <div class="relative"><label class="block text-sm font-semibold text-slate-600 mb-1.5">SECTION <span class="text-rose-500">*</span></label><input type="text" id="form-sec" required class="w-full px-4 py-2 border rounded-xl outline-none bg-slate-50 border-slate-200 text-slate-900 disabled:bg-slate-100/50 disabled:text-slate-500 disabled:cursor-not-allowed"></div>
+              <div class="relative"><label class="block text-sm font-semibold text-slate-600 mb-1.5">申請人 <span class="text-rose-500">*</span></label><input type="text" id="form-applicant" required class="w-full px-4 py-2 border rounded-xl outline-none bg-slate-50 border-slate-200 text-slate-900 disabled:bg-slate-100/50 disabled:text-slate-500 disabled:cursor-not-allowed"></div>
+            </div>
+            <div class="relative"><label class="block text-sm font-semibold text-slate-600 mb-1.5">需求摘要 <span class="text-rose-500">*</span></label><textarea id="form-desc" required rows="2" class="w-full px-4 py-2 border rounded-xl outline-none bg-slate-50 border-slate-200 text-slate-900 disabled:bg-slate-100/50 disabled:text-slate-500 disabled:cursor-not-allowed resize-none"></textarea></div>
+          </div>
+          
+          <div id="edit-advanced-section" class="hidden space-y-6">
+            <div>
+              <h4 class="text-sm font-bold text-slate-800 border-b border-slate-200 pb-2 mb-4">執行與追蹤</h4>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div><label class="block text-sm font-semibold text-slate-600 mb-1.5">STATUS</label><select id="form-status" class="w-full px-4 py-2 border rounded-xl outline-none bg-white border-slate-200 text-slate-900"><option value="缺欄位">缺欄位</option><option value="處理中">處理中</option><option value="已上線">已上線</option></select></div>
+                <div><label class="block text-sm font-semibold text-slate-600 mb-1.5">處理人員</label><input type="text" id="form-owner" class="w-full px-4 py-2 border rounded-xl outline-none bg-white border-slate-200 text-slate-900"></div>
+                <div><label class="block text-sm font-semibold text-slate-600 mb-1.5">效益(MP/年)</label><input type="number" step="0.0001" id="form-benefit" class="w-full px-4 py-2 border rounded-xl outline-none bg-white border-slate-200 text-slate-900"></div>
+                <div><label class="block text-sm font-semibold text-slate-600 mb-1.5">DBCat</label><input type="text" id="form-dbcat" class="w-full px-4 py-2 border rounded-xl outline-none bg-white border-slate-200 text-slate-900"></div>
+                <div><label class="block text-sm font-semibold text-slate-600 mb-1.5">TCD</label><input type="text" id="form-tcd" class="w-full px-4 py-2 border rounded-xl outline-none bg-white border-slate-200 text-slate-900"></div>
+                <div><label class="block text-sm font-semibold text-slate-600 mb-1.5">App LINK</label><input type="text" id="form-applink" class="w-full px-4 py-2 border rounded-xl outline-none bg-white border-slate-200 text-slate-900"></div>
+              </div>
+            </div>
+            <div>
+              <h4 class="text-sm font-bold text-slate-800 border-b border-slate-200 pb-2 mb-4">Data Source</h4>
+              <textarea id="form-datasource" rows="3" class="w-full px-4 py-3 border rounded-xl outline-none bg-slate-50 border-slate-200 text-slate-900 font-mono text-[13px]"></textarea>
+            </div>
+            <div>
+              <h4 class="text-sm font-bold text-slate-800 border-b border-slate-200 pb-2 mb-4">機台站點設定</h4>
+              <div id="form-stations-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+            </div>
+          </div>
+          
+          <div class="pt-4 flex gap-3 justify-end border-t border-slate-100">
+            <button type="button" onclick="closeModal('crud-modal')" class="px-5 py-2 text-sm font-semibold rounded-lg border text-slate-600 bg-white border-slate-200">取消</button>
+            <button type="submit" class="px-5 py-2 text-sm font-semibold rounded-lg text-white bg-blue-600 hover:bg-blue-700">儲存變更</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== 初始化與全域變數 =====
+    let appData = [];
+    const stationColumns = ['DF1', 'DF2', 'DF3', 'DF4', 'ET1', 'ET2', 'ET3', 'ET4', 'LT3', 'LT4', 'TF1', 'TF2', 'TF3', 'TF4', 'TF5', 'TF6', 'PTI'];
+    const state = { view: 'table', searchTerm: '', statusFilter: 'All', sortConfig: { key: 'regId', direction: 'desc' }, currentPage: 1, itemsPerPage: 15 };
+
+    // ===== 關鍵：資料轉換邏輯 =====
+    // 將 C# 後端傳回的 Master-Detail (主從關聯) 結構，攤平成前端預期的單層結構
+    function mapDBtoFrontend(data) {
+      return data.map(row => {
+        let flatItem = { ...row }; 
+        
+        // 初始化所有站點欄位為空
+        stationColumns.forEach(col => flatItem[col.toLowerCase()] = '');
+        
+        // 若有從 TaskStation 關聯出來的資料，將數值與網址組合回去給前端顯示
+        if (row.stations && row.stations.length > 0) {
+          row.stations.forEach(st => {
+            const colName = st.stationName.toLowerCase();
+            const mp = st.mpValue || '';
+            const url = st.urlLink || '';
+            // 轉成 UI 慣用的 "MpValue^Url" 格式，或者單純的 MpValue / Url
+            flatItem[colName] = (mp || url) ? (url ? `${mp}^${url}` : mp) : '';
+          });
+        }
+        return flatItem;
+      });
+    }
+
+    function recalculateItemNum() {
+      let statusCounters = {};
+      appData.forEach((item) => {
+        if (!statusCounters[item.status]) statusCounters[item.status] = 0;
+        item.itemNum = ++statusCounters[item.status];
+      });
+    }
+
+    // ===== DB 連線與 API 操作 (透過 C# Minimal API) =====
+    
+    let isPreviewMode = false;
+
+    async function fetchTasks() {
+      try {
+        // 為了避免在 Canvas 預覽環境 (blob:) 報錯，增加環境判斷
+        if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') {
+          throw new Error('Local preview mode');
+        }
+
+        const response = await fetch('/api/tasks');
+        if (!response.ok) throw new Error('API 回應異常');
+        const data = await response.json();
+        
+        appData = mapDBtoFrontend(data);
+      } catch (err) {
+        if (!isPreviewMode) {
+          console.warn("無法連線至後端 API，已自動切換為本地預覽模式 (Mock Mode)。", err);
+          isPreviewMode = true;
+          showToast('預覽模式：無法呼叫 API，已載入測試資料', 'info');
+          
+          const mockDbData = [
+            { regId: 1, date: '2026-03-25', status: '已上線', owner: 'ESI:宸詳', dept: 'LT4', sec: 'EQ1', applicant: '陳思綺', desc: 'E3 FDC_SPEC 設定資料', tcd: 'Notes://', benefit: 0, dbCat: 'FDC', appLink: '', dataSource: 'SELECT * FROM FDC', stations: [ { stationName: 'DF1', mpValue: 'V', urlLink: '' }, { stationName: 'LT4', mpValue: 'LT4', urlLink: '' } ] },
+            { regId: 2, date: '2026-03-05', status: '已上線', owner: 'IT:昱璋', dept: 'LT3', sec: 'EQ4', applicant: '簡廷寬', desc: 'LT e-Abnormal lot', tcd: '', benefit: 0.035, dbCat: '-', appLink: '', dataSource: '', stations: [ { stationName: 'LT3', mpValue: '0', urlLink: '' }, { stationName: 'LT4', mpValue: '0.035', urlLink: 'http://www.umc.com' } ] }
+          ];
+          appData = mapDBtoFrontend(mockDbData);
+        }
+      } finally {
+        recalculateItemNum();
+        renderKPI();
+        renderContent();
+      }
+    }
+
+    async function saveData(event) {
+      event.preventDefault(); 
+      const mode = document.getElementById('modal-mode').value;
+      const today = new Date().toISOString().split('T')[0];
+      
+      const payload = {
+        date: today,
+        status: mode === 'add' ? '缺欄位' : document.getElementById('form-status').value,
+        dept: document.getElementById('form-dept').value,
+        sec: document.getElementById('form-sec').value,
+        applicant: document.getElementById('form-applicant').value,
+        desc: document.getElementById('form-desc').value,
+        owner: mode === 'add' ? '' : document.getElementById('form-owner').value,
+        benefit: mode === 'add' ? 0 : (parseFloat(document.getElementById('form-benefit').value) || 0),
+        dbCat: mode === 'add' ? '' : document.getElementById('form-dbcat').value,
+        tcd: mode === 'add' ? '' : document.getElementById('form-tcd').value,
+        appLink: mode === 'add' ? '' : document.getElementById('form-applink').value,
+        dataSource: mode === 'add' ? '' : document.getElementById('form-datasource').value,
+        stations: [] 
+      };
+
+      if (mode === 'edit') {
+        stationColumns.forEach(col => {
+          const mp = document.getElementById(`st-mp-${col}`).value.trim();
+          const url = document.getElementById(`st-url-${col}`).value.trim();
+          if (mp || url) {
+            payload.stations.push({ stationName: col, mpValue: mp, urlLink: url });
+          }
+        });
+      }
+
+      try {
+        if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') {
+          throw new Error('Local preview mode');
+        }
+
+        if (mode === 'add') {
+          await fetch('/api/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          state.sortConfig = { key: 'regId', direction: 'desc' };
+          state.currentPage = 1;
+          showToast('需求已成功建立！同步至 DB', 'success');
+        } else {
+          const regId = document.getElementById('modal-regid').value;
+          await fetch(`/api/tasks/${regId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          showToast('資料修改已儲存並同步至 DB！', 'success');
+        }
+        closeModal('crud-modal');
+        await fetchTasks();
+      } catch (err) {
+        // 預覽模式的本地更新邏輯
+        if (mode === 'add') {
+          payload.regId = appData.length > 0 ? Math.max(...appData.map(d => d.regId)) + 1 : 1;
+          appData.push(mapDBtoFrontend([payload])[0]);
+          state.sortConfig = { key: 'regId', direction: 'desc' };
+          state.currentPage = 1;
+          showToast('[預覽] 需求已成功建立！', 'success');
+        } else {
+          const regId = parseInt(document.getElementById('modal-regid').value);
+          payload.regId = regId;
+          const idx = appData.findIndex(d => d.regId === regId);
+          if (idx !== -1) appData[idx] = mapDBtoFrontend([payload])[0];
+          showToast('[預覽] 資料修改已儲存！', 'success');
+        }
+        closeModal('crud-modal');
+        recalculateItemNum();
+        renderKPI();
+        renderContent();
+      }
+    }
+
+    async function deleteData(regId) {
+      if(confirm(`確定要刪除 RegID #${regId} 的需求資料嗎？資料庫會一併刪除關聯站點。`)) {
+        try {
+          if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') {
+            throw new Error('Local preview mode');
+          }
+          await fetch(`/api/tasks/${regId}`, { method: 'DELETE' });
+          showToast(`已成功刪除項目 #${regId}`, 'info');
+          await fetchTasks();
+        } catch (err) {
+          appData = appData.filter(d => d.regId !== regId);
+          showToast(`[預覽] 已成功刪除項目 #${regId}`, 'info');
+          recalculateItemNum();
+          renderKPI();
+          renderContent();
+        }
+      }
+    }
+
+    // ===== 匯入初始資料腳本 =====
+    async function importInitialData() {
+      const basePayloads = [
+        { 
+          date: '2026-03-25', status: '已上線', owner: 'ESI:宸詳', dept: 'LT4', sec: 'EQ1', applicant: '陳思綺', desc: 'E3 FDC_SPEC 設定資料', 
+          tcd: 'Notes://', benefit: 0, dbCat: 'FDC', appLink: '', dataSource: 'SELECT * FROM FDC', 
+          stations: [ { stationName: 'DF1', mpValue: 'V', urlLink: '' }, { stationName: 'LT4', mpValue: 'LT4', urlLink: '' } ] 
+        },
+        { 
+          date: '2026-03-05', status: '已上線', owner: 'IT:昱璋', dept: 'LT3', sec: 'EQ4', applicant: '簡廷寬', desc: 'LT e-Abnormal lot', 
+          tcd: '', benefit: 0.035, dbCat: '-', appLink: '', dataSource: '', 
+          stations: [ { stationName: 'LT3', mpValue: '0', urlLink: '' }, { stationName: 'LT4', mpValue: '0.035', urlLink: 'http://www.umc.com' } ] 
+        }
+      ];
+      
+      if(confirm("這將會把範例資料以主從關聯格式寫入 DB，確定嗎？")) {
+        try {
+          if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') {
+            throw new Error('Local preview mode');
+          }
+          for(let payload of basePayloads) {
+            await fetch('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          }
+          showToast("範例資料已成功寫入 DB！", 'success');
+          fetchTasks();
+        } catch (err) {
+          basePayloads.forEach((payload, idx) => {
+            payload.regId = Date.now() + idx;
+            appData.push(mapDBtoFrontend([payload])[0]);
+          });
+          showToast("[預覽] 範例資料已寫入！", 'success');
+          recalculateItemNum();
+          renderKPI();
+          renderContent();
+        }
+      }
+    }
+
+    // ===== 畫面渲染邏輯 (保留您原有的精美 UI) =====
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const config = { success: { icon: 'check-circle-2', color: 'text-emerald-500', bg: 'bg-emerald-50', border: 'border-emerald-200' }, error: { icon: 'alert-circle', color: 'text-rose-500', bg: 'bg-rose-50', border: 'border-rose-200' }, info: { icon: 'info', color: 'text-blue-500', bg: 'bg-blue-50', border: 'border-blue-200' } }[type];
+      toast.className = `flex items-center gap-3 px-4 py-3 bg-white border ${config.border} shadow-lg rounded-xl pointer-events-auto toast-enter`;
+      toast.innerHTML = `<div class="p-1 rounded-full ${config.bg} ${config.color}"><i data-lucide="${config.icon}" class="w-5 h-5"></i></div><p class="text-sm font-semibold text-slate-700">${message}</p>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+      setTimeout(() => { toast.classList.replace('toast-enter', 'toast-leave'); setTimeout(() => toast.remove(), 300); }, 3000);
+    }
+
+    function getStatusColorClass(status) {
+      switch(status) { case '已上線': return 'bg-emerald-100 text-emerald-800 border-emerald-200'; case '處理中': return 'bg-amber-100 text-amber-800 border-amber-200'; case '缺欄位': return 'bg-rose-100 text-rose-800 border-rose-200'; default: return 'bg-slate-100 text-slate-800 border-slate-200'; }
+    }
+    function getStatusIconTag(status) {
+      switch(status) { case '已上線': return '<i data-lucide="check-circle-2" class="w-3.5 h-3.5 mr-1"></i>'; case '處理中': return '<i data-lucide="clock" class="w-3.5 h-3.5 mr-1"></i>'; case '缺欄位': return '<i data-lucide="alert-circle" class="w-3.5 h-3.5 mr-1"></i>'; default: return ''; }
+    }
+    function formatIconLink(val, type) {
+      if (!val) return `<span class="text-slate-400">-</span>`;
+      let href = val.startsWith('http') || val.startsWith('Notes') ? val : 'http://' + val;
+      return `<a href="${href}" target="_blank" title="開啟連結: ${val}" class="inline-flex items-center justify-center p-1.5 rounded-md text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:text-blue-700 transition-colors"><i data-lucide="${type === 'tcd' ? 'file-text' : 'external-link'}" class="w-4 h-4"></i></a>`;
+    }
+
+    function getProcessedData() {
+      let filtered = appData.filter(item => {
+        const term = state.searchTerm.toLowerCase();
+        const matchesSearch = item.desc.toLowerCase().includes(term) || item.applicant.toLowerCase().includes(term) || item.dept.toLowerCase().includes(term) || (item.sec && item.sec.toLowerCase().includes(term)) || (item.owner && item.owner.toLowerCase().includes(term));
+        const matchesStatus = state.statusFilter === 'All' || item.status === state.statusFilter;
+        return matchesSearch && matchesStatus;
+      });
+      filtered.sort((a, b) => {
+        let aVal = a[state.sortConfig.key], bVal = b[state.sortConfig.key];
+        if(state.sortConfig.key === 'benefit') { aVal = Number(aVal)||0; bVal = Number(bVal)||0; }
+        if (aVal < bVal) return state.sortConfig.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return state.sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+      return filtered;
+    }
+
+    function openModal(mode, regId = null) {
+      const modal = document.getElementById('crud-modal');
+      const content = document.getElementById('crud-modal-content');
+      document.getElementById('modal-mode').value = mode;
+      document.getElementById('crud-form').reset();
+      const baseInputs = ['form-dept', 'form-sec', 'form-applicant', 'form-desc'];
+      
+      if (mode === 'add') {
+        document.getElementById('modal-title').innerHTML = '<i data-lucide="plus-circle" class="w-5 h-5 text-blue-600"></i> 新增需求';
+        document.getElementById('edit-advanced-section').classList.add('hidden'); 
+        baseInputs.forEach(id => document.getElementById(id).disabled = false);
+      } else if (mode === 'edit') {
+        document.getElementById('modal-title').innerHTML = `<i data-lucide="edit-3" class="w-5 h-5 text-blue-600"></i> 編輯需求 <span class="ml-2 text-sm font-normal text-slate-500">#RegID: ${regId}</span>`;
+        document.getElementById('edit-advanced-section').classList.remove('hidden');
+        document.getElementById('modal-regid').value = regId;
+        baseInputs.forEach(id => document.getElementById(id).disabled = true);
+        
+        const item = appData.find(d => d.regId === regId);
+        if(item) {
+          document.getElementById('form-dept').value = item.dept; document.getElementById('form-sec').value = item.sec || '';
+          document.getElementById('form-applicant').value = item.applicant; document.getElementById('form-desc').value = item.desc;
+          document.getElementById('form-status').value = item.status; document.getElementById('form-owner').value = item.owner || '';
+          document.getElementById('form-benefit').value = item.benefit || ''; document.getElementById('form-dbcat').value = item.dbCat || '';
+          document.getElementById('form-tcd').value = item.tcd || ''; document.getElementById('form-applink').value = item.appLink || '';
+          document.getElementById('form-datasource').value = item.dataSource || '';
+
+          document.getElementById('form-stations-grid').innerHTML = stationColumns.map(col => {
+            let val = item[col.toLowerCase()] || '', mp = '', url = '';
+            if(val.includes('^')){ [mp, url] = val.split('^'); } else if(val.startsWith('http') || val.startsWith('Notes://')){ url = val; } else { mp = val; }
+            return `<div class="p-2.5 border rounded-lg bg-slate-50 relative focus-within:border-blue-400 focus-within:bg-white"><label class="absolute -top-2 left-2 px-1 text-xs font-bold bg-slate-50 text-slate-500">${col}</label><div class="space-y-1.5 mt-1"><div class="flex items-center bg-white border rounded overflow-hidden"><span class="pl-2 text-slate-400"><i data-lucide="activity" class="w-3 h-3"></i></span><input type="text" id="st-mp-${col}" value="${mp}" placeholder="MP Saving" class="w-full text-xs font-medium px-2 py-1 bg-transparent outline-none"></div><div class="flex items-center bg-white border rounded overflow-hidden"><span class="pl-2 text-slate-400"><i data-lucide="link" class="w-3 h-3"></i></span><input type="text" id="st-url-${col}" value="${url}" placeholder="URL" class="w-full text-xs font-medium px-2 py-1 bg-transparent outline-none"></div></div></div>`;
+          }).join('');
+        }
+      }
+      modal.classList.remove('hidden'); lucide.createIcons(); 
+      setTimeout(() => { content.classList.remove('scale-95', 'opacity-0'); content.classList.add('scale-100', 'opacity-100'); }, 10);
+    }
+
+    function closeModal(modalId) {
+      const modal = document.getElementById(modalId);
+      const content = document.getElementById(modalId + '-content');
+      content.classList.remove('scale-100', 'opacity-100'); content.classList.add('scale-95', 'opacity-0');
+      setTimeout(() => modal.classList.add('hidden'), 200); 
+    }
+
+    function exportToExcel() {
+      const data = getProcessedData();
+      if (data.length === 0) return showToast('目前沒有符合條件的資料可以匯出！', 'error');
+      const headers = ['註冊日期', 'RegID', 'ITEM_NO', 'STATUS', 'DEPT', 'SECTION', '申請人', '需求摘要', '處理人員', 'TCD', '效益(MP/年)', 'DBCat', 'App LINK', 'Data Source', ...stationColumns];
+      const excelData = [headers];
+      data.forEach(row => {
+        excelData.push([row.date, row.regId, row.itemNum, row.status, row.dept, row.sec, row.applicant, row.desc, row.owner, row.tcd, row.benefit || '', row.dbCat, row.appLink, row.dataSource, ...stationColumns.map(c => row[c.toLowerCase()] || '')]);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(excelData), wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "任務清單");
+      XLSX.writeFile(wb, `代辦中心資料_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.xlsx`);
+      showToast('Excel 報表匯出成功！', 'success');
+    }
+
+    function renderKPI() {
+      const kpis = [
+        { title: "總需求數量", value: appData.length, icon: "database", color: "blue" },
+        { title: "已上線完成", value: appData.filter(d => d.status === '已上線').length, icon: "check-circle-2", color: "emerald" },
+        { title: "處理中專案", value: appData.filter(d => d.status === '處理中').length, icon: "clock", color: "amber" },
+        { title: "缺欄位專案", value: appData.filter(d => d.status === '缺欄位').length, icon: "alert-circle", color: "rose" },
+        { title: "預估總效益 (MP/年)", value: appData.reduce((s, i) => s + (Number(i.benefit)||0), 0).toFixed(3), icon: "trending-up", color: "purple" },
+      ];
+      document.getElementById('kpi-container').innerHTML = kpis.map(k => `<div class="p-5 rounded-xl border bg-white border-slate-200 shadow-sm"><div class="flex justify-between items-start"><div><p class="text-sm font-medium mb-1 text-slate-500">${k.title}</p><h3 class="text-3xl font-bold text-slate-800">${k.value}</h3></div><div class="p-2.5 rounded-lg border bg-${k.color}-50 text-${k.color}-600 border-${k.color}-100"><i data-lucide="${k.icon}" class="w-6 h-6"></i></div></div></div>`).join('');
+    }
+
+    function renderSortHeader(label, sortKey, className) {
+      const isAsc = state.sortConfig.key === sortKey && state.sortConfig.direction === 'asc';
+      const isDesc = state.sortConfig.key === sortKey && state.sortConfig.direction === 'desc';
+      return `<th class="px-4 py-3 cursor-pointer group transition-colors ${className}" onclick="setSort('${sortKey}')"><div class="flex items-center gap-1 font-semibold text-xs text-slate-600 tracking-wider ${className.includes('text-center')?'justify-center':''}">${label}<span class="flex flex-col opacity-30 group-hover:opacity-100 transition-opacity"><i data-lucide="chevron-up" class="w-3 h-3 -mb-1 ${isAsc?'text-blue-600 opacity-100':''}"></i><i data-lucide="chevron-down" class="w-3 h-3 ${isDesc?'text-blue-600 opacity-100':''}"></i></span></div></th>`;
+    }
+
+    function renderContent() {
+      const filtered = getProcessedData();
+      const startIdx = (state.currentPage - 1) * state.itemsPerPage;
+      const currentData = filtered.slice(startIdx, startIdx + state.itemsPerPage);
+      const container = document.getElementById('content-container');
+      
+      if (state.view === 'table') {
+        let stationHeaders = stationColumns.map(col => `<th class="px-2 py-3 text-center border-b border-slate-200 bg-slate-50 font-semibold text-xs tracking-wider text-slate-600">${col}</th>`).join('');
+        let rowsHtml = currentData.map(row => {
+          let stationCells = stationColumns.map(col => {
+            const val = row[col.toLowerCase()];
+            if(!val) return `<td class="px-1 py-2 text-center border-l border-slate-100"><span class="text-slate-300 font-medium">-</span></td>`;
+            let mp = val, url = ''; if(val.includes('^')){ [mp,url]=val.split('^'); } else if(val.startsWith('http')){ mp='Link';url=val; }
+            return `<td class="px-1 py-2 text-center border-l border-slate-100"><div class="inline-flex items-center px-1.5 py-0.5 rounded bg-yellow-50 text-yellow-800 border border-yellow-200 shadow-sm"><span class="font-semibold text-xs">${mp}</span>${url?`<a href="${url}" target="_blank" class="ml-1 text-blue-600 bg-white rounded p-0.5 border border-slate-100"><i data-lucide="external-link" class="w-3 h-3 inline"></i></a>`:''}</div></td>`;
+          }).join('');
+
+          return `<tr class="table-row-hover transition-colors border-b border-slate-100 bg-white group">
+            <td class="px-4 py-2 sticky left-0 z-10 border-r border-slate-200 bg-white text-slate-500 text-sm w-[110px] min-w-[110px]">${row.date}</td>
+            <td class="px-4 py-2 text-center sticky left-[110px] z-10 border-r border-slate-200 bg-white font-bold text-blue-600 text-sm w-[70px] min-w-[70px]">#${row.regId}</td>
+            <td class="px-4 py-2 text-center sticky left-[180px] z-10 border-r border-slate-200 bg-white font-bold text-emerald-600 text-sm w-[80px] min-w-[80px] sticky-left-shadow">${row.itemNum}</td>
+            <td class="px-4 py-2 w-[110px] min-w-[110px]"><span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${getStatusColorClass(row.status)}">${getStatusIconTag(row.status)} ${row.status}</span></td>
+            <td class="px-4 py-2"><span class="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">${row.dept}</span></td>
+            <td class="px-4 py-2"><span class="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">${row.sec || '-'}</span></td>
+            <td class="px-4 py-2 font-medium text-slate-800 text-sm">${row.applicant}</td>
+            <td class="px-4 py-2 w-[280px] max-w-[280px] truncate text-slate-600 text-sm" title="${row.desc}">${row.desc}</td>
+            <td class="px-4 py-2 text-slate-700 text-sm">${row.owner || '-'}</td>
+            <td class="px-4 py-2 text-center">${formatIconLink(row.tcd, 'tcd')}</td>
+            <td class="px-4 py-2 font-semibold text-right ${row.benefit > 0 ? 'text-emerald-600' : 'text-slate-400'}">${row.benefit > 0 ? row.benefit : '-'}</td>
+            <td class="px-4 py-2 text-sm">${row.dbCat || '-'}</td>
+            <td class="px-4 py-2 text-center">${formatIconLink(row.appLink, 'link')}</td>
+            <td class="px-4 py-2 text-center">${row.dataSource ? '<span class="text-xs text-indigo-600 font-bold">SQL</span>' : '-'}</td>
+            ${stationCells}
+            <td class="px-2 py-2 sticky right-0 z-10 border-l border-slate-200 bg-white text-center sticky-right-shadow group-hover:bg-[#f0f9ff]">
+              <div class="flex items-center justify-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                <button onclick="openModal('edit', ${row.regId})" class="p-1.5 rounded text-blue-600 hover:bg-blue-50 transition-colors"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                <button onclick="deleteData(${row.regId})" class="p-1.5 rounded text-rose-600 hover:bg-rose-50 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+              </div>
+            </td>
+          </tr>`;
+        }).join('');
+
+        if(currentData.length === 0) rowsHtml = `<tr><td colspan="${15 + stationColumns.length}" class="px-4 py-16 text-center text-slate-500">找不到符合條件的資料。</td></tr>`;
+        
+        container.innerHTML = `<div class="flex-1 overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm"><table class="w-full text-left whitespace-nowrap min-w-max border-collapse"><thead class="sticky top-0 z-20 bg-slate-50 shadow-sm border-b border-slate-200"><tr>${renderSortHeader('註冊日期', 'date', 'sticky left-0 z-30 border-r border-slate-200 bg-slate-50')}${renderSortHeader('RegID', 'regId', 'text-center sticky left-[110px] z-30 border-r border-slate-200 bg-slate-50')}${renderSortHeader('ITEM_NO', 'itemNum', 'text-center sticky left-[180px] z-30 border-r border-slate-200 bg-slate-50 sticky-left-shadow')}${renderSortHeader('STATUS', 'status', 'border-b border-slate-200')}${renderSortHeader('DEPT', 'dept', 'border-b border-slate-200')}${renderSortHeader('SECTION', 'sec', 'border-b border-slate-200')}${renderSortHeader('申請人', 'applicant', 'border-b border-slate-200')}${renderSortHeader('需求摘要', 'desc', 'border-b border-slate-200 w-[280px]')}${renderSortHeader('處理人員', 'owner', 'border-b border-slate-200')}<th class="px-4 py-3 border-b border-slate-200 text-center font-semibold text-xs tracking-wider text-slate-600">TCD</th>${renderSortHeader('效益(MP/年)', 'benefit', 'border-b border-slate-200 text-right')}<th class="px-4 py-3 border-b border-slate-200 font-semibold text-xs tracking-wider text-slate-600">DBCat</th><th class="px-4 py-3 border-b border-slate-200 text-center font-semibold text-xs tracking-wider text-slate-600">App LINK</th><th class="px-4 py-3 border-b border-slate-200 text-center font-semibold text-xs tracking-wider text-slate-600">Data Source</th>${stationHeaders}<th class="px-2 py-3 sticky right-0 z-30 border-b border-l border-slate-200 bg-slate-50 text-center font-semibold text-xs text-slate-600 sticky-right-shadow">操作</th></tr></thead><tbody class="divide-y divide-slate-100">${rowsHtml}</tbody></table></div>`;
+      } else {
+        container.innerHTML = `<div class="flex-1 overflow-auto pb-4"><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">${currentData.map(row => `<div class="flex flex-col p-5 rounded-xl border transition-all hover:shadow-md bg-white border-slate-200 relative group"><div class="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100"><button onclick="openModal('edit', ${row.regId})" class="p-1.5 rounded-md bg-white border border-slate-200 text-blue-600"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button><button onclick="deleteData(${row.regId})" class="p-1.5 rounded-md bg-white border border-slate-200 text-rose-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div><div class="flex justify-between items-start mb-3 mr-16"><div class="flex items-center gap-2"><span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusColorClass(row.status)}">${row.status}</span><span class="text-xs font-bold px-2 py-1 rounded bg-slate-100 text-slate-600">ITEMNO: ${row.itemNum}</span></div></div><div class="flex justify-between items-end mb-1"><div class="text-xs font-semibold text-emerald-600">申請人: ${row.applicant}</div><div class="text-right"><div class="text-xs font-bold text-blue-600">#${row.regId}</div><div class="text-[10px] font-medium text-slate-500">${row.date}</div></div></div><h3 class="font-semibold mb-3 flex-grow line-clamp-2 text-sm">${row.desc}</h3></div>`).join('')}</div></div>`;
+      }
+      renderPagination(filtered.length);
+      lucide.createIcons();
+    }
+
+    function renderPagination(totalItems) {
+      const totalPages = Math.ceil(totalItems / state.itemsPerPage) || 1;
+      const startNum = totalItems > 0 ? (state.currentPage - 1) * state.itemsPerPage + 1 : 0;
+      const endNum = Math.min(state.currentPage * state.itemsPerPage, totalItems);
+      document.getElementById('pagination-container').innerHTML = `
+        <div class="flex items-center justify-between px-6 py-4 rounded-xl border bg-white border-slate-200 shadow-sm">
+          <div class="text-sm text-slate-600">顯示第 <span class="font-bold">${startNum}</span> 到 <span class="font-bold">${endNum}</span> 筆，共 <span class="font-bold">${totalItems}</span> 筆</div>
+          <div class="flex items-center gap-4">
+             <div class="flex items-center gap-2"><span class="text-sm text-slate-500">每頁:</span><select onchange="changeItemsPerPage(this.value)" class="text-sm px-2 py-1 rounded border outline-none bg-white border-slate-300"><option value="15" ${state.itemsPerPage===15?'selected':''}>15</option><option value="30" ${state.itemsPerPage===30?'selected':''}>30</option><option value="50" ${state.itemsPerPage===50?'selected':''}>50</option></select></div>
+             <div class="flex items-center gap-1"><button onclick="changePage(${Math.max(1, state.currentPage-1)})" ${state.currentPage===1?'disabled':''} class="p-1.5 rounded border"><i data-lucide="chevron-left" class="w-4 h-4"></i></button><span class="text-sm px-3 font-medium">${state.currentPage} / ${totalPages}</span><button onclick="changePage(${Math.min(totalPages, state.currentPage+1)})" ${state.currentPage===totalPages?'disabled':''} class="p-1.5 rounded border"><i data-lucide="chevron-right" class="w-4 h-4"></i></button></div>
+          </div>
+        </div>`;
+    }
+
+    function setView(v) { state.view = v; renderContent(); }
+    function setSort(k) { state.sortConfig.direction = (state.sortConfig.key === k && state.sortConfig.direction === 'desc') ? 'asc' : 'desc'; state.sortConfig.key = k; renderContent(); }
+    function handleSearch(v) { state.searchTerm = v; state.currentPage = 1; renderContent(); }
+    function handleStatusFilter(v) { state.statusFilter = v; state.currentPage = 1; renderContent(); }
+    function changePage(p) { state.currentPage = p; renderContent(); }
+    function changeItemsPerPage(n) { state.itemsPerPage = Number(n); state.currentPage = 1; renderContent(); }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      lucide.createIcons();
+      fetchTasks();
+    });
+  </script>
+</body>
+</html>
