@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="zh-TW" class="light">
 <head>
@@ -41,9 +42,6 @@
       </div>
     </div>
     <div class="flex items-center gap-5">
-      <button onclick="importInitialData()" class="px-3 py-1.5 text-xs font-bold rounded bg-amber-100 text-amber-700 hover:bg-amber-200 transition">
-        匯入初始範例資料至 DB
-      </button>
       <div class="w-9 h-9 flex items-center justify-center rounded-full bg-blue-100 text-blue-700 font-bold border border-blue-200">主</div>
     </div>
   </header>
@@ -57,7 +55,16 @@
           <i data-lucide="layout-list" class="w-5 h-5 text-blue-600"></i>
           <h2 class="text-lg font-bold text-slate-800">任務追蹤清單</h2>
         </div>
+        
         <div class="flex flex-wrap gap-3 w-full sm:w-auto justify-end">
+          
+          <!-- ★ 新增：匯入 Excel 功能區 -->
+          <input type="file" id="excel-upload" accept=".xlsx" class="hidden" onchange="handleExcelImport(event)">
+          <button onclick="document.getElementById('excel-upload').click()" class="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 shadow-sm transition-all active:scale-95">
+            <i data-lucide="upload" class="w-4 h-4"></i> 匯入 Excel
+          </button>
+          
+          <!-- 原有按鈕 -->
           <button onclick="exportToExcel()" class="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 shadow-sm transition-all active:scale-95">
             <i data-lucide="download" class="w-4 h-4"></i> 匯出 Excel
           </button>
@@ -152,25 +159,19 @@
   <script>
     // ===== 初始化與全域變數 =====
     let appData = [];
+    let isPreviewMode = false;
     const stationColumns = ['DF1', 'DF2', 'DF3', 'DF4', 'ET1', 'ET2', 'ET3', 'ET4', 'LT3', 'LT4', 'TF1', 'TF2', 'TF3', 'TF4', 'TF5', 'TF6', 'PTI'];
     const state = { view: 'table', searchTerm: '', statusFilter: 'All', sortConfig: { key: 'regId', direction: 'desc' }, currentPage: 1, itemsPerPage: 15 };
 
-    // ===== 關鍵：資料轉換邏輯 =====
-    // 將 C# 後端傳回的 Master-Detail (主從關聯) 結構，攤平成前端預期的單層結構
     function mapDBtoFrontend(data) {
       return data.map(row => {
         let flatItem = { ...row }; 
-        
-        // 初始化所有站點欄位為空
         stationColumns.forEach(col => flatItem[col.toLowerCase()] = '');
-        
-        // 若有從 TaskStation 關聯出來的資料，將數值與網址組合回去給前端顯示
         if (row.stations && row.stations.length > 0) {
           row.stations.forEach(st => {
             const colName = st.stationName.toLowerCase();
             const mp = st.mpValue || '';
             const url = st.urlLink || '';
-            // 轉成 UI 慣用的 "MpValue^Url" 格式，或者單純的 MpValue / Url
             flatItem[colName] = (mp || url) ? (url ? `${mp}^${url}` : mp) : '';
           });
         }
@@ -186,33 +187,152 @@
       });
     }
 
-    // ===== DB 連線與 API 操作 (透過 C# Minimal API) =====
-    
-    let isPreviewMode = false;
+    // ===== ★ 核心：匯入 Excel 邏輯 =====
+    async function handleExcelImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (!confirm("⚠️ 警告：匯入 Excel 將會【清空目前資料庫所有資料】，並以 Excel 內容重新建立。\n\n確定要繼續嗎？")) {
+        event.target.value = ''; // 清空 input 讓下次可以選同一個檔
+        return;
+      }
+
+      showToast("解析資料中，請稍候...", "info");
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          
+          // 將 Excel 轉為 2D 陣列 (header: 1 代表回傳陣列的陣列)
+          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+          if (rows.length < 2) throw new Error("Excel 檔案沒有資料列！");
+
+          // 1. 動態比對 Header 欄位索引 (不論中英文標題都能抓到)
+          const headers = rows[0];
+          const colMap = {};
+          headers.forEach((h, idx) => {
+            if (!h) return;
+            const text = String(h).trim().toLowerCase();
+            if (text.includes('date') || text.includes('日期')) colMap.date = idx;
+            else if (text === 'status' || text.includes('狀態')) colMap.status = idx;
+            else if (text.includes('dept') || text.includes('department')) colMap.dept = idx;
+            else if (text.includes('sec') || text.includes('section')) colMap.sec = idx;
+            else if (text.includes('applicant') || text.includes('申請人')) colMap.applicant = idx;
+            else if (text.includes('desc') || text.includes('摘要')) colMap.desc = idx;
+            else if (text.includes('owner') || text.includes('處理人員')) colMap.owner = idx;
+            else if (text.includes('benefit') || text.includes('效益')) colMap.benefit = idx;
+            else if (text.includes('dbcat')) colMap.dbCat = idx;
+            else if (text.includes('tcd')) colMap.tcd = idx;
+            else if (text.includes('applink') || text.includes('app link')) colMap.appLink = idx;
+            else if (text.includes('datasource') || text.includes('data source')) colMap.dataSource = idx;
+            
+            stationColumns.forEach(st => {
+              if (text === st.toLowerCase()) colMap[st.toLowerCase()] = idx;
+            });
+          });
+
+          if (colMap.desc === undefined) throw new Error("找不到『需求摘要 / Description』欄位，請確認 Excel 格式。");
+
+          // 2. 解析每一列並打包成 payload
+          const payloads = [];
+          for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row[colMap.desc]) continue; // 略過無摘要的空白列
+
+            let stations = [];
+            stationColumns.forEach(st => {
+              let val = row[colMap[st.toLowerCase()]];
+              if (val) {
+                val = String(val).trim();
+                let mp = val, url = '';
+                // 處理使用者手寫的 MpValue^UrlLink 或是單純文字/網址
+                if (val.includes('^')) { [mp, url] = val.split('^'); }
+                else if (val.startsWith('http') || val.startsWith('Notes://')) { mp = 'Link'; url = val; }
+                stations.push({ stationName: st, mpValue: mp, urlLink: url });
+              }
+            });
+
+            // 處理 Excel 的日期格式 (Excel 可能回傳距離 1900 年的天數整數)
+            let dateStr = new Date().toISOString().split('T')[0];
+            const rawDate = row[colMap.date];
+            if (typeof rawDate === 'number') {
+              const d = new Date(Math.round((rawDate - 25569) * 86400 * 1000));
+              dateStr = d.toISOString().split('T')[0];
+            } else if (rawDate) {
+              const d = new Date(rawDate);
+              if (!isNaN(d)) dateStr = d.toISOString().split('T')[0];
+            }
+
+            payloads.push({
+              date: dateStr,
+              status: row[colMap.status] || '缺欄位',
+              dept: row[colMap.dept] || '',
+              sec: row[colMap.sec] || '',
+              applicant: row[colMap.applicant] || '',
+              desc: row[colMap.desc] || '',
+              owner: row[colMap.owner] || '',
+              benefit: parseFloat(row[colMap.benefit]) || 0,
+              dbCat: row[colMap.dbCat] || '',
+              tcd: row[colMap.tcd] || '',
+              appLink: row[colMap.appLink] || '',
+              dataSource: row[colMap.dataSource] || '',
+              stations: stations
+            });
+          }
+
+          // 3. 呼叫 C# 後端 API
+          if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') {
+            throw new Error('Local preview mode');
+          }
+
+          const response = await fetch('/api/tasks/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payloads)
+          });
+
+          if (!response.ok) throw new Error("伺服器匯入處理失敗");
+
+          showToast(`成功匯入 ${payloads.length} 筆資料！`, "success");
+          await fetchTasks();
+
+        } catch (err) {
+          if (isPreviewMode) {
+             // 預覽模式模擬
+             appData = mapDBtoFrontend(payloads);
+             appData.forEach((d, idx) => d.regId = idx + 1);
+             showToast(`[預覽] 已模擬匯入 ${payloads.length} 筆資料`, "success");
+             recalculateItemNum(); renderKPI(); renderContent();
+          } else {
+             console.error(err);
+             showToast("匯入失敗：" + err.message, "error");
+          }
+        } finally {
+          event.target.value = ''; 
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+
+    // ===== DB 連線與一般 CRUD 操作 =====
 
     async function fetchTasks() {
       try {
-        // 為了避免在 Canvas 預覽環境 (blob:) 報錯，增加環境判斷
-        if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') {
-          throw new Error('Local preview mode');
-        }
-
+        if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') throw new Error('Local preview mode');
         const response = await fetch('/api/tasks');
         if (!response.ok) throw new Error('API 回應異常');
         const data = await response.json();
-        
         appData = mapDBtoFrontend(data);
       } catch (err) {
         if (!isPreviewMode) {
-          console.warn("無法連線至後端 API，已自動切換為本地預覽模式 (Mock Mode)。", err);
+          console.warn("無法連線至 API，切換為本地預覽模式。", err);
           isPreviewMode = true;
-          showToast('預覽模式：無法呼叫 API，已載入測試資料', 'info');
-          
-          const mockDbData = [
-            { regId: 1, date: '2026-03-25', status: '已上線', owner: 'ESI:宸詳', dept: 'LT4', sec: 'EQ1', applicant: '陳思綺', desc: 'E3 FDC_SPEC 設定資料', tcd: 'Notes://', benefit: 0, dbCat: 'FDC', appLink: '', dataSource: 'SELECT * FROM FDC', stations: [ { stationName: 'DF1', mpValue: 'V', urlLink: '' }, { stationName: 'LT4', mpValue: 'LT4', urlLink: '' } ] },
-            { regId: 2, date: '2026-03-05', status: '已上線', owner: 'IT:昱璋', dept: 'LT3', sec: 'EQ4', applicant: '簡廷寬', desc: 'LT e-Abnormal lot', tcd: '', benefit: 0.035, dbCat: '-', appLink: '', dataSource: '', stations: [ { stationName: 'LT3', mpValue: '0', urlLink: '' }, { stationName: 'LT4', mpValue: '0.035', urlLink: 'http://www.umc.com' } ] }
-          ];
-          appData = mapDBtoFrontend(mockDbData);
+          showToast('無 C# 伺服器，已進入純前端預覽模式', 'info');
         }
       } finally {
         recalculateItemNum();
@@ -246,44 +366,29 @@
         stationColumns.forEach(col => {
           const mp = document.getElementById(`st-mp-${col}`).value.trim();
           const url = document.getElementById(`st-url-${col}`).value.trim();
-          if (mp || url) {
-            payload.stations.push({ stationName: col, mpValue: mp, urlLink: url });
-          }
+          if (mp || url) payload.stations.push({ stationName: col, mpValue: mp, urlLink: url });
         });
       }
 
       try {
-        if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') {
-          throw new Error('Local preview mode');
-        }
+        if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') throw new Error('Local preview mode');
 
         if (mode === 'add') {
-          await fetch('/api/tasks', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          state.sortConfig = { key: 'regId', direction: 'desc' };
-          state.currentPage = 1;
+          await fetch('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          state.sortConfig = { key: 'regId', direction: 'desc' }; state.currentPage = 1;
           showToast('需求已成功建立！同步至 DB', 'success');
         } else {
           const regId = document.getElementById('modal-regid').value;
-          await fetch(`/api/tasks/${regId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
+          await fetch(`/api/tasks/${regId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
           showToast('資料修改已儲存並同步至 DB！', 'success');
         }
         closeModal('crud-modal');
         await fetchTasks();
       } catch (err) {
-        // 預覽模式的本地更新邏輯
         if (mode === 'add') {
           payload.regId = appData.length > 0 ? Math.max(...appData.map(d => d.regId)) + 1 : 1;
           appData.push(mapDBtoFrontend([payload])[0]);
-          state.sortConfig = { key: 'regId', direction: 'desc' };
-          state.currentPage = 1;
+          state.sortConfig = { key: 'regId', direction: 'desc' }; state.currentPage = 1;
           showToast('[預覽] 需求已成功建立！', 'success');
         } else {
           const regId = parseInt(document.getElementById('modal-regid').value);
@@ -293,68 +398,25 @@
           showToast('[預覽] 資料修改已儲存！', 'success');
         }
         closeModal('crud-modal');
-        recalculateItemNum();
-        renderKPI();
-        renderContent();
+        recalculateItemNum(); renderKPI(); renderContent();
       }
     }
 
     async function deleteData(regId) {
       if(confirm(`確定要刪除 RegID #${regId} 的需求資料嗎？資料庫會一併刪除關聯站點。`)) {
         try {
-          if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') {
-            throw new Error('Local preview mode');
-          }
+          if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') throw new Error('Local preview mode');
           await fetch(`/api/tasks/${regId}`, { method: 'DELETE' });
           showToast(`已成功刪除項目 #${regId}`, 'info');
           await fetchTasks();
         } catch (err) {
           appData = appData.filter(d => d.regId !== regId);
           showToast(`[預覽] 已成功刪除項目 #${regId}`, 'info');
-          recalculateItemNum();
-          renderKPI();
-          renderContent();
+          recalculateItemNum(); renderKPI(); renderContent();
         }
       }
     }
 
-    // ===== 匯入初始資料腳本 =====
-    async function importInitialData() {
-      const basePayloads = [
-        { 
-          date: '2026-03-25', status: '已上線', owner: 'ESI:宸詳', dept: 'LT4', sec: 'EQ1', applicant: '陳思綺', desc: 'E3 FDC_SPEC 設定資料', 
-          tcd: 'Notes://', benefit: 0, dbCat: 'FDC', appLink: '', dataSource: 'SELECT * FROM FDC', 
-          stations: [ { stationName: 'DF1', mpValue: 'V', urlLink: '' }, { stationName: 'LT4', mpValue: 'LT4', urlLink: '' } ] 
-        },
-        { 
-          date: '2026-03-05', status: '已上線', owner: 'IT:昱璋', dept: 'LT3', sec: 'EQ4', applicant: '簡廷寬', desc: 'LT e-Abnormal lot', 
-          tcd: '', benefit: 0.035, dbCat: '-', appLink: '', dataSource: '', 
-          stations: [ { stationName: 'LT3', mpValue: '0', urlLink: '' }, { stationName: 'LT4', mpValue: '0.035', urlLink: 'http://www.umc.com' } ] 
-        }
-      ];
-      
-      if(confirm("這將會把範例資料以主從關聯格式寫入 DB，確定嗎？")) {
-        try {
-          if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') {
-            throw new Error('Local preview mode');
-          }
-          for(let payload of basePayloads) {
-            await fetch('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-          }
-          showToast("範例資料已成功寫入 DB！", 'success');
-          fetchTasks();
-        } catch (err) {
-          basePayloads.forEach((payload, idx) => {
-            payload.regId = Date.now() + idx;
-            appData.push(mapDBtoFrontend([payload])[0]);
-          });
-          showToast("[預覽] 範例資料已寫入！", 'success');
-          recalculateItemNum();
-          renderKPI();
-          renderContent();
-        }
-      }
-    }
 
     // ===== 畫面渲染邏輯 (保留您原有的精美 UI) =====
 
@@ -552,3 +614,6 @@
   </script>
 </body>
 </html>
+
+
+```
