@@ -1,3 +1,4 @@
+```csharp
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Data.SqlClient;
@@ -8,18 +9,16 @@ using System.Data;
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
-// 啟用靜態檔案支援 (讓程式可以讀取 wwwroot 資料夾下的 index.html)
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
 // ===== 請填入您的 MS SQL 連線字串 =====
 string connStr = "Server=localhost;Database=YOUR_DB;User Id=YOUR_USER;Password=YOUR_PWD;TrustServerCertificate=True;";
 
-// 1. 取得所有資料 (Read) - JOIN 主表與明細表
+// 1. 取得所有資料
 app.MapGet("/api/tasks", async () =>
 {
     var tasks = new Dictionary<int, TaskDto>();
-
     using var conn = new SqlConnection(connStr);
     await conn.OpenAsync();
     
@@ -58,7 +57,6 @@ app.MapGet("/api/tasks", async () =>
             };
         }
 
-        // 如果該任務有關聯的站點資料，則加入 List 中
         if (!reader.IsDBNull(13))
         {
             tasks[regId].Stations.Add(new StationDto
@@ -69,11 +67,10 @@ app.MapGet("/api/tasks", async () =>
             });
         }
     }
-
     return Results.Ok(tasks.Values);
 });
 
-// 2. 新增資料 (Create) - 使用 Transaction 確保主表與明細表同時成功寫入
+// 2. 新增單筆資料
 app.MapPost("/api/tasks", async (TaskDto dto) =>
 {
     using var conn = new SqlConnection(connStr);
@@ -82,7 +79,6 @@ app.MapPost("/api/tasks", async (TaskDto dto) =>
 
     try
     {
-        // 新增至主表並取得 RegId
         var insertMain = @"
             INSERT INTO TaskCenter (RegDate, Status, Department, Section, Applicant, Description, Owner, Benefit, DBCat, TCD, AppLink, DataSource)
             OUTPUT INSERTED.RegId
@@ -104,7 +100,6 @@ app.MapPost("/api/tasks", async (TaskDto dto) =>
 
         int newRegId = (int)await cmdMain.ExecuteScalarAsync();
 
-        // 迴圈新增至明細表
         if (dto.Stations != null && dto.Stations.Count > 0)
         {
             var insertStation = "INSERT INTO TaskStation (TaskRegId, StationName, MpValue, UrlLink) VALUES (@TaskRegId, @StationName, @MpValue, @UrlLink)";
@@ -118,7 +113,6 @@ app.MapPost("/api/tasks", async (TaskDto dto) =>
                 await cmdSt.ExecuteNonQueryAsync();
             }
         }
-
         transaction.Commit();
         return Results.Ok(new { success = true, regId = newRegId });
     }
@@ -129,7 +123,74 @@ app.MapPost("/api/tasks", async (TaskDto dto) =>
     }
 });
 
-// 3. 更新資料 (Update)
+// 3. 批次匯入資料 (清空並重新建立)
+app.MapPost("/api/tasks/import", async (List<TaskDto> dtos) =>
+{
+    using var conn = new SqlConnection(connStr);
+    await conn.OpenAsync();
+    using var transaction = conn.BeginTransaction();
+
+    try
+    {
+        // 刪除明細表、主表，並將流水號歸零
+        var cleanDbCmd = @"
+            DELETE FROM TaskStation;
+            DELETE FROM TaskCenter;
+            DBCC CHECKIDENT ('TaskCenter', RESEED, 0);";
+        
+        using var cmdClean = new SqlCommand(cleanDbCmd, conn, transaction);
+        await cmdClean.ExecuteNonQueryAsync();
+
+        // 準備新增指令
+        var insertMain = @"
+            INSERT INTO TaskCenter (RegDate, Status, Department, Section, Applicant, Description, Owner, Benefit, DBCat, TCD, AppLink, DataSource)
+            OUTPUT INSERTED.RegId
+            VALUES (@RegDate, @Status, @Department, @Section, @Applicant, @Description, @Owner, @Benefit, @DBCat, @TCD, @AppLink, @DataSource)";
+
+        var insertStation = "INSERT INTO TaskStation (TaskRegId, StationName, MpValue, UrlLink) VALUES (@TaskRegId, @StationName, @MpValue, @UrlLink)";
+
+        foreach (var dto in dtos)
+        {
+            using var cmdMain = new SqlCommand(insertMain, conn, transaction);
+            cmdMain.Parameters.AddWithValue("@RegDate", dto.Date ?? DateTime.Now.ToString("yyyy-MM-dd"));
+            cmdMain.Parameters.AddWithValue("@Status", dto.Status ?? "缺欄位");
+            cmdMain.Parameters.AddWithValue("@Department", dto.Dept ?? "");
+            cmdMain.Parameters.AddWithValue("@Section", dto.Sec ?? "");
+            cmdMain.Parameters.AddWithValue("@Applicant", dto.Applicant ?? "");
+            cmdMain.Parameters.AddWithValue("@Description", dto.Desc ?? "");
+            cmdMain.Parameters.AddWithValue("@Owner", dto.Owner ?? "");
+            cmdMain.Parameters.AddWithValue("@Benefit", dto.Benefit);
+            cmdMain.Parameters.AddWithValue("@DBCat", dto.DbCat ?? "");
+            cmdMain.Parameters.AddWithValue("@TCD", dto.Tcd ?? "");
+            cmdMain.Parameters.AddWithValue("@AppLink", dto.AppLink ?? "");
+            cmdMain.Parameters.AddWithValue("@DataSource", dto.DataSource ?? "");
+
+            int newRegId = (int)await cmdMain.ExecuteScalarAsync();
+
+            if (dto.Stations != null && dto.Stations.Count > 0)
+            {
+                foreach (var st in dto.Stations)
+                {
+                    using var cmdSt = new SqlCommand(insertStation, conn, transaction);
+                    cmdSt.Parameters.AddWithValue("@TaskRegId", newRegId);
+                    cmdSt.Parameters.AddWithValue("@StationName", st.StationName);
+                    cmdSt.Parameters.AddWithValue("@MpValue", st.MpValue ?? "");
+                    cmdSt.Parameters.AddWithValue("@UrlLink", st.UrlLink ?? "");
+                    await cmdSt.ExecuteNonQueryAsync();
+                }
+            }
+        }
+        transaction.Commit();
+        return Results.Ok(new { success = true, count = dtos.Count });
+    }
+    catch (Exception ex)
+    {
+        transaction.Rollback();
+        return Results.Problem(ex.Message);
+    }
+});
+
+// 4. 更新單筆資料
 app.MapPut("/api/tasks/{id}", async (int id, TaskDto dto) =>
 {
     using var conn = new SqlConnection(connStr);
@@ -138,7 +199,6 @@ app.MapPut("/api/tasks/{id}", async (int id, TaskDto dto) =>
 
     try
     {
-        // 更新主表
         var updateMain = @"
             UPDATE TaskCenter SET 
                 Status=@Status, Owner=@Owner, Benefit=@Benefit, DBCat=@DBCat, 
@@ -156,7 +216,6 @@ app.MapPut("/api/tasks/{id}", async (int id, TaskDto dto) =>
         cmdMain.Parameters.AddWithValue("@DataSource", dto.DataSource ?? "");
         await cmdMain.ExecuteNonQueryAsync();
 
-        // 處理明細表：先刪除舊有站點，再寫入新站點
         var deleteOldStations = "DELETE FROM TaskStation WHERE TaskRegId = @RegId";
         using var cmdDel = new SqlCommand(deleteOldStations, conn, transaction);
         cmdDel.Parameters.AddWithValue("@RegId", id);
@@ -175,7 +234,6 @@ app.MapPut("/api/tasks/{id}", async (int id, TaskDto dto) =>
                 await cmdSt.ExecuteNonQueryAsync();
             }
         }
-
         transaction.Commit();
         return Results.Ok(new { success = true });
     }
@@ -186,7 +244,7 @@ app.MapPut("/api/tasks/{id}", async (int id, TaskDto dto) =>
     }
 });
 
-// 4. 刪除資料 (Delete) - 資料庫中的 CASCADE 會自動刪除對應的站點資料
+// 5. 刪除資料
 app.MapDelete("/api/tasks/{id}", async (int id) =>
 {
     using var conn = new SqlConnection(connStr);
@@ -194,13 +252,11 @@ app.MapDelete("/api/tasks/{id}", async (int id) =>
     using var cmd = new SqlCommand("DELETE FROM TaskCenter WHERE RegId=@RegId", conn);
     cmd.Parameters.AddWithValue("@RegId", id);
     await cmd.ExecuteNonQueryAsync();
-    
     return Results.Ok(new { success = true });
 });
 
 app.Run();
 
-// 定義資料結構 Model
 public class TaskDto
 {
     public int RegId { get; set; }
@@ -225,3 +281,6 @@ public class StationDto
     public string MpValue { get; set; }
     public string UrlLink { get; set; }
 }
+
+
+```
