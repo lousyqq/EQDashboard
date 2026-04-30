@@ -1,9 +1,10 @@
-﻿<!DOCTYPE html>
-<html lang="zh-TW" class="light">
+```html
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>代辦中心 (新版 UI + C# DB 連線)</title>
+    <title>代辦中心 (戰情深色版 + 完整DB功能)</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -12,126 +13,112 @@
     <script>
         tailwind.config = {
             darkMode: 'class',
-            theme: { extend: { fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'], mono: ['ui-monospace', 'monospace'], } } }
+            theme: { 
+                extend: { 
+                    fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'], mono: ['ui-monospace', 'monospace'], },
+                    colors: {
+                        // 戰情室專屬配色 (對應您提供的截圖)
+                        monitor: {
+                            bg: '#050b14',       // 最底層極深藍
+                            panel: '#0d1522',    // 面板底色
+                            card: '#162032',     // 卡片底色
+                            border: '#1e293b',   // 邊界線
+                            borderLight: '#334155',
+                            cyan: '#0ea5e9',     // 科技青色
+                            red: '#ef4444',      // 警示紅
+                            green: '#10b981',    // 正常綠
+                            yellow: '#f59e0b',   // 處理中黃
+                            textMain: '#e2e8f0', // 主文字
+                            textMuted: '#64748b' // 次要文字
+                        }
+                    }
+                } 
+            }
         }
     </script>
 
     <style>
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 10px;
-        }
+        /* 深色科技感捲軸 */
+        ::-webkit-scrollbar { width: 8px; height: 10px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-        ::-webkit-scrollbar-track {
-            background: transparent;
-            border-radius: 4px;
-        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
+        /* 凍結窗格深色陰影 */
+        .sticky-left-shadow { box-shadow: 4px 0 10px -2px rgba(0, 0, 0, 0.5); }
+        .sticky-right-shadow { box-shadow: -4px 0 10px -2px rgba(0, 0, 0, 0.5); }
 
-            ::-webkit-scrollbar-thumb:hover {
-                background: #94a3b8;
-            }
+        /* 表格 Hover 效果 (極淡的青色光暈) */
+        .table-row-hover:hover td { background-color: rgba(14, 165, 233, 0.08); }
 
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
-        .sticky-left-shadow {
-            box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.05);
-        }
-
-        .sticky-right-shadow {
-            box-shadow: -4px 0 8px -2px rgba(0, 0, 0, 0.05);
-        }
-
-        .table-row-hover:hover td {
-            background-color: #f8fafc; /* 優化為更輕盈的 Hover 顏色 */
-        }
-
-        @keyframes slideInUp {
-            from {
-                transform: translateY(100%);
-                opacity: 0;
-            }
-
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes fadeOut {
-            from {
-                opacity: 1;
-            }
-
-            to {
-                opacity: 0;
-            }
-        }
-
-        .toast-enter {
-            animation: slideInUp 0.3s ease-out forwards;
-        }
-
-        .toast-leave {
-            animation: fadeOut 0.3s ease-out forwards;
+        @keyframes slideInUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        .toast-enter { animation: slideInUp 0.3s ease-out forwards; }
+        .toast-leave { animation: fadeOut 0.3s ease-out forwards; }
+        
+        body { background-color: #050b14; color: #e2e8f0; }
+        
+        /* 避免深色模式下 input 被瀏覽器預設樣式影響 */
+        input:-webkit-autofill {
+            -webkit-box-shadow: 0 0 0 30px #050b14 inset !important;
+            -webkit-text-fill-color: #e2e8f0 !important;
         }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col antialiased selection:bg-blue-200 selection:text-blue-900">
+<body class="font-sans min-h-screen flex flex-col antialiased selection:bg-monitor-cyan selection:text-white">
 
-    <!-- 頂部資訊板 -->
-    <div class="bg-white shrink-0 shadow-sm border-b border-slate-200 z-40 relative overflow-hidden">
-        <div class="absolute top-0 right-0 w-[600px] h-full bg-gradient-to-l from-blue-50/80 to-transparent pointer-events-none"></div>
-        <div class="absolute -top-10 left-[40%] w-[400px] h-[200px] bg-gradient-to-b from-indigo-50/50 to-transparent blur-3xl pointer-events-none"></div>
-
+    <!-- ★ 頂部資訊板 (顏色替換：改為深色面板) -->
+    <div class="bg-monitor-panel shrink-0 shadow-[0_4px_20px_rgba(0,0,0,0.5)] border-b border-monitor-border z-40 relative overflow-hidden">
+        <!-- 移除亮色背景的光暈，保持深邃感 -->
         <div class="max-w-[1800px] w-full mx-auto px-4 relative">
-            <header class="flex items-center justify-between py-3 px-1">
+            <header class="flex items-center justify-between py-4 px-1">
                 <div class="flex items-center gap-3.5">
-                    <div class="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 shadow-md shadow-blue-500/20">
-                        <i data-lucide="cpu" class="w-5 h-5 text-white"></i>
+                    <!-- Logo 區塊 -->
+                    <div class="relative flex items-center justify-center w-10 h-10 rounded-xl bg-monitor-card border border-monitor-borderLight shadow-md">
+                        <i data-lucide="cpu" class="w-5 h-5 text-monitor-cyan"></i>
                     </div>
                     <div>
-                        <h1 class="text-xl font-extrabold text-slate-900 tracking-tight leading-tight">代辦中心</h1>
-                        <p class="text-[11px] text-slate-500 font-medium">GenAI Empowered Task Control</p>
+                        <h1 class="text-xl font-extrabold text-white tracking-wide leading-tight">代辦中心</h1>
+                        <p class="text-[11px] text-monitor-cyan font-mono uppercase tracking-widest mt-0.5">Task Control Monitor</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-5">
-                    <div class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-600 text-sm font-bold border border-slate-200 hover:bg-slate-200 hover:text-slate-800 transition-colors cursor-pointer shadow-sm">主</div>
+                    <div class="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-monitor-card border border-monitor-border cursor-pointer hover:bg-slate-800 transition-colors">
+                        <div class="text-right hidden sm:block">
+                            <p class="text-xs font-bold text-white leading-tight">廠區高階主管</p>
+                            <p class="text-[10px] text-monitor-green font-mono uppercase">Online</p>
+                        </div>
+                        <div class="w-8 h-8 rounded bg-monitor-panel border border-monitor-borderLight flex items-center justify-center text-monitor-cyan">
+                            <i data-lucide="user" class="w-4 h-4"></i>
+                        </div>
+                    </div>
                 </div>
             </header>
 
-            <div id="kpi-container" class="flex pb-4 overflow-x-auto hide-scrollbar px-1"></div>
+            <div id="kpi-container" class="flex pb-4 overflow-x-auto hide-scrollbar px-1 gap-4"></div>
         </div>
     </div>
 
     <!-- 內容區 -->
-    <main class="flex-1 px-4 pt-4 pb-12 max-w-[1800px] w-full mx-auto flex flex-col gap-3">
+    <main class="flex-1 px-4 pt-5 pb-12 max-w-[1800px] w-full mx-auto flex flex-col gap-4">
 
-        <!-- 控制列 -->
-        <div class="flex flex-wrap items-center justify-between gap-3 p-2 rounded-xl border shrink-0 bg-white border-slate-200 shadow-sm">
+        <!-- ★ 控制列 (顏色替換：改為深色卡片) -->
+        <div class="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl border shrink-0 bg-monitor-panel border-monitor-border shadow-md">
             <div class="flex flex-wrap items-center gap-2 sm:gap-3 pl-1.5">
-                <div class="flex items-center gap-1.5 mr-1 hidden sm:flex">
-                    <i data-lucide="layout-list" class="w-4 h-4 text-blue-600"></i>
-                    <h2 class="text-[14px] font-bold text-slate-800 whitespace-nowrap">任務清單</h2>
+                <div class="flex items-center gap-2 mr-2 hidden sm:flex">
+                    <i data-lucide="layout-list" class="w-4 h-4 text-monitor-cyan"></i>
+                    <h2 class="text-[14px] font-bold text-white whitespace-nowrap tracking-wide">任務清單</h2>
                 </div>
 
-                <div class="relative flex items-center px-2 py-1.5 rounded-md border bg-slate-50 border-slate-200 focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-100 transition-all w-40 sm:w-56">
-                    <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
-                    <input type="text" id="search-input" placeholder="搜尋申請人、需求..." class="ml-1.5 bg-transparent outline-none text-xs w-full text-slate-800 placeholder-slate-400" oninput="handleSearch(this.value)" />
+                <div class="relative flex items-center px-2 py-1.5 rounded-md border bg-monitor-bg border-monitor-borderLight focus-within:border-monitor-cyan focus-within:ring-1 focus-within:ring-monitor-cyan transition-all w-40 sm:w-64">
+                    <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 shrink-0"></i>
+                    <input type="text" id="search-input" placeholder="搜尋申請人、需求..." class="ml-2 bg-transparent outline-none text-xs w-full text-white placeholder-slate-500 font-medium" oninput="handleSearch(this.value)" />
                 </div>
 
-                <select id="status-filter" onchange="handleStatusFilter(this.value)" class="text-xs px-2 py-1.5 rounded-md border outline-none cursor-pointer bg-slate-50 border-slate-200 text-slate-700 focus:border-blue-400 transition-all">
+                <select id="status-filter" onchange="handleStatusFilter(this.value)" class="text-xs px-3 py-2 rounded-md border outline-none cursor-pointer bg-monitor-bg border-monitor-borderLight text-white focus:border-monitor-cyan transition-all font-medium appearance-none pr-8">
                     <option value="All">全部狀態</option>
                     <option value="已上線">已上線</option>
                     <option value="處理中">處理中</option>
@@ -139,27 +126,27 @@
                 </select>
             </div>
 
-            <div class="flex flex-wrap items-center gap-2 pr-0.5">
+            <div class="flex flex-wrap items-center gap-2.5 pr-0.5">
                 <input type="file" id="excel-upload" accept=".xlsx" class="hidden" onchange="handleExcelImport(event)">
-                <button onclick="document.getElementById('excel-upload').click()" class="flex items-center gap-1 px-3 py-1.5 text-[11px] font-semibold rounded-md text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-all active:scale-95 whitespace-nowrap">
+                <button onclick="document.getElementById('excel-upload').click()" class="flex items-center gap-1.5 px-4 py-2 text-[12px] font-bold rounded-md text-slate-300 bg-monitor-card border border-monitor-borderLight hover:text-white hover:border-slate-500 transition-colors shadow-sm active:scale-95">
                     <i data-lucide="upload" class="w-3.5 h-3.5"></i> 匯入 Excel
                 </button>
 
-                <button onclick="exportToExcel()" class="flex items-center gap-1 px-3 py-1.5 text-[11px] font-semibold rounded-md text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-all active:scale-95 whitespace-nowrap">
+                <button onclick="exportToExcel()" class="flex items-center gap-1.5 px-4 py-2 text-[12px] font-bold rounded-md text-slate-300 bg-monitor-card border border-monitor-borderLight hover:text-white hover:border-slate-500 transition-colors shadow-sm active:scale-95">
                     <i data-lucide="download" class="w-3.5 h-3.5"></i> 匯出 Excel
                 </button>
 
-                <button onclick="openModal('add')" class="flex items-center gap-1 px-3 py-1.5 text-[11px] font-semibold rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all active:scale-95 whitespace-nowrap">
+                <button onclick="openModal('add')" class="flex items-center gap-1.5 px-5 py-2 text-[12px] font-bold rounded-md text-white bg-monitor-cyan hover:bg-[#0284c7] shadow-[0_0_12px_rgba(14,165,233,0.3)] transition-all active:scale-95 ml-1">
                     <i data-lucide="plus" class="w-3.5 h-3.5"></i> 新增需求
                 </button>
 
-                <div class="h-4 w-px bg-slate-200 mx-1 hidden sm:block"></div>
+                <div class="h-5 w-px bg-monitor-borderLight mx-2 hidden sm:block"></div>
 
-                <div class="flex p-0.5 rounded-md border bg-slate-100 border-slate-200 shrink-0">
-                    <button id="btn-view-table" onclick="setView('table')" class="flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded transition-colors bg-white text-slate-800 shadow-sm">
+                <div class="flex p-0.5 rounded-md border bg-monitor-bg border-monitor-border shrink-0">
+                    <button id="btn-view-table" onclick="setView('table')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded bg-monitor-panel text-monitor-cyan border border-monitor-borderLight shadow-sm transition-colors">
                         <i data-lucide="list" class="w-3.5 h-3.5"></i> 總覽
                     </button>
-                    <button id="btn-view-card" onclick="setView('card')" class="flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded transition-colors text-slate-500 hover:text-slate-700">
+                    <button id="btn-view-card" onclick="setView('card')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded text-slate-400 hover:text-white transition-colors bg-transparent border border-transparent">
                         <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i> 卡片
                     </button>
                 </div>
@@ -176,76 +163,76 @@
 
     <div id="toast-container" class="fixed bottom-6 right-6 z-[120] flex flex-col gap-3 pointer-events-none"></div>
 
-    <!-- CRUD Modal -->
+    <!-- ★ CRUD Modal (顏色替換：改為深色) -->
     <div id="crud-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="closeModal('crud-modal')"></div>
-        <div id="crud-modal-content" class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl flex flex-col transform transition-all scale-95 opacity-0 duration-200 border border-slate-200 max-h-[90vh]">
-            <div class="flex justify-between items-center p-5 border-b border-slate-100 shrink-0">
-                <h3 id="modal-title" class="text-lg font-bold text-slate-800 flex items-center gap-2"></h3>
-                <button type="button" onclick="closeModal('crud-modal')" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity" onclick="closeModal('crud-modal')"></div>
+        <div id="crud-modal-content" class="relative bg-monitor-panel border border-monitor-border rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.8)] w-full max-w-4xl flex flex-col transform transition-all scale-95 opacity-0 duration-200 max-h-[90vh] overflow-hidden">
+            <div class="flex justify-between items-center p-5 border-b border-monitor-border shrink-0 bg-monitor-card/50">
+                <h3 id="modal-title" class="text-lg font-bold text-white flex items-center gap-2"></h3>
+                <button type="button" onclick="closeModal('crud-modal')" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
-            <div class="p-5 overflow-y-auto custom-scrollbar">
+            <div class="p-6 overflow-y-auto custom-scrollbar">
                 <form id="crud-form" onsubmit="saveData(event)" class="space-y-6">
                     <input type="hidden" id="modal-mode" value="add">
                     <input type="hidden" id="modal-regid" value="">
 
                     <div>
-                        <h4 class="text-sm font-bold text-slate-800 border-b border-slate-200 pb-2 mb-4">基礎資訊</h4>
+                        <h4 class="text-[11px] font-bold text-monitor-cyan uppercase tracking-widest mb-3 border-b border-monitor-border pb-2">基礎資訊 Base Info</h4>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                            <div class="relative"><label class="block text-sm font-semibold text-slate-600 mb-1.5">DEPT <span class="text-rose-500">*</span></label><input type="text" id="form-dept" required class="w-full px-4 py-2 border rounded-xl outline-none bg-slate-50 border-slate-200 text-slate-900 disabled:bg-slate-100/50 disabled:text-slate-500 disabled:cursor-not-allowed"></div>
-                            <div class="relative"><label class="block text-sm font-semibold text-slate-600 mb-1.5">SECTION <span class="text-rose-500">*</span></label><input type="text" id="form-sec" required class="w-full px-4 py-2 border rounded-xl outline-none bg-slate-50 border-slate-200 text-slate-900 disabled:bg-slate-100/50 disabled:text-slate-500 disabled:cursor-not-allowed"></div>
-                            <div class="relative"><label class="block text-sm font-semibold text-slate-600 mb-1.5">申請人 <span class="text-rose-500">*</span></label><input type="text" id="form-applicant" required class="w-full px-4 py-2 border rounded-xl outline-none bg-slate-50 border-slate-200 text-slate-900 disabled:bg-slate-100/50 disabled:text-slate-500 disabled:cursor-not-allowed"></div>
+                            <div class="relative"><label class="block text-xs font-bold text-slate-400 mb-1.5">DEPT <span class="text-monitor-red">*</span></label><input type="text" id="form-dept" required class="w-full px-3 py-2 border rounded-md outline-none bg-monitor-bg border-monitor-border focus:border-monitor-cyan transition-all text-white disabled:opacity-50"></div>
+                            <div class="relative"><label class="block text-xs font-bold text-slate-400 mb-1.5">SECTION <span class="text-monitor-red">*</span></label><input type="text" id="form-sec" required class="w-full px-3 py-2 border rounded-md outline-none bg-monitor-bg border-monitor-border focus:border-monitor-cyan transition-all text-white disabled:opacity-50"></div>
+                            <div class="relative"><label class="block text-xs font-bold text-slate-400 mb-1.5">申請人 <span class="text-monitor-red">*</span></label><input type="text" id="form-applicant" required class="w-full px-3 py-2 border rounded-md outline-none bg-monitor-bg border-monitor-border focus:border-monitor-cyan transition-all text-white disabled:opacity-50"></div>
                         </div>
-                        <div class="relative"><label class="block text-sm font-semibold text-slate-600 mb-1.5">需求摘要 <span class="text-rose-500">*</span></label><textarea id="form-desc" required rows="2" class="w-full px-4 py-2 border rounded-xl outline-none bg-slate-50 border-slate-200 text-slate-900 disabled:bg-slate-100/50 disabled:text-slate-500 disabled:cursor-not-allowed resize-none"></textarea></div>
+                        <div class="relative"><label class="block text-xs font-bold text-slate-400 mb-1.5">需求摘要 <span class="text-monitor-red">*</span></label><textarea id="form-desc" required rows="2" class="w-full px-3 py-2 border rounded-md outline-none bg-monitor-bg border-monitor-border focus:border-monitor-cyan transition-all text-white disabled:opacity-50 resize-none"></textarea></div>
                     </div>
 
                     <div id="edit-advanced-section" class="hidden space-y-6">
                         <div>
-                            <h4 class="text-sm font-bold text-slate-800 border-b border-slate-200 pb-2 mb-4">執行與追蹤</h4>
+                            <h4 class="text-[11px] font-bold text-monitor-cyan uppercase tracking-widest mb-3 border-b border-monitor-border pb-2">執行與追蹤 Tracking</h4>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div><label class="block text-sm font-semibold text-slate-600 mb-1.5">STATUS</label><select id="form-status" class="w-full px-4 py-2 border rounded-xl outline-none bg-white border-slate-200 text-slate-900"><option value="缺欄位">缺欄位</option><option value="處理中">處理中</option><option value="已上線">已上線</option></select></div>
-                                <div><label class="block text-sm font-semibold text-slate-600 mb-1.5">處理人員</label><input type="text" id="form-owner" class="w-full px-4 py-2 border rounded-xl outline-none bg-white border-slate-200 text-slate-900"></div>
-                                <div><label class="block text-sm font-semibold text-slate-600 mb-1.5">效益(MP/年)</label><input type="number" step="0.0001" id="form-benefit" class="w-full px-4 py-2 border rounded-xl outline-none bg-white border-slate-200 text-slate-900"></div>
-                                <div><label class="block text-sm font-semibold text-slate-600 mb-1.5">DBCat</label><input type="text" id="form-dbcat" class="w-full px-4 py-2 border rounded-xl outline-none bg-white border-slate-200 text-slate-900"></div>
-                                <div><label class="block text-sm font-semibold text-slate-600 mb-1.5">TCD</label><input type="text" id="form-tcd" class="w-full px-4 py-2 border rounded-xl outline-none bg-white border-slate-200 text-slate-900"></div>
-                                <div><label class="block text-sm font-semibold text-slate-600 mb-1.5">App LINK</label><input type="text" id="form-applink" class="w-full px-4 py-2 border rounded-xl outline-none bg-white border-slate-200 text-slate-900"></div>
+                                <div><label class="block text-xs font-bold text-slate-400 mb-1.5">STATUS</label><select id="form-status" class="w-full px-3 py-2 border rounded-md outline-none bg-monitor-bg border-monitor-border text-white focus:border-monitor-cyan"><option value="缺欄位">缺欄位</option><option value="處理中">處理中</option><option value="已上線">已上線</option></select></div>
+                                <div><label class="block text-xs font-bold text-slate-400 mb-1.5">處理人員</label><input type="text" id="form-owner" class="w-full px-3 py-2 border rounded-md outline-none bg-monitor-bg border-monitor-border text-white focus:border-monitor-cyan"></div>
+                                <div><label class="block text-xs font-bold text-slate-400 mb-1.5">效益(MP/年)</label><input type="number" step="0.0001" id="form-benefit" class="w-full px-3 py-2 border rounded-md outline-none bg-monitor-bg border-monitor-border text-white focus:border-monitor-cyan"></div>
+                                <div><label class="block text-xs font-bold text-slate-400 mb-1.5">DBCat</label><input type="text" id="form-dbcat" class="w-full px-3 py-2 border rounded-md outline-none bg-monitor-bg border-monitor-border text-white focus:border-monitor-cyan"></div>
+                                <div><label class="block text-xs font-bold text-slate-400 mb-1.5">TCD</label><input type="text" id="form-tcd" class="w-full px-3 py-2 border rounded-md outline-none bg-monitor-bg border-monitor-border text-white focus:border-monitor-cyan"></div>
+                                <div><label class="block text-xs font-bold text-slate-400 mb-1.5">App LINK</label><input type="text" id="form-applink" class="w-full px-3 py-2 border rounded-md outline-none bg-monitor-bg border-monitor-border text-white focus:border-monitor-cyan"></div>
                             </div>
                         </div>
                         <div>
-                            <h4 class="text-sm font-bold text-slate-800 border-b border-slate-200 pb-2 mb-4">Data Source</h4>
-                            <textarea id="form-datasource" rows="3" class="w-full px-4 py-3 border rounded-xl outline-none bg-slate-50 border-slate-200 text-slate-900 font-mono text-[13px]"></textarea>
+                            <h4 class="text-[11px] font-bold text-monitor-cyan uppercase tracking-widest mb-3 border-b border-monitor-border pb-2">Data Source (SQL)</h4>
+                            <textarea id="form-datasource" rows="3" class="w-full px-4 py-3 border rounded-md outline-none bg-[#050b14] border-monitor-border text-monitor-cyan font-mono text-[13px] shadow-inner"></textarea>
                         </div>
                         <div>
-                            <h4 class="text-sm font-bold text-slate-800 border-b border-slate-200 pb-2 mb-4">機台站點設定</h4>
+                            <h4 class="text-[11px] font-bold text-monitor-cyan uppercase tracking-widest mb-3 border-b border-monitor-border pb-2">機台站點設定 Stations</h4>
                             <div id="form-stations-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
                         </div>
                     </div>
 
-                    <div class="pt-4 flex gap-3 justify-end border-t border-slate-100">
-                        <button type="button" onclick="closeModal('crud-modal')" class="px-5 py-2 text-sm font-semibold rounded-lg border text-slate-600 bg-white hover:bg-slate-50 border-slate-200">取消</button>
-                        <button type="submit" class="px-5 py-2 text-sm font-semibold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm">儲存變更</button>
+                    <div class="pt-4 flex gap-3 justify-end border-t border-monitor-border mt-2">
+                        <button type="button" onclick="closeModal('crud-modal')" class="px-5 py-2 text-sm font-bold rounded-md border border-monitor-border text-slate-300 bg-monitor-card hover:bg-slate-800 transition-colors">取消</button>
+                        <button type="submit" class="px-5 py-2 text-sm font-bold rounded-md text-white bg-monitor-cyan hover:bg-[#0284c7] shadow-[0_0_10px_rgba(14,165,233,0.3)] transition-all active:scale-95">儲存變更</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- SQL Viewer Modal -->
+    <!-- SQL Viewer Modal (深色版) -->
     <div id="sql-modal" class="hidden fixed inset-0 z-[110] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeModal('sql-modal')"></div>
-        <div id="sql-modal-content" class="relative bg-slate-900 rounded-xl shadow-2xl w-full max-w-3xl transform transition-all scale-95 opacity-0 duration-200 border border-slate-700 overflow-hidden">
-            <div class="flex justify-between items-center px-5 py-4 border-b border-slate-800 bg-slate-800/50">
-                <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
-                    <i data-lucide="code" class="w-4 h-4 text-emerald-400"></i> Data Source
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity" onclick="closeModal('sql-modal')"></div>
+        <div id="sql-modal-content" class="relative bg-monitor-panel rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.9)] border border-monitor-border w-full max-w-3xl transform transition-all scale-95 opacity-0 duration-200 overflow-hidden">
+            <div class="flex justify-between items-center px-5 py-4 border-b border-monitor-border bg-monitor-card/80">
+                <h3 class="text-sm font-bold text-monitor-cyan flex items-center gap-2">
+                    <i data-lucide="code" class="w-4 h-4"></i> Data Source
                 </h3>
-                <button onclick="closeModal('sql-modal')" class="p-1 text-slate-400 hover:text-white transition-colors">
-                    <i data-lucide="x" class="w-5 h-5"></i>
+                <button onclick="closeModal('sql-modal')" class="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                    <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
-            <div class="p-5 overflow-x-auto max-h-[70vh]">
-                <pre><code id="sql-viewer-code" class="text-sm font-mono text-emerald-400 whitespace-pre-wrap break-all"></code></pre>
+            <div class="p-5 overflow-x-auto max-h-[70vh] bg-[#050b14]">
+                <pre><code id="sql-viewer-code" class="text-[13px] font-mono text-monitor-green whitespace-pre-wrap break-all leading-relaxed"></code></pre>
             </div>
         </div>
     </div>
@@ -294,15 +281,16 @@
                 if (!isPreviewMode) {
                     console.warn("無法連線至 API，已切換為本地預覽模式。", err);
                     isPreviewMode = true;
-                    showToast('預覽模式：無法連線 C# 伺服器，已載入測試資料', 'info');
+                    showToast('預覽模式：已載入測試資料', 'info');
 
                     const mockDbData = [
-                        { regId: 22, date: '2026-04-29', status: '缺欄位', owner: '陳祥', dept: 'PTI', sec: 'ESI', applicant: '林玉婷', desc: 'TEST', benefit: 0.6, dbCat: '33', stations: [{ stationName: 'DF1', mpValue: 'V', urlLink: '' }] },
+                        { regId: 22, date: '2026-04-29', status: '缺欄位', owner: '陳祥', dept: 'PTI', sec: 'ESI', applicant: '林玉婷', desc: 'TF-CUSPUT2-RDR-buffer-A_PM', benefit: 0.6, dbCat: '33', stations: [{ stationName: 'DF1', mpValue: 'V', urlLink: '' }] },
                         { regId: 21, date: '2026-02-10', status: '缺欄位', owner: '-', dept: 'TF5', sec: 'EQ2', applicant: '黃筱嵐', desc: 'CROSS_FAB_INLINE_BENCHMARK_RATATA', benefit: 0, dbCat: '-', stations: [] },
                         { regId: 20, date: '2026-02-03', status: '處理中', owner: '-', dept: 'DM1', sec: 'DM', applicant: '林宗緯', desc: 'DM Gen AI GPT 需求:連接到KLARITY資料', benefit: 0, dbCat: '-', stations: [] },
-                        { regId: 19, date: '2026-02-12', status: '處理中', owner: '-', dept: 'DM1', sec: 'DM', applicant: '沈俊龑/林宗緯', desc: 'Hold rate 資訊(PT Hold Report)', benefit: 0, dbCat: '-', stations: [] }
+                        { regId: 19, date: '2026-02-12', status: '處理中', owner: '-', dept: 'DM1', sec: 'DM', applicant: '沈俊龑/林宗緯', desc: 'Hold rate 資訊(PT Hold Report)', benefit: 0, dbCat: '-', stations: [] },
+                        { regId: 18, date: '2026-02-12', status: '處理中', owner: '-', dept: 'TF5', sec: 'EQ2', applicant: '黃筱嵐', desc: 'hourly、Weekly HR TGT HOLD_WIP', benefit: 0.035, dbCat: '-', stations: [] },
+                        { regId: 17, date: '2026-02-02', status: '已上線', owner: 'ESI:JH', dept: 'TF6', sec: 'PE2', applicant: '詹皓評', desc: 'PDS data 分析', benefit: 0.12, tcd: 'Notes://', dbCat: 'SEMAS', stations: [] }
                     ];
-                    // 自動擴增資料以便測試無高度限制的捲軸
                     let expandedData = [];
                     for (let i = 0; i < 20; i++) {
                         mockDbData.forEach(d => { expandedData.push({ ...d, regId: expandedData.length + 1 }); });
@@ -354,21 +342,13 @@
                 }
 
                 if (mode === 'add') {
-                    await fetch('/api/tasks', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
+                    await fetch('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                     state.sortConfig = { key: 'regId', direction: 'desc' };
                     state.currentPage = 1;
                     showToast('需求已成功建立！同步至 DB', 'success');
                 } else {
                     const regId = document.getElementById('modal-regid').value;
-                    await fetch(`/api/tasks/${regId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
+                    await fetch(`/api/tasks/${regId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                     showToast('資料修改已儲存並同步至 DB！', 'success');
                 }
                 closeModal('crud-modal');
@@ -421,8 +401,7 @@
             if (!file) return;
 
             if (!confirm("⚠️ 警告：匯入 Excel 將會【清空目前資料庫所有資料】，並以 Excel 內容重新建立。\n\n確定要繼續嗎？")) {
-                event.target.value = '';
-                return;
+                event.target.value = ''; return;
             }
 
             showToast("解析資料中，請稍候...", "info");
@@ -434,8 +413,8 @@
                     const workbook = XLSX.read(data, { type: 'array' });
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
-
                     const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+                    
                     if (rows.length < 2) throw new Error("Excel 檔案沒有資料列！");
 
                     const headers = rows[0];
@@ -455,10 +434,7 @@
                         else if (text.includes('tcd')) colMap.tcd = idx;
                         else if (text.includes('applink') || text.includes('app link')) colMap.appLink = idx;
                         else if (text.includes('datasource') || text.includes('data source')) colMap.dataSource = idx;
-
-                        stationColumns.forEach(st => {
-                            if (text === st.toLowerCase()) colMap[st.toLowerCase()] = idx;
-                        });
+                        stationColumns.forEach(st => { if (text === st.toLowerCase()) colMap[st.toLowerCase()] = idx; });
                     });
 
                     if (colMap.desc === undefined) throw new Error("找不到『需求摘要』欄位，請確認 Excel 格式。");
@@ -474,8 +450,7 @@
                             if (val) {
                                 val = String(val).trim();
                                 let mp = val, url = '';
-                                if (val.includes('^')) { [mp, url] = val.split('^'); }
-                                else if (val.startsWith('http') || val.startsWith('Notes://')) { mp = 'Link'; url = val; }
+                                if (val.includes('^')) { [mp, url] = val.split('^'); } else if (val.startsWith('http') || val.startsWith('Notes://')) { mp = 'Link'; url = val; }
                                 stations.push({ stationName: st, mpValue: mp, urlLink: url });
                             }
                         });
@@ -499,14 +474,9 @@
                         });
                     }
 
-                    if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') {
-                        throw new Error('Local preview mode');
-                    }
+                    if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') throw new Error('Local preview mode');
 
-                    const response = await fetch('/api/tasks/import', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloads)
-                    });
-
+                    const response = await fetch('/api/tasks/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloads) });
                     if (!response.ok) throw new Error("伺服器匯入處理失敗");
 
                     showToast(`成功匯入 ${payloads.length} 筆資料！`, "success");
@@ -519,98 +489,13 @@
                         showToast(`[預覽] 已模擬匯入 ${payloads.length} 筆資料`, "success");
                         recalculateItemNum(); renderKPI(); renderContent(); renderPagination();
                     } else {
-                        console.error(err);
-                        showToast("匯入失敗：" + err.message, "error");
+                        console.error(err); showToast("匯入失敗：" + err.message, "error");
                     }
                 } finally {
                     event.target.value = '';
                 }
             };
             reader.readAsArrayBuffer(file);
-        }
-
-        // ===== UI 操作與互動函數 =====
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            const config = { success: { icon: 'check-circle-2', color: 'text-emerald-500', bg: 'bg-emerald-50', border: 'border-emerald-200' }, error: { icon: 'alert-circle', color: 'text-rose-500', bg: 'bg-rose-50', border: 'border-rose-200' }, info: { icon: 'info', color: 'text-blue-500', bg: 'bg-blue-50', border: 'border-blue-200' } }[type];
-            toast.className = `flex items-center gap-3 px-4 py-3 bg-white border ${config.border} shadow-lg rounded-xl pointer-events-auto toast-enter`;
-            toast.innerHTML = `<div class="p-1 rounded-full ${config.bg} ${config.color}"><i data-lucide="${config.icon}" class="w-5 h-5"></i></div><p class="text-sm font-semibold text-slate-700">${message}</p>`;
-            container.appendChild(toast);
-            lucide.createIcons();
-            setTimeout(() => { toast.classList.replace('toast-enter', 'toast-leave'); setTimeout(() => toast.remove(), 300); }, 3000);
-        }
-
-        function getStatusColorClass(status) {
-            switch (status) { case '已上線': return 'bg-emerald-50 text-emerald-600 border-emerald-100/50'; case '處理中': return 'bg-amber-50 text-amber-600 border-amber-100/50'; case '缺欄位': return 'bg-rose-50 text-rose-600 border-rose-100/50'; default: return 'bg-slate-50 text-slate-600 border-slate-200/50'; }
-        }
-        function getStatusIconTag(status) {
-            switch (status) { case '已上線': return '<i data-lucide="check-circle" class="w-3.5 h-3.5 mr-1 text-emerald-500"></i>'; case '處理中': return '<i data-lucide="clock" class="w-3.5 h-3.5 mr-1 text-amber-500"></i>'; case '缺欄位': return '<i data-lucide="alert-octagon" class="w-3.5 h-3.5 mr-1 text-rose-500"></i>'; default: return ''; }
-        }
-        function formatIconLink(val, type) {
-            if (!val) return `<span class="text-slate-400 font-medium">-</span>`;
-            let href = val.startsWith('http') || val.startsWith('Notes') ? val : 'http://' + val;
-            let iconName = type === 'tcd' ? 'file-text' : 'external-link';
-            return `<a href="${href}" target="_blank" title="開啟連結: ${val}" class="inline-flex items-center justify-center p-1.5 rounded-md text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:text-blue-700 transition-colors" onclick="event.stopPropagation()"><i data-lucide="${iconName}" class="w-4 h-4"></i></a>`;
-        }
-
-        function openModal(mode, regId = null) {
-            const modal = document.getElementById('crud-modal');
-            const content = document.getElementById('crud-modal-content');
-            document.getElementById('modal-mode').value = mode;
-            document.getElementById('crud-form').reset();
-            const baseInputs = ['form-dept', 'form-sec', 'form-applicant', 'form-desc'];
-
-            if (mode === 'add') {
-                document.getElementById('modal-title').innerHTML = '<i data-lucide="plus-circle" class="w-5 h-5 text-blue-600"></i> 新增需求';
-                document.getElementById('edit-advanced-section').classList.add('hidden');
-                baseInputs.forEach(id => document.getElementById(id).disabled = false);
-            } else if (mode === 'edit') {
-                document.getElementById('modal-title').innerHTML = `<i data-lucide="edit-3" class="w-5 h-5 text-blue-600"></i> 編輯需求 <span class="ml-2 text-sm font-normal text-slate-500">#RegID: ${regId}</span>`;
-                document.getElementById('edit-advanced-section').classList.remove('hidden');
-                document.getElementById('modal-regid').value = regId;
-                baseInputs.forEach(id => document.getElementById(id).disabled = true);
-
-                const item = appData.find(d => d.regId === regId);
-                if (item) {
-                    document.getElementById('form-dept').value = item.dept; document.getElementById('form-sec').value = item.sec || '';
-                    document.getElementById('form-applicant').value = item.applicant; document.getElementById('form-desc').value = item.desc;
-                    document.getElementById('form-status').value = item.status; document.getElementById('form-owner').value = item.owner || '';
-                    document.getElementById('form-benefit').value = item.benefit || ''; document.getElementById('form-dbcat').value = item.dbCat || '';
-                    document.getElementById('form-tcd').value = item.tcd || ''; document.getElementById('form-applink').value = item.appLink || '';
-                    document.getElementById('form-datasource').value = item.dataSource || '';
-
-                    document.getElementById('form-stations-grid').innerHTML = stationColumns.map(col => {
-                        let val = item[col.toLowerCase()] || '', mp = '', url = '';
-                        if (val.includes('^')) { [mp, url] = val.split('^'); } else if (val.startsWith('http') || val.startsWith('Notes://')) { url = val; } else { mp = val; }
-                        return `<div class="p-2.5 border rounded-lg bg-slate-50 relative focus-within:border-blue-400 focus-within:bg-white"><label class="absolute -top-2 left-2 px-1 text-xs font-bold bg-slate-50 text-slate-500">${col}</label><div class="space-y-1.5 mt-1"><div class="flex items-center bg-white border rounded overflow-hidden"><span class="pl-2 text-slate-400"><i data-lucide="activity" class="w-3 h-3"></i></span><input type="text" id="st-mp-${col}" value="${mp}" placeholder="MP Saving" class="w-full text-xs font-medium px-2 py-1 bg-transparent outline-none"></div><div class="flex items-center bg-white border rounded overflow-hidden"><span class="pl-2 text-slate-400"><i data-lucide="link" class="w-3 h-3"></i></span><input type="text" id="st-url-${col}" value="${url}" placeholder="URL" class="w-full text-xs font-medium px-2 py-1 bg-transparent outline-none"></div></div></div>`;
-                    }).join('');
-                }
-            }
-            modal.classList.remove('hidden'); lucide.createIcons();
-            setTimeout(() => { content.classList.remove('scale-95', 'opacity-0'); content.classList.add('scale-100', 'opacity-100'); }, 10);
-        }
-
-        function viewSqlModal(regId) {
-            const item = appData.find(d => d.regId === regId);
-            if (!item || !item.dataSource) return;
-
-            document.getElementById('sql-viewer-code').textContent = item.dataSource;
-            const modal = document.getElementById('sql-modal');
-            const content = document.getElementById('sql-modal-content');
-            modal.classList.remove('hidden');
-            lucide.createIcons();
-            setTimeout(() => {
-                content.classList.remove('scale-95', 'opacity-0');
-                content.classList.add('scale-100', 'opacity-100');
-            }, 10);
-        }
-
-        function closeModal(modalId) {
-            const modal = document.getElementById(modalId);
-            const content = document.getElementById(modalId + '-content');
-            content.classList.remove('scale-100', 'opacity-100'); content.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => modal.classList.add('hidden'), 200);
         }
 
         function exportToExcel() {
@@ -627,7 +512,7 @@
             showToast('Excel 報表匯出成功！', 'success');
         }
 
-        // ===== 渲染功能 =====
+        // ===== 核心資料過濾與排序函數 =====
         function getProcessedData() {
             let filtered = appData.filter(item => {
                 const term = state.searchTerm.toLowerCase();
@@ -646,59 +531,94 @@
             return filtered;
         }
 
-        function renderKPI() {
-            const kpis = [
-                { title: "總需求數量", value: appData.length, icon: "database", bgClass: "bg-blue-50/50", textClass: "text-blue-600", borderClass: "border-blue-100" },
-                { title: "已上線完成", value: appData.filter(d => d.status === '已上線').length, icon: "check-circle", bgClass: "bg-emerald-50/50", textClass: "text-emerald-600", borderClass: "border-emerald-100" },
-                { title: "處理中專案", value: appData.filter(d => d.status === '處理中').length, icon: "clock", bgClass: "bg-amber-50/50", textClass: "text-amber-600", borderClass: "border-amber-100" },
-                { title: "缺欄位專案", value: appData.filter(d => d.status === '缺欄位').length, icon: "alert-octagon", bgClass: "bg-rose-50/50", textClass: "text-rose-600", borderClass: "border-rose-100" },
-                { title: "預估總效益", value: appData.reduce((s, i) => s + (Number(i.benefit) || 0), 0).toFixed(3), icon: "trending-up", bgClass: "bg-indigo-50/50", textClass: "text-indigo-600", borderClass: "border-indigo-100" },
-            ];
-
-            const kpiCardsHtml = kpis.map((k) => `
-                <div class="flex-1 min-w-[150px] flex items-center justify-between px-5 py-4 bg-white rounded-2xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.04)] border border-slate-200/60 hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300 group cursor-default">
-                  <div class="flex flex-col gap-1">
-                    <p class="text-[11px] font-bold text-slate-400 tracking-wider">${k.title}</p>
-                    <h3 class="text-3xl font-black text-slate-800 leading-none">${k.value}</h3>
-                  </div>
-                  <div class="p-2.5 rounded-xl ${k.bgClass} ${k.textClass} border ${k.borderClass} group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300">
-                    <i data-lucide="${k.icon}" class="w-5 h-5"></i>
-                  </div>
-                </div>
-              `).join('');
-
-            document.getElementById('kpi-container').innerHTML = `
-                <div class="inline-flex w-full xl:w-auto p-2 bg-slate-50/50 border border-slate-200/50 rounded-[24px] gap-3">
-                  ${kpiCardsHtml}
-                </div>
-              `;
+        // ===== UI 操作與互動函數 =====
+        // 深色 UI 的 Toast
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const config = { 
+                success: { icon: 'check-circle', color: 'text-monitor-green', bg: 'bg-monitor-green/10', border: 'border-monitor-green/30' }, 
+                error: { icon: 'alert-circle', color: 'text-monitor-red', bg: 'bg-monitor-red/10', border: 'border-monitor-red/30' }, 
+                info: { icon: 'info', color: 'text-monitor-cyan', bg: 'bg-monitor-cyan/10', border: 'border-monitor-cyan/30' } 
+            }[type];
+            toast.className = `flex items-center gap-3 px-4 py-3 bg-monitor-card border ${config.border} shadow-2xl rounded-xl pointer-events-auto toast-enter`;
+            toast.innerHTML = `<div class="p-1 rounded-full ${config.bg} ${config.color}"><i data-lucide="${config.icon}" class="w-4 h-4"></i></div><p class="text-xs font-bold text-white tracking-wide">${message}</p>`;
+            container.appendChild(toast);
+            lucide.createIcons();
+            setTimeout(() => { toast.classList.replace('toast-enter', 'toast-leave'); setTimeout(() => toast.remove(), 300); }, 3000);
         }
 
-        // ★ 核心修復：優化排序小箭頭 (還原截圖的淡藍雙箭頭)
+        // ★ 深色版：狀態顏色定義
+        function getStatusColorClass(status) {
+            switch (status) { 
+                case '已上線': return 'text-monitor-green border-monitor-green/30 bg-monitor-green/10'; 
+                case '處理中': return 'text-monitor-yellow border-monitor-yellow/30 bg-monitor-yellow/10'; 
+                case '缺欄位': return 'text-monitor-red border-monitor-red/30 bg-monitor-red/10'; 
+                default: return 'text-slate-400 border-slate-600 bg-slate-800'; 
+            }
+        }
+        function getStatusIconTag(status) {
+            switch (status) { 
+                case '已上線': return '<i data-lucide="check-circle" class="w-3 h-3 mr-1"></i>'; 
+                case '處理中': return '<i data-lucide="clock" class="w-3 h-3 mr-1"></i>'; 
+                case '缺欄位': return '<i data-lucide="alert-circle" class="w-3 h-3 mr-1"></i>'; 
+                default: return ''; 
+            }
+        }
+
+        // ★ KPI 渲染：加入截圖風格的高亮色彩 (保留寬度保護)
+        function renderKPI() {
+            const filteredData = getProcessedData();
+            const totalBenefit = filteredData.reduce((s, i) => s + (Number(i.benefit) || 0), 0).toFixed(3);
+            const kpis = [
+                { title: "目前總任務數", value: filteredData.length, icon: "database", color: "text-monitor-cyan", border: "border-monitor-cyan/30", glow: "bg-monitor-cyan" },
+                { title: "高風險異常(缺欄位)", value: appData.filter(d => d.status === '缺欄位').length, icon: "alert-octagon", color: "text-monitor-red", border: "border-monitor-red/30", glow: "bg-monitor-red" },
+                { title: "處理中專案", value: appData.filter(d => d.status === '處理中').length, icon: "clock", color: "text-monitor-yellow", border: "border-monitor-yellow/30", glow: "bg-monitor-yellow" },
+                { title: "全區預估效益", value: totalBenefit, icon: "trending-up", color: "text-monitor-green", border: "border-monitor-green/30", glow: "bg-monitor-green" },
+            ];
+
+            const kpiCardsHtml = kpis.map((k) => {
+                const isLongValue = String(k.value).length > 8;
+                return `
+                <div class="flex-1 min-w-[200px] flex items-center justify-between px-5 py-4 bg-monitor-card rounded-xl border border-monitor-border hover:border-slate-500 transition-colors duration-300 group cursor-default relative overflow-hidden">
+                  <div class="absolute -right-6 -top-6 w-20 h-20 rounded-full ${k.glow}/10 blur-xl group-hover:scale-150 transition-transform duration-500"></div>
+                  <div class="flex flex-col gap-1 min-w-0 pr-2 relative z-10">
+                    <p class="text-[11px] font-bold text-monitor-textMuted tracking-widest uppercase whitespace-nowrap">${k.title}</p>
+                    <h3 class="${isLongValue ? 'text-2xl' : 'text-[28px]'} font-mono font-bold ${k.color} tracking-tight leading-none mt-1 truncate drop-shadow-[0_0_8px_currentColor]" title="${k.value}">${k.value}</h3>
+                  </div>
+                  <div class="shrink-0 w-9 h-9 rounded bg-monitor-panel border ${k.border} flex items-center justify-center transition-transform group-hover:rotate-3 shadow-sm relative z-10">
+                    <i data-lucide="${k.icon}" class="w-4 h-4 ${k.color}"></i>
+                  </div>
+                </div>
+              `;
+            }).join('');
+
+            document.getElementById('kpi-container').innerHTML = kpiCardsHtml;
+            lucide.createIcons();
+        }
+
+        // ★ 表頭：深色微光雙向小箭頭 (不突兀)
         function renderSortHeader(label, sortKey, className) {
             const isActive = state.sortConfig.key === sortKey;
             const isAsc = isActive && state.sortConfig.direction === 'asc';
             const isDesc = isActive && state.sortConfig.direction === 'desc';
 
-            let upColor = isAsc ? 'text-blue-600' : 'text-slate-300 group-hover:text-blue-400';
-            let downColor = isDesc ? 'text-blue-600' : 'text-slate-300 group-hover:text-blue-400';
-
             return `
-                <th class="px-3 py-3 cursor-pointer select-none group transition-colors hover:bg-slate-50 bg-[#f8fafc] border-b border-slate-200/60 ${className}" onclick="setSort('${sortKey}')">
-                  <div class="flex items-center gap-1.5 font-semibold text-[11px] text-slate-500 tracking-widest uppercase ${className.includes('text-center') ? 'justify-center' : ''}">
-                    ${label}
-                    <div class="flex items-center -space-x-[3px] transition-opacity">
-                        <i data-lucide="arrow-up" class="w-[11px] h-[11px] ${upColor} transition-colors" stroke-width="3"></i>
-                        <i data-lucide="arrow-down" class="w-[11px] h-[11px] ${downColor} transition-colors" stroke-width="3"></i>
-                    </div>
-                  </div>
-                </th>
-              `;
+            <th class="px-3 py-3.5 cursor-pointer select-none group border-b border-monitor-border bg-monitor-card hover:bg-[#162032] transition-colors ${className}" onclick="setSort('${sortKey}')">
+              <div class="flex items-center text-[11px] font-bold text-slate-400 uppercase tracking-widest ${className.includes('text-center') ? 'justify-center' : ''}">
+                ${label}
+                <div class="flex items-center -space-x-[2px] ml-1 transition-opacity">
+                    <i data-lucide="arrow-up" class="w-[11px] h-[11px] ${isAsc ? 'text-monitor-cyan opacity-100' : 'text-slate-500 opacity-0 group-hover:opacity-100'} transition-all"></i>
+                    <i data-lucide="arrow-down" class="w-[11px] h-[11px] ${isDesc ? 'text-monitor-cyan opacity-100' : 'text-slate-500 opacity-0 group-hover:opacity-100'} transition-all"></i>
+                </div>
+              </div>
+            </th>
+          `;
         }
 
+        // 表格內容 (深色版)
         function renderContent() {
             const filtered = getProcessedData();
-
             let currentData;
             if (state.itemsPerPage === 'All') {
                 currentData = filtered;
@@ -710,164 +630,123 @@
             const contentContainer = document.getElementById('content-container');
 
             if (state.view === 'table') {
-                let stationHeaders = stationColumns.map(col => `<th class="px-1.5 py-3 text-center border-b border-slate-200/60 bg-[#f8fafc] font-semibold text-[11px] tracking-widest uppercase text-slate-500 min-w-[70px] max-w-[120px]">${col}</th>`).join('');
-
+                let stationHeaders = stationColumns.map(col => `<th class="px-2 py-3.5 text-center border-b border-monitor-border bg-monitor-card text-[11px] font-bold text-slate-400 uppercase tracking-widest min-w-[60px] max-w-[100px] border-l border-monitor-border/50">${col}</th>`).join('');
+                
                 let rowsHtml = currentData.map(row => {
                     let stationCells = stationColumns.map(col => {
                         const val = row[col.toLowerCase()];
-                        if (!val) return `<td class="px-1 py-2.5 text-center"><span class="text-slate-200 font-medium">-</span></td>`;
+                        if (!val) return `<td class="px-2 py-2 text-center border-l border-monitor-border/50"><span class="text-slate-600 font-mono">-</span></td>`;
                         let mp = val, url = ''; if (val.includes('^')) { [mp, url] = val.split('^'); } else if (val.startsWith('http') || val.startsWith('Notes://')) { mp = 'Link'; url = val; }
-                        return `<td class="px-1 py-2.5 text-center min-w-[70px] max-w-[120px] whitespace-normal break-words">
-                                <span class="font-semibold text-[11px] text-slate-600 break-all">${mp}</span>
-                                ${url ? `<a href="${url}" target="_blank" class="inline-block ml-1 opacity-60 hover:opacity-100 transition-opacity" onclick="event.stopPropagation()"><i data-lucide="external-link" class="w-3 h-3 text-blue-500"></i></a>` : ''}
-                            </td>`;
+                        return `<td class="px-2 py-2 text-center min-w-[60px] max-w-[100px] whitespace-normal break-words border-l border-monitor-border/50">
+                            <span class="font-mono text-[11px] text-monitor-cyan break-all">${mp}</span>
+                            ${url ? `<a href="${url}" target="_blank" class="inline-block ml-1 opacity-60 hover:opacity-100 transition-all" onclick="event.stopPropagation()"><i data-lucide="external-link" class="w-3 h-3 text-monitor-cyan"></i></a>` : ''}
+                        </td>`;
                     }).join('');
 
                     let sqlBtn = row.dataSource ? `
-                            <button onclick="viewSqlModal(${row.regId})" class="text-blue-400 hover:text-blue-600 transition-colors" title="檢視語法">
-                                <i data-lucide="code" class="w-4 h-4 mx-auto"></i>
-                            </button>` : `<span class="text-slate-200">-</span>`;
+                        <button onclick="viewSqlModal(${row.regId})" class="text-monitor-cyan hover:text-white transition-colors" title="檢視語法">
+                            <i data-lucide="code" class="w-4 h-4 mx-auto"></i>
+                        </button>` : `<span class="text-slate-600">-</span>`;
 
-                    let tcdIcon = row.tcd ? `<i data-lucide="file-text" class="w-4 h-4 text-blue-400 hover:text-blue-600 mx-auto cursor-pointer transition-colors" title="TCD"></i>` : `<span class="text-slate-200">-</span>`;
+                    let tcdIcon = row.tcd ? `<i data-lucide="file-text" class="w-4 h-4 text-monitor-cyan hover:text-white mx-auto cursor-pointer transition-colors" title="開啟連結" onclick="window.open('${row.tcd.startsWith('http')?row.tcd:'#'}')"></i>` : `<span class="text-slate-600">-</span>`;
 
-                    // ★ 核心修復：無框線的純淨畫筆與垃圾桶 (還原截圖設計)
+                    // ★ 去外框操作按鈕
                     let actionHtml = `
-                          <div class="flex items-center justify-center gap-3 opacity-50 group-hover:opacity-100 transition-opacity">
-                            <button onclick="openModal('edit', ${row.regId})" class="text-blue-500 hover:text-blue-700 transition-colors" title="編輯">
-                              <i data-lucide="pen-line" class="w-4 h-4"></i>
-                            </button>
-                            <button onclick="deleteData(${row.regId})" class="text-rose-400 hover:text-rose-600 transition-colors" title="刪除">
-                              <i data-lucide="trash-2" class="w-4 h-4"></i>
-                            </button>
-                          </div>
-                        `;
+                      <div class="flex items-center justify-center gap-3 opacity-30 group-hover:opacity-100 transition-opacity">
+                        <button onclick="openModal('edit', ${row.regId})" class="text-monitor-cyan hover:text-white transition-colors" title="編輯">
+                          <i data-lucide="pen-line" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="deleteData(${row.regId})" class="text-monitor-red hover:text-white transition-colors" title="刪除">
+                          <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                      </div>
+                    `;
 
                     return `
-                    <tr class="table-row-hover transition-colors border-b border-slate-50 bg-white group">
-                      <td class="px-3 py-2.5 sticky left-0 z-10 bg-white group-hover:bg-[#f8fafc] text-slate-500 text-xs font-medium w-[90px] min-w-[90px] transition-colors border-r border-slate-100/50">${row.date}</td>
-                      <td class="px-3 py-2.5 text-center sticky left-[90px] z-10 bg-white group-hover:bg-[#f8fafc] font-mono font-semibold text-blue-500 text-[13px] w-[60px] min-w-[60px] transition-colors border-r border-slate-100/50">#${row.regId}</td>
-                      <td class="px-3 py-2.5 text-center sticky left-[150px] z-10 bg-white group-hover:bg-[#f8fafc] font-bold text-emerald-500 text-xs w-[70px] min-w-[70px] sticky-left-shadow transition-colors">${row.itemNum}</td>
-                      <td class="px-3 py-2.5 w-[100px] min-w-[100px]">
-                         <span class="inline-flex items-center px-1.5 py-0.5 rounded-[6px] text-[11px] font-bold border whitespace-nowrap ${getStatusColorClass(row.status)}">
-                             ${getStatusIconTag(row.status)} ${row.status}
-                         </span>
-                      </td>
-                      <td class="px-3 py-2.5 min-w-[70px] max-w-[120px] whitespace-normal break-words"><span class="text-[12px] font-semibold text-slate-600">${row.dept}</span></td>
-                      <td class="px-3 py-2.5 min-w-[70px] max-w-[120px] whitespace-normal break-words"><span class="text-[12px] font-medium text-slate-500">${row.sec || '-'}</span></td>
-                      <td class="px-3 py-2.5 font-medium text-slate-700 text-[12px] min-w-[80px] max-w-[150px] whitespace-normal break-words">${row.applicant}</td>
-                      <td class="px-3 py-2.5 min-w-[350px] max-w-[500px] whitespace-normal break-words leading-relaxed text-slate-600 text-[13px] font-medium">${row.desc}</td>
-                      <td class="px-3 py-2.5 text-slate-500 text-[12px] font-medium min-w-[90px] max-w-[150px] whitespace-normal break-words">${row.owner || '-'}</td>
-                      <td class="px-3 py-2.5 text-center min-w-[50px]">${tcdIcon}</td>
-                      <td class="px-3 py-2.5 font-semibold text-right text-xs min-w-[80px] ${row.benefit > 0 ? 'text-emerald-500' : 'text-slate-300'}">${row.benefit > 0 ? row.benefit : '-'}</td>
-                      <td class="px-3 py-2.5 text-[12px] text-slate-400 font-medium min-w-[80px] max-w-[150px] text-center">${row.dbCat || '-'}</td>
-                      <td class="px-3 py-2.5 text-center min-w-[50px]">${formatIconLink(row.appLink, 'link')}</td>
-                      <td class="px-3 py-2.5 text-center min-w-[50px]">${sqlBtn}</td>
-                      ${stationCells}
-                      <td class="px-2 py-2.5 sticky right-0 z-10 bg-white group-hover:bg-[#f8fafc] text-center sticky-right-shadow transition-colors">
-                        ${actionHtml}
-                      </td>
-                    </tr>
-                  `;
+                <tr class="table-row-hover transition-colors border-b border-monitor-border/50 bg-monitor-panel group cursor-default">
+                  <td class="px-4 py-3 sticky left-0 z-10 bg-monitor-panel group-hover:bg-[#121c2c] text-slate-400 font-mono text-[11px] w-[90px] min-w-[90px] transition-colors border-r border-monitor-border/50">${row.date}</td>
+                  <td class="px-4 py-3 text-center sticky left-[90px] z-10 bg-monitor-panel group-hover:bg-[#121c2c] font-mono font-bold text-monitor-cyan text-[12px] w-[60px] min-w-[60px] transition-colors border-r border-monitor-border/50">#${row.regId}</td>
+                  <td class="px-4 py-3 text-center sticky left-[150px] z-10 bg-monitor-panel group-hover:bg-[#121c2c] font-mono font-bold text-white text-[12px] w-[60px] min-w-[60px] sticky-left-shadow transition-colors">${row.itemNum}</td>
+                  <td class="px-4 py-3 w-[110px] min-w-[110px]">
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border whitespace-nowrap ${getStatusColorClass(row.status)}">
+                         ${getStatusIconTag(row.status)} ${row.status}
+                      </span>
+                  </td>
+                  <td class="px-4 py-3 min-w-[60px] max-w-[100px] whitespace-normal break-words"><span class="text-[12px] font-bold text-white">${row.dept}</span></td>
+                  <td class="px-4 py-3 min-w-[60px] max-w-[100px] whitespace-normal break-words"><span class="text-[12px] font-mono text-slate-400">${row.sec || '-'}</span></td>
+                  <td class="px-4 py-3 font-medium text-slate-300 text-[12px] min-w-[70px] max-w-[120px] whitespace-normal break-words">${row.applicant}</td>
+                  <td class="px-4 py-3 min-w-[300px] max-w-[450px] whitespace-normal break-words leading-relaxed text-slate-300 text-[12px] font-medium">${row.desc}</td>
+                  <td class="px-4 py-3 text-slate-400 text-[12px] font-medium min-w-[80px] max-w-[120px] whitespace-normal break-words">${row.owner || '-'}</td>
+                  <td class="px-4 py-3 text-center min-w-[50px]">${tcdIcon}</td>
+                  <td class="px-4 py-3 font-mono font-bold text-right text-[12px] min-w-[70px] ${row.benefit > 0 ? 'text-monitor-green' : 'text-slate-600'}">${row.benefit > 0 ? row.benefit : '-'}</td>
+                  <td class="px-4 py-3 text-[12px] font-mono text-slate-400 min-w-[70px] max-w-[120px] text-center">${row.dbCat || '-'}</td>
+                  <td class="px-4 py-3 text-center min-w-[50px]">${sqlBtn}</td>
+                  ${stationCells}
+                  <td class="px-3 py-3 sticky right-0 z-10 bg-monitor-panel group-hover:bg-[#121c2c] text-center sticky-right-shadow transition-colors">
+                    ${actionHtml}
+                  </td>
+                </tr>
+              `;
                 }).join('');
 
                 if (currentData.length === 0) {
-                    rowsHtml = `<tr><td colspan="${15 + stationColumns.length}" class="px-4 py-16 text-center text-slate-500">找不到符合條件的資料。</td></tr>`;
+                    rowsHtml = `<tr><td colspan="${14 + stationColumns.length}" class="px-4 py-16 text-center text-slate-500 font-bold uppercase tracking-widest opacity-60">No Data Found</td></tr>`;
                 }
 
                 contentContainer.innerHTML = `
-                  <div class="w-full overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <table class="w-full text-left whitespace-nowrap min-w-max border-collapse">
-                      <thead class="bg-[#f8fafc] border-b border-slate-200/60">
-                        <tr>
-                          ${renderSortHeader('註冊日期', 'date', 'sticky left-0 z-30 border-r border-slate-200/60 bg-[#f8fafc]')}
-                          ${renderSortHeader('RegID', 'regId', 'text-center sticky left-[90px] z-30 border-r border-slate-200/60 bg-[#f8fafc]')}
-                          ${renderSortHeader('ITEM_NO', 'itemNum', 'text-center sticky left-[150px] z-30 border-r border-slate-200/60 bg-[#f8fafc] sticky-left-shadow')}
-                          ${renderSortHeader('STATUS', 'status', 'border-b border-slate-200/60')}
-                          ${renderSortHeader('DEPT', 'dept', 'border-b border-slate-200/60 min-w-[70px] max-w-[120px]')}
-                          ${renderSortHeader('SECTION', 'sec', 'border-b border-slate-200/60 min-w-[70px] max-w-[120px]')}
-                          ${renderSortHeader('申請人', 'applicant', 'border-b border-slate-200/60 min-w-[80px] max-w-[150px]')}
-                          ${renderSortHeader('需求摘要', 'desc', 'border-b border-slate-200/60 min-w-[350px] max-w-[500px]')}
-                          ${renderSortHeader('負責人', 'owner', 'border-b border-slate-200/60 min-w-[90px] max-w-[150px]')}
-                          <th class="px-3 py-3 border-b border-slate-200/60 text-center font-semibold text-[11px] tracking-widest uppercase text-slate-500 min-w-[50px]">TCD</th>
-                          ${renderSortHeader('效益', 'benefit', 'border-b border-slate-200/60 text-right min-w-[80px]')}
-                          <th class="px-3 py-3 border-b border-slate-200/60 font-semibold text-[11px] tracking-widest uppercase text-slate-500 min-w-[80px] max-w-[150px] text-center">DBCat</th>
-                          <th class="px-3 py-3 border-b border-slate-200/60 text-center font-semibold text-[11px] tracking-widest uppercase text-slate-500 min-w-[50px]">App LINK</th>
-                          <th class="px-3 py-3 border-b border-slate-200/60 text-center font-semibold text-[11px] tracking-widest uppercase text-slate-500 min-w-[50px]">SQL</th>
-                          ${stationHeaders}
-                          <th class="px-2 py-3 sticky right-0 z-30 border-b border-slate-200/60 bg-[#f8fafc] text-center font-semibold text-[11px] text-slate-500 tracking-widest uppercase sticky-right-shadow">操作</th>
-                        </tr>
-                      </thead>
-                      <tbody class="divide-y divide-slate-50">${rowsHtml}</tbody>
-                    </table>
-                  </div>
-                `;
+              <div class="w-full overflow-x-auto bg-monitor-panel">
+                <table class="w-full text-left whitespace-nowrap min-w-max border-collapse">
+                  <thead>
+                    <tr>
+                      ${renderSortHeader('Date', 'date', 'sticky left-0 z-30 border-r border-monitor-border/50')}
+                      ${renderSortHeader('ID', 'regId', 'text-center sticky left-[90px] z-30 border-r border-monitor-border/50')}
+                      ${renderSortHeader('No.', 'itemNum', 'text-center sticky left-[150px] z-30 sticky-left-shadow')}
+                      ${renderSortHeader('Status', 'status', '')}
+                      ${renderSortHeader('Dept', 'dept', 'min-w-[60px] max-w-[100px]')}
+                      ${renderSortHeader('Sec', 'sec', 'min-w-[60px] max-w-[100px]')}
+                      ${renderSortHeader('Applicant', 'applicant', 'min-w-[70px] max-w-[120px]')}
+                      ${renderSortHeader('Description', 'desc', 'min-w-[300px] max-w-[450px]')}
+                      ${renderSortHeader('Owner', 'owner', 'min-w-[80px] max-w-[120px]')}
+                      <th class="px-3 py-3.5 border-b border-monitor-border bg-monitor-card text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest min-w-[50px]">TCD</th>
+                      ${renderSortHeader('MP', 'benefit', 'text-right min-w-[70px]')}
+                      <th class="px-3 py-3.5 border-b border-monitor-border bg-monitor-card text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest min-w-[70px] max-w-[120px]">DB</th>
+                      <th class="px-3 py-3.5 border-b border-monitor-border bg-monitor-card text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest min-w-[50px]">SQL</th>
+                      ${stationHeaders}
+                      <th class="px-2 py-3.5 sticky right-0 z-30 border-b border-monitor-border bg-monitor-card text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest sticky-right-shadow">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y-0">${rowsHtml}</tbody>
+                </table>
+              </div>
+            `;
             } else {
-                let cardsHtml = currentData.map(row => `
-                  <div class="flex flex-col p-5 rounded-xl border transition-all hover:shadow-md bg-white border-slate-200 hover:border-blue-300 relative group">
-
-                    <div class="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onclick="openModal('edit', ${row.regId})" class="p-1.5 rounded-md bg-white border border-slate-200 text-blue-600 hover:bg-blue-50 shadow-sm">
-                        <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
-                      </button>
-                      <button onclick="deleteData(${row.regId})" class="p-1.5 rounded-md bg-white border border-slate-200 text-rose-600 hover:bg-rose-50 shadow-sm">
-                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                      </button>
+                let cardsHtml = currentData.map(row => {
+                    let statusColor = getStatusColorClass(row.status);
+                    let statusIcon = getStatusIconTag(row.status);
+                    
+                    return `
+                    <div class="flex flex-col p-4 rounded-xl border transition-all bg-monitor-card border-monitor-border hover:border-monitor-cyan relative group shadow-sm">
+                        <div class="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="openModal('edit', ${row.regId})" class="text-monitor-cyan hover:text-white"><i data-lucide="pen-line" class="w-4 h-4"></i></button>
+                            <button onclick="deleteData(${row.regId})" class="text-monitor-red hover:text-white"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${statusColor}">${statusIcon}${row.status}</span>
+                        </div>
+                        <div class="flex justify-between items-end mb-2">
+                            <div class="text-xs font-mono font-bold text-monitor-cyan">#${row.regId}</div>
+                            <div class="text-[10px] font-mono text-slate-500">${row.date}</div>
+                        </div>
+                        <h3 class="font-bold mb-3 flex-grow line-clamp-2 leading-relaxed text-[13px] text-slate-200" title="${row.desc}">${row.desc}</h3>
+                        <div class="mt-auto pt-3 border-t border-monitor-borderLight flex justify-between items-center">
+                            <span class="text-[11px] text-slate-400">${row.applicant}</span>
+                            <span class="text-[11px] font-mono font-bold text-monitor-green">${row.benefit > 0 ? row.benefit + ' MP' : ''}</span>
+                        </div>
                     </div>
+                `}).join('');
 
-                    <div class="flex justify-between items-start mb-3 mr-16">
-                      <div class="flex items-center gap-2">
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-[6px] text-[11px] font-bold border ${getStatusColorClass(row.status)}">
-                          ${getStatusIconTag(row.status)}
-                          ${row.status}
-                        </span>
-                        <span class="text-xs font-bold px-2 py-1 rounded bg-slate-100 text-slate-600" title="同狀態下的優先級順序">
-                          ITEMNO: ${row.itemNum}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div class="flex justify-between items-end mb-1">
-                      <div class="text-xs font-semibold text-emerald-600">申請人: ${row.applicant}</div>
-                      <div class="text-right">
-                        <div class="text-xs font-bold text-blue-600">#${row.regId}</div>
-                        <div class="text-[10px] font-medium text-slate-500">${row.date}</div>
-                      </div>
-                    </div>
-
-                    <h3 class="font-semibold mb-3 flex-grow line-clamp-2 leading-relaxed text-sm text-slate-800" title="${row.desc}">
-                      ${row.desc}
-                    </h3>
-
-                    <div class="mt-auto pt-4 border-t space-y-2 border-slate-100">
-                      <div class="flex justify-between items-center text-sm">
-                        <span class="text-slate-500">負責人</span>
-                        <span class="font-medium text-slate-700">${row.owner || '未指派'}</span>
-                      </div>
-                      <div class="flex justify-between items-center text-sm">
-                        <span class="text-slate-500">部門/課別</span>
-                        <span class="font-medium text-slate-700">${row.dept} / ${row.sec || '-'}</span>
-                      </div>
-                      <div class="flex justify-between items-center text-sm mt-2 pt-2 border-t border-slate-50">
-                        <span class="font-medium text-slate-600">預期效益</span>
-                        <span class="font-bold ${row.benefit > 0 ? 'text-emerald-500' : 'text-slate-400'}">
-                          ${row.benefit > 0 ? `${row.benefit} MP/年` : '無'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                `).join('');
-
-                if (currentData.length === 0) {
-                    cardsHtml = `<div class="col-span-full py-16 text-center text-slate-500">找不到符合條件的資料。</div>`;
-                }
-
-                contentContainer.innerHTML = `
-                  <div class="w-full pb-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      ${cardsHtml}
-                    </div>
-                  </div>
-                `;
+                if (currentData.length === 0) cardsHtml = `<div class="col-span-full py-16 text-center text-slate-500 font-bold uppercase tracking-widest opacity-60">No Data Found</div>`;
+                contentContainer.innerHTML = `<div class="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">${cardsHtml}</div>`;
             }
             lucide.createIcons();
         }
@@ -875,43 +754,41 @@
         function renderPagination() {
             const filtered = getProcessedData();
             const totalItems = filtered.length;
-
             const isAll = state.itemsPerPage === 'All';
             const totalPages = isAll ? 1 : (Math.ceil(totalItems / state.itemsPerPage) || 1);
-
             const startNum = totalItems > 0 ? (isAll ? 1 : (state.currentPage - 1) * state.itemsPerPage + 1) : 0;
             const endNum = isAll ? totalItems : Math.min(state.currentPage * state.itemsPerPage, totalItems);
-
             const prevDisabled = state.currentPage === 1 || isAll || totalItems === 0;
             const nextDisabled = state.currentPage === totalPages || isAll || totalItems === 0;
 
             document.getElementById('pagination-container').innerHTML = `
-                <div class="flex items-center justify-between px-5 py-3.5 rounded-xl border bg-white border-slate-200 shadow-sm mt-1">
-                  <div class="text-[12px] text-slate-500 font-medium">
-                    顯示 <span class="font-bold text-slate-800">${startNum}</span> - <span class="font-bold text-slate-800">${endNum}</span> 筆，共 <span class="font-bold text-slate-800">${totalItems}</span> 筆
-                  </div>
-                  <div class="flex items-center gap-4">
-                     <div class="flex items-center gap-1.5">
-                       <span class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Rows:</span>
-                       <select onchange="changeItemsPerPage(this.value)" class="text-xs font-bold px-2 py-1.5 rounded-lg border outline-none bg-slate-50 border-slate-200 text-slate-700 cursor-pointer hover:border-slate-300 shadow-sm transition-colors">
-                          <option value="15" ${state.itemsPerPage === 15 ? 'selected' : ''}>15</option>
-                          <option value="30" ${state.itemsPerPage === 30 ? 'selected' : ''}>30</option>
-                          <option value="50" ${state.itemsPerPage === 50 ? 'selected' : ''}>50</option>
-                          <option value="All" ${state.itemsPerPage === 'All' ? 'selected' : ''}>All</option>
-                        </select>
-                     </div>
-                     <div class="flex items-center gap-1.5">
-                       <button onclick="changePage(${Math.max(1, state.currentPage - 1)})" ${prevDisabled ? 'disabled' : ''} class="p-1.5 rounded-lg border transition-colors ${prevDisabled ? 'border-slate-100 text-slate-300 cursor-not-allowed' : 'border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 shadow-sm'}">
-                         <i data-lucide="chevron-left" class="w-4 h-4"></i>
-                       </button>
-                       <span class="text-[12px] px-2 text-slate-600 font-bold tracking-widest">${state.currentPage} / ${totalPages}</span>
-                       <button onclick="changePage(${Math.min(totalPages, state.currentPage + 1)})" ${nextDisabled ? 'disabled' : ''} class="p-1.5 rounded-lg border transition-colors ${nextDisabled ? 'border-slate-100 text-slate-300 cursor-not-allowed' : 'border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 shadow-sm'}">
-                         <i data-lucide="chevron-right" class="w-4 h-4"></i>
-                       </button>
-                     </div>
-                  </div>
-                </div>
-              `;
+            <div class="flex items-center justify-between px-5 py-3">
+              <div class="text-[11px] text-monitor-textMuted font-mono">
+                Showing <span class="text-white font-bold">${startNum}</span> to <span class="text-white font-bold">${endNum}</span> of <span class="text-white font-bold">${totalItems}</span> entries
+              </div>
+              <div class="flex items-center gap-4">
+                 <div class="flex items-center gap-2">
+                   <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Rows:</span>
+                   <select onchange="changeItemsPerPage(this.value)" class="text-xs font-mono font-bold px-2 py-1 rounded border border-monitor-borderLight bg-monitor-card text-white cursor-pointer hover:border-monitor-cyan shadow-sm transition-all outline-none">
+                      <option value="15" ${state.itemsPerPage === 15 ? 'selected' : ''}>15</option>
+                      <option value="30" ${state.itemsPerPage === 30 ? 'selected' : ''}>30</option>
+                      <option value="50" ${state.itemsPerPage === 50 ? 'selected' : ''}>50</option>
+                      <option value="All" ${state.itemsPerPage === 'All' ? 'selected' : ''}>All</option>
+                    </select>
+                 </div>
+                 <div class="flex items-center gap-1.5">
+                   <button onclick="changePage(${Math.max(1, state.currentPage - 1)})" ${prevDisabled ? 'disabled' : ''} class="p-1.5 rounded border transition-colors ${prevDisabled ? 'border-monitor-borderLight text-slate-600 cursor-not-allowed' : 'border-monitor-borderLight text-slate-300 hover:border-monitor-cyan hover:text-white'}">
+                     <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                   </button>
+                   <span class="text-[11px] font-mono px-2 text-white">${state.currentPage} / ${totalPages}</span>
+                   <button onclick="changePage(${Math.min(totalPages, state.currentPage + 1)})" ${nextDisabled ? 'disabled' : ''} class="p-1.5 rounded border transition-colors ${nextDisabled ? 'border-monitor-borderLight text-slate-600 cursor-not-allowed' : 'border-monitor-borderLight text-slate-300 hover:border-monitor-cyan hover:text-white'}">
+                     <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                   </button>
+                 </div>
+              </div>
+            </div>
+          `;
+          lucide.createIcons();
         }
 
         function setView(viewMode) {
@@ -919,11 +796,11 @@
             const btnTable = document.getElementById('btn-view-table');
             const btnCard = document.getElementById('btn-view-card');
             if (viewMode === 'table') {
-                btnTable.className = "flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-[6px] transition-colors bg-white text-blue-600 shadow-sm border border-slate-200";
-                btnCard.className = "flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-[6px] transition-colors text-slate-500 hover:text-slate-800 bg-transparent border border-transparent";
+                btnTable.className = "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded bg-monitor-panel text-monitor-cyan border border-monitor-borderLight shadow-sm transition-colors";
+                btnCard.className = "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded text-slate-400 hover:text-white transition-colors bg-transparent border border-transparent";
             } else {
-                btnCard.className = "flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-[6px] transition-colors bg-white text-blue-600 shadow-sm border border-slate-200";
-                btnTable.className = "flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-[6px] transition-colors text-slate-500 hover:text-slate-800 bg-transparent border border-transparent";
+                btnCard.className = "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded bg-monitor-panel text-monitor-cyan border border-monitor-borderLight shadow-sm transition-colors";
+                btnTable.className = "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded text-slate-400 hover:text-white transition-colors bg-transparent border border-transparent";
             }
             renderContent();
         }
@@ -952,3 +829,6 @@
     </script>
 </body>
 </html>
+
+
+```
