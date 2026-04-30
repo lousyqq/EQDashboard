@@ -4,14 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>代辦中心 (雙主題效能優化版)</title>
+    <title>代辦中心 (雙主題完整功能版)</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
-    <!-- ★ 防閃爍機制 1：在 DOM 渲染前先決定深淺色 -->
     <script>
+        // 頁面載入時檢查深色模式設定，避免閃爍
         if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark')
         } else {
@@ -29,15 +29,6 @@
     </script>
 
     <style>
-        /* ★ 防閃爍機制 2：頁面完全載入前，禁用所有動畫與過渡效果 */
-        .preload * {
-            -webkit-transition: none !important;
-            -moz-transition: none !important;
-            -ms-transition: none !important;
-            -o-transition: none !important;
-            transition: none !important;
-        }
-
         /* 捲軸設計：支援亮暗色 */
         ::-webkit-scrollbar { width: 8px; height: 10px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -55,28 +46,30 @@
         .sticky-right-shadow { box-shadow: -4px 0 8px -2px rgba(0, 0, 0, 0.05); }
         .dark .sticky-right-shadow { box-shadow: -4px 0 10px -2px rgba(0, 0, 0, 0.4); }
 
-        /* 表格 Hover 效果 */
-        .table-row-hover:hover td { background-color: #f8fafc; }
-        .dark .table-row-hover:hover td { background-color: rgba(14, 165, 233, 0.05); }
-
         /* 解決深色模式下 Chrome 自動填入變成白色的問題 */
         .dark input:-webkit-autofill {
             -webkit-box-shadow: 0 0 0 30px #020617 inset !important;
             -webkit-text-fill-color: #f8fafc !important;
         }
 
-        /* 通知 Toast 動畫 */
+        /* 移除卡頓的過渡動畫 */
+        .preload * {
+            -webkit-transition: none !important;
+            -moz-transition: none !important;
+            -ms-transition: none !important;
+            -o-transition: none !important;
+            transition: none !important;
+        }
+
         @keyframes slideInUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
         .toast-enter { animation: slideInUp 0.3s ease-out forwards; }
         .toast-leave { animation: fadeOut 0.3s ease-out forwards; }
     </style>
 </head>
-
-<!-- 加入 preload 類別，會在 JS 載入後移除 -->
 <body class="preload bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-200 font-sans min-h-screen flex flex-col antialiased selection:bg-blue-200 selection:text-blue-900 dark:selection:bg-sky-500/30 dark:selection:text-sky-200 transition-colors duration-300">
 
-    <!-- ★ 頂部資訊板 -->
+    <!-- ★ 頂部資訊板 (淺色：白底光暈 / 深色：深海藍漸層) -->
     <div class="bg-white dark:bg-gradient-to-r dark:from-slate-900 dark:to-slate-800 shrink-0 shadow-sm dark:shadow-[0_4px_20px_rgba(0,0,0,0.5)] border-b border-slate-200 dark:border-slate-800 z-40 relative overflow-hidden transition-colors duration-300">
         <!-- 淺色專屬光暈 -->
         <div class="absolute top-0 right-0 w-[600px] h-full bg-gradient-to-l from-blue-50/80 to-transparent pointer-events-none dark:hidden"></div>
@@ -123,7 +116,7 @@
             <!-- 由 JS 動態渲染 -->
         </div>
 
-        <!-- 核心控制列與表格 -->
+        <!-- 核心控制列與表格 (淺色白底 / 深色面板) -->
         <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm dark:shadow-[0_4px_25px_rgba(0,0,0,0.3)] border border-slate-200 dark:border-slate-800 flex flex-col flex-1 overflow-hidden transition-colors duration-300">
             
             <!-- 控制列 -->
@@ -144,7 +137,8 @@
                             <option value="All">全部狀態</option>
                             <option value="已上線">已上線</option>
                             <option value="處理中">處理中</option>
-                            <option value="缺欄位">缺欄位</option>
+                            <!-- ★ 將缺欄位改為確認中 -->
+                            <option value="確認中">確認中</option>
                         </select>
                         <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
                     </div>
@@ -185,6 +179,7 @@
         </div>
     </main>
 
+    <!-- ★ Toast 通知容器 -->
     <div id="toast-container" class="fixed bottom-6 right-6 z-[120] flex flex-col gap-3 pointer-events-none"></div>
 
     <!-- CRUD Modal -->
@@ -216,7 +211,8 @@
                         <div>
                             <h4 class="text-[11px] font-bold text-slate-500 dark:text-sky-400 uppercase tracking-widest mb-3 border-b border-slate-200 dark:border-slate-800 pb-2">執行與追蹤 Tracking</h4>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div><label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5 uppercase">STATUS</label><select id="form-status" class="w-full px-3 py-2 border rounded-md outline-none bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-200 focus:border-blue-400 dark:focus:border-sky-500"><option value="缺欄位">缺欄位</option><option value="處理中">處理中</option><option value="已上線">已上線</option></select></div>
+                                <!-- ★ 將選項改為確認中 -->
+                                <div><label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5 uppercase">STATUS</label><select id="form-status" class="w-full px-3 py-2 border rounded-md outline-none bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-200 focus:border-blue-400 dark:focus:border-sky-500"><option value="確認中">確認中</option><option value="處理中">處理中</option><option value="已上線">已上線</option></select></div>
                                 <div><label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5 uppercase">處理人員</label><input type="text" id="form-owner" class="w-full px-3 py-2 border rounded-md outline-none bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-200 focus:border-blue-400 dark:focus:border-sky-500"></div>
                                 <div><label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5 uppercase">效益(MP/年)</label><input type="number" step="0.0001" id="form-benefit" class="w-full px-3 py-2 border rounded-md outline-none bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-200 focus:border-blue-400 dark:focus:border-sky-500"></div>
                                 <div><label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5 uppercase">DBCat</label><input type="text" id="form-dbcat" class="w-full px-3 py-2 border rounded-md outline-none bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-200 focus:border-blue-400 dark:focus:border-sky-500"></div>
@@ -262,7 +258,7 @@
     </div>
 
     <script>
-        // ★ 移除防閃爍的 preload class
+        // 移除載入防閃爍 class
         window.addEventListener('load', function() {
             document.body.classList.remove('preload');
         });
@@ -325,8 +321,9 @@
                     showToast('預覽模式：已載入測試資料', 'info');
 
                     const mockDbData = [
-                        { regId: 22, date: '2026-04-29', status: '缺欄位', owner: '陳祥', dept: 'PTI', sec: 'ESI', applicant: '林玉婷', desc: '這是一段用來測試的長文字，當摘要內容非常多的時候，需要自動換行且行距適中，確保主管可以舒服地閱讀所有的細節，而不必左右滾動。', benefit: 0.6, dbCat: '33', stations: [{ stationName: 'DF1', mpValue: 'V', urlLink: '' }] },
-                        { regId: 21, date: '2026-02-10', status: '缺欄位', owner: '-', dept: 'TF5', sec: 'EQ2', applicant: '黃筱嵐', desc: 'CROSS_FAB_INLINE_BENCHMARK_RATATA', benefit: 0, dbCat: '-', stations: [] },
+                        // ★ 將狀態預設值改為 確認中
+                        { regId: 22, date: '2026-04-29', status: '確認中', owner: '劉世仁', dept: 'LT2', sec: 'PE1', applicant: '林玉婷', desc: '24/48 hr WIP fllowin lot 資訊', benefit: 0, dbCat: '33', stations: [{ stationName: 'DF1', mpValue: 'V', urlLink: '' }] },
+                        { regId: 21, date: '2026-02-10', status: '確認中', owner: '-', dept: 'TF5', sec: 'EQ2', applicant: '黃筱嵐', desc: 'CROSS_FAB_INLINE_BENCHMARK_RATATA', benefit: 0, dbCat: '-', stations: [] },
                         { regId: 20, date: '2026-02-03', status: '處理中', owner: '-', dept: 'DM1', sec: 'DM', applicant: '林宗緯', desc: 'DM Gen AI GPT 需求:連接到KLARITY資料', benefit: 0, dbCat: '-', stations: [] },
                         { regId: 19, date: '2026-02-12', status: '處理中', owner: '-', dept: 'DM1', sec: 'DM', applicant: '沈俊龑/林宗緯', desc: 'Hold rate 資訊(PT Hold Report)', benefit: 0, dbCat: '-', stations: [] },
                         { regId: 18, date: '2026-02-12', status: '處理中', owner: '-', dept: 'TF5', sec: 'EQ2', applicant: '黃筱嵐', desc: 'hourly、Weekly HR TGT HOLD_WIP 所有Node的都要', benefit: 0.035, dbCat: '-', stations: [] },
@@ -353,7 +350,7 @@
 
             const payload = {
                 date: today,
-                status: mode === 'add' ? '缺欄位' : document.getElementById('form-status').value,
+                status: mode === 'add' ? '確認中' : document.getElementById('form-status').value,
                 dept: document.getElementById('form-dept').value,
                 sec: document.getElementById('form-sec').value,
                 applicant: document.getElementById('form-applicant').value,
@@ -505,8 +502,12 @@
                             if (!isNaN(d)) dateStr = d.toISOString().split('T')[0];
                         }
 
+                        // ★ 處理 Excel 匯入的狀態 (如果是缺欄位，強制對應到 確認中)
+                        let importedStatus = row[colMap.status] || '確認中';
+                        if (importedStatus === '缺欄位') importedStatus = '確認中';
+
                         payloads.push({
-                            date: dateStr, status: row[colMap.status] || '缺欄位', dept: row[colMap.dept] || '',
+                            date: dateStr, status: importedStatus, dept: row[colMap.dept] || '',
                             sec: row[colMap.sec] || '', applicant: row[colMap.applicant] || '', desc: row[colMap.desc] || '',
                             owner: row[colMap.owner] || '', benefit: parseFloat(row[colMap.benefit]) || 0,
                             dbCat: row[colMap.dbCat] || '', tcd: row[colMap.tcd] || '', appLink: row[colMap.appLink] || '',
@@ -588,20 +589,21 @@
             setTimeout(() => { toast.classList.replace('toast-enter', 'toast-leave'); setTimeout(() => toast.remove(), 300); }, 3000);
         }
 
+        // ★ 修改狀態顏色: 將缺欄位/確認中 改為沈穩的灰色
         function getStatusColorClass(status) {
             switch (status) { 
                 case '已上線': return 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-400/10 dark:text-emerald-400 dark:border-emerald-400/20'; 
                 case '處理中': return 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-400/10 dark:text-amber-400 dark:border-amber-400/20'; 
-                case '缺欄位': return 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-400/10 dark:text-rose-400 dark:border-rose-400/20'; 
+                case '確認中': return 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'; 
                 default: return 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-600'; 
             }
         }
         
+        // ★ 修改狀態 Icon: 確認中無 icon
         function getStatusIconTag(status) {
             switch (status) { 
                 case '已上線': return '<i data-lucide="check-circle" class="w-3.5 h-3.5 mr-1 dark:opacity-90"></i>'; 
                 case '處理中': return '<i data-lucide="clock" class="w-3.5 h-3.5 mr-1 dark:opacity-90"></i>'; 
-                case '缺欄位': return '<i data-lucide="alert-octagon" class="w-3.5 h-3.5 mr-1 dark:opacity-90"></i>'; 
                 default: return ''; 
             }
         }
@@ -609,11 +611,13 @@
         function renderKPI() {
             const filteredData = getProcessedData();
             const totalBenefit = filteredData.reduce((s, i) => s + (Number(i.benefit) || 0), 0).toFixed(3);
+            
+            // ★ 修改 KPI: 缺欄位專案 改為 確認中專案 (使用沈穩灰色)
             const kpis = [
                 { title: "總需求數量", value: appData.length, icon: "database", lightColor: "text-blue-600", lightBg: "bg-blue-50 border-blue-100", darkColor: "dark:text-sky-400", darkBorder: "dark:border-sky-400/30", darkGlow: "bg-sky-400" },
                 { title: "已上線完成", value: appData.filter(d => d.status === '已上線').length, icon: "check-circle", lightColor: "text-emerald-600", lightBg: "bg-emerald-50 border-emerald-100", darkColor: "dark:text-emerald-400", darkBorder: "dark:border-emerald-400/30", darkGlow: "bg-emerald-400" },
                 { title: "處理中專案", value: appData.filter(d => d.status === '處理中').length, icon: "clock", lightColor: "text-amber-600", lightBg: "bg-amber-50 border-amber-100", darkColor: "dark:text-amber-400", darkBorder: "dark:border-amber-400/30", darkGlow: "bg-amber-400" },
-                { title: "缺欄位專案", value: appData.filter(d => d.status === '缺欄位').length, icon: "alert-octagon", lightColor: "text-rose-600", lightBg: "bg-rose-50 border-rose-100", darkColor: "dark:text-rose-400", darkBorder: "dark:border-rose-400/30", darkGlow: "bg-rose-400" },
+                { title: "確認中專案", value: appData.filter(d => d.status === '確認中').length, icon: "help-circle", lightColor: "text-slate-600", lightBg: "bg-slate-50 border-slate-200", darkColor: "dark:text-slate-400", darkBorder: "dark:border-slate-700", darkGlow: "bg-slate-500" },
                 { title: "預估總效益", value: totalBenefit, icon: "trending-up", lightColor: "text-purple-600", lightBg: "bg-purple-50 border-purple-100", darkColor: "dark:text-purple-400", darkBorder: "dark:border-purple-400/30", darkGlow: "bg-purple-400" },
             ];
 
@@ -655,7 +659,6 @@
           `;
         }
 
-        // ★ 核心優化：移除內部大量表格行的 transition-colors 避免切換深淺色時卡頓閃爍
         function renderContent() {
             const filtered = getProcessedData();
             let currentData;
@@ -702,7 +705,6 @@
                       </div>
                     `;
 
-                    // 移除 <tr> 和 <td> 的 transition-colors，大幅改善切換效能
                     return `
                 <tr class="table-row-hover border-b border-slate-50 dark:border-slate-800/50 bg-white dark:bg-transparent group cursor-default">
                   <td class="px-3 py-2.5 sticky left-0 z-10 bg-white group-hover:bg-[#f8fafc] dark:bg-slate-900 dark:group-hover:bg-[#121c2c] text-slate-500 dark:text-slate-400 text-xs dark:font-mono font-medium w-[90px] min-w-[90px] border-r border-slate-100/50 dark:border-slate-800/50">${row.date}</td>
@@ -731,7 +733,7 @@
                 }).join('');
 
                 if (currentData.length === 0) {
-                    rowsHtml = `<tr><td colspan="${14 + stationColumns.length}" class="px-4 py-16 text-center text-slate-500 font-bold uppercase tracking-widest opacity-60">No Data Found</td></tr>`;
+                    rowsHtml = `<tr><td colspan="${14 + stationColumns.length}" class="px-4 py-16 text-center text-slate-500 font-bold uppercase tracking-widest opacity-60">找不到符合條件的資料。</td></tr>`;
                 }
 
                 contentContainer.innerHTML = `
@@ -761,32 +763,65 @@
               </div>
             `;
             } else {
+                // ★ 完美還原截圖的卡片視圖 (Card View)
                 let cardsHtml = currentData.map(row => {
                     return `
-              <div class="flex flex-col p-5 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:shadow-lg dark:hover:border-sky-500/50 relative group">
-                <div class="absolute top-4 right-4 flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onclick="openModal('edit', ${row.regId})" class="text-blue-500 hover:text-blue-700 dark:text-sky-400 dark:hover:text-white"><i data-lucide="pen-line" class="w-4 h-4"></i></button>
-                  <button onclick="deleteData(${row.regId})" class="text-rose-400 hover:text-rose-600 dark:text-rose-400 dark:hover:text-white"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+              <div class="flex flex-col p-4 rounded-xl border transition-all bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:shadow-lg dark:hover:border-sky-500/50 relative group">
+                <!-- 頂部列：左側標籤與右側操作按鈕 -->
+                <div class="flex justify-between items-start mb-3">
+                  <div class="flex gap-2 items-center">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold bg-slate-50 text-slate-600 border border-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 shadow-sm">
+                      ${row.status}
+                    </span>
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold font-mono bg-slate-50 text-slate-600 border border-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 shadow-sm uppercase tracking-wide">
+                      ITEMNO: ${row.itemNum}
+                    </span>
+                  </div>
+                  <div class="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onclick="openModal('edit', ${row.regId})" class="p-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-blue-500 hover:bg-blue-50 dark:text-sky-400 dark:hover:bg-slate-700 shadow-sm transition-colors">
+                      <i data-lucide="pen-line" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button onclick="deleteData(${row.regId})" class="p-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-rose-500 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-slate-700 shadow-sm transition-colors">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
                 </div>
-                <div class="flex justify-between items-start mb-4">
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-[6px] text-[11px] font-bold border dark:shadow-[0_1px_2px_rgba(0,0,0,0.2)] ${getStatusColorClass(row.status)}">
-                    ${getStatusIconTag(row.status)} ${row.status}
-                  </span>
+
+                <!-- 中間列：申請人、摘要 與 右側ID、日期 -->
+                <div class="flex justify-between items-start mb-2">
+                  <div class="flex-1 pr-4">
+                    <div class="text-[13px] font-bold text-teal-600 dark:text-teal-400 mb-1 tracking-wide">申請人: ${row.applicant}</div>
+                    <h3 class="font-bold text-[15px] text-slate-800 dark:text-slate-200 leading-snug line-clamp-2" title="${row.desc}">${row.desc}</h3>
+                  </div>
+                  <div class="text-right shrink-0 flex flex-col items-end">
+                    <div class="text-[14px] font-bold text-blue-600 dark:text-sky-400 font-mono">#${row.regId}</div>
+                    <div class="text-[11px] font-medium text-slate-400 dark:text-slate-500 font-mono mt-0.5">${row.date}</div>
+                  </div>
                 </div>
-                <div class="flex justify-between items-end mb-2">
-                  <div class="text-xs font-bold font-mono text-blue-600 dark:text-sky-400">#${row.regId}</div>
-                  <div class="text-[11px] font-medium dark:font-mono text-slate-400 dark:text-slate-500">${row.date}</div>
-                </div>
-                <h3 class="font-bold mb-4 flex-grow line-clamp-2 leading-relaxed text-[14px] text-slate-800 dark:text-slate-200" title="${row.desc}">${row.desc}</h3>
-                <div class="mt-auto pt-4 border-t border-slate-50 dark:border-slate-800 flex justify-between items-center">
-                  <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">${row.applicant}</span>
-                  <span class="text-xs font-black dark:font-mono text-emerald-600 dark:text-emerald-400">${row.benefit > 0 ? row.benefit + ' MP' : ''}</span>
+
+                <!-- 微弱分隔線 -->
+                <div class="w-full h-px bg-slate-100 dark:bg-slate-800 my-3"></div>
+
+                <!-- 底部清單列 -->
+                <div class="flex flex-col gap-2.5 mt-auto">
+                  <div class="flex justify-between items-center text-[13px]">
+                    <span class="text-slate-500 dark:text-slate-400 font-medium">負責人</span>
+                    <span class="font-medium text-slate-700 dark:text-slate-300">${row.owner || '未指派'}</span>
+                  </div>
+                  <div class="flex justify-between items-center text-[13px]">
+                    <span class="text-slate-500 dark:text-slate-400 font-medium">部門/課別</span>
+                    <span class="font-medium text-slate-700 dark:text-slate-300">${row.dept} / ${row.sec || '-'}</span>
+                  </div>
+                  <div class="flex justify-between items-center text-[13px]">
+                    <span class="text-slate-500 dark:text-slate-400 font-medium">預期效益</span>
+                    <span class="font-medium ${row.benefit > 0 ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500'}">${row.benefit > 0 ? row.benefit + ' MP/年' : '無'}</span>
+                  </div>
                 </div>
               </div>
             `}).join('');
 
-                if (currentData.length === 0) cardsHtml = `<div class="col-span-full py-16 text-center text-slate-500 font-bold uppercase tracking-widest opacity-60">No Data Found</div>`;
-                contentContainer.innerHTML = `<div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 dark:bg-slate-950/50">${cardsHtml}</div>`;
+                if (currentData.length === 0) cardsHtml = `<div class="col-span-full py-16 text-center text-slate-500 font-bold uppercase tracking-widest opacity-60">找不到符合條件的資料。</div>`;
+                contentContainer.innerHTML = `<div class="p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5 dark:bg-slate-950/50">${cardsHtml}</div>`;
             }
             lucide.createIcons();
         }
@@ -809,7 +844,7 @@
               <div class="flex items-center gap-5">
                  <div class="flex items-center gap-2">
                    <span class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Rows:</span>
-                   <select onchange="changeItemsPerPage(this.value)" class="text-xs font-bold dark:font-mono px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-white cursor-pointer hover:border-slate-300 dark:hover:border-sky-500 shadow-sm outline-none">
+                   <select onchange="changeItemsPerPage(this.value)" class="text-xs font-bold dark:font-mono px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-white cursor-pointer hover:border-slate-300 dark:hover:border-sky-500 shadow-sm transition-colors outline-none">
                       <option value="15" ${state.itemsPerPage === 15 ? 'selected' : ''}>15</option>
                       <option value="30" ${state.itemsPerPage === 30 ? 'selected' : ''}>30</option>
                       <option value="50" ${state.itemsPerPage === 50 ? 'selected' : ''}>50</option>
@@ -817,11 +852,11 @@
                     </select>
                  </div>
                  <div class="flex items-center gap-1.5">
-                   <button onclick="changePage(${Math.max(1, state.currentPage - 1)})" ${prevDisabled ? 'disabled' : ''} class="p-2 rounded-lg border ${prevDisabled ? 'border-slate-100 text-slate-300 bg-slate-50 dark:border-slate-800 dark:text-slate-600 dark:bg-transparent cursor-not-allowed' : 'border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white'}">
+                   <button onclick="changePage(${Math.max(1, state.currentPage - 1)})" ${prevDisabled ? 'disabled' : ''} class="p-2 rounded-lg border transition-colors ${prevDisabled ? 'border-slate-100 text-slate-300 bg-slate-50 dark:border-slate-800 dark:text-slate-600 dark:bg-transparent cursor-not-allowed' : 'border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white'}">
                      <i data-lucide="chevron-left" class="w-4 h-4"></i>
                    </button>
                    <span class="text-[12px] px-2 text-slate-700 dark:text-white font-bold tracking-widest dark:font-mono">${state.currentPage} / ${totalPages}</span>
-                   <button onclick="changePage(${Math.min(totalPages, state.currentPage + 1)})" ${nextDisabled ? 'disabled' : ''} class="p-2 rounded-lg border ${nextDisabled ? 'border-slate-100 text-slate-300 bg-slate-50 dark:border-slate-800 dark:text-slate-600 dark:bg-transparent cursor-not-allowed' : 'border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white'}">
+                   <button onclick="changePage(${Math.min(totalPages, state.currentPage + 1)})" ${nextDisabled ? 'disabled' : ''} class="p-2 rounded-lg border transition-colors ${nextDisabled ? 'border-slate-100 text-slate-300 bg-slate-50 dark:border-slate-800 dark:text-slate-600 dark:bg-transparent cursor-not-allowed' : 'border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white'}">
                      <i data-lucide="chevron-right" class="w-4 h-4"></i>
                    </button>
                  </div>
