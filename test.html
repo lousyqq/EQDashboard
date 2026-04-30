@@ -79,7 +79,7 @@
                 </div>
                 
                 <div class="flex items-center gap-4">
-                    <!-- ★ 新增：淺色/深色模式切換按鈕 -->
+                    <!-- ★ 淺色/深色模式切換按鈕 -->
                     <button onclick="toggleTheme()" class="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shadow-sm transition-colors flex items-center justify-center" title="切換顯示模式">
                         <i data-lucide="sun" class="w-4 h-4 block dark:hidden"></i>
                         <i data-lucide="moon" class="w-4 h-4 hidden dark:block"></i>
@@ -171,7 +171,7 @@
 
     <div id="toast-container" class="fixed bottom-6 right-6 z-[120] flex flex-col gap-3 pointer-events-none"></div>
 
-    <!-- CRUD Modal -->
+    <!-- ★ CRUD Modal (雙主題相容修復) -->
     <div id="crud-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
         <div class="absolute inset-0 bg-slate-900/40 dark:bg-black/70 backdrop-blur-sm transition-opacity" onclick="closeModal('crud-modal')"></div>
         <div id="crud-modal-content" class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl dark:shadow-[0_0_40px_rgba(0,0,0,0.8)] w-full max-w-4xl flex flex-col transform transition-all scale-95 opacity-0 duration-200 max-h-[90vh] overflow-hidden">
@@ -210,7 +210,7 @@
                         </div>
                         <div>
                             <h4 class="text-[11px] font-bold text-slate-500 dark:text-sky-400 uppercase tracking-widest mb-3 border-b border-slate-200 dark:border-slate-800 pb-2">Data Source (SQL)</h4>
-                            <textarea id="form-datasource" rows="3" class="w-full px-4 py-3 border rounded-md outline-none bg-slate-900 dark:bg-[#020617] border-slate-800 text-emerald-400 font-mono text-[13px] shadow-inner focus:border-blue-400 dark:focus:border-sky-500"></textarea>
+                            <textarea id="form-datasource" rows="3" class="w-full px-4 py-3 border rounded-md outline-none bg-slate-50 dark:bg-[#020617] border-slate-200 dark:border-slate-800 text-slate-900 dark:text-emerald-400 font-mono text-[13px] shadow-inner focus:border-blue-400 dark:focus:border-sky-500 transition-colors"></textarea>
                         </div>
                         <div>
                             <h4 class="text-[11px] font-bold text-slate-500 dark:text-sky-400 uppercase tracking-widest mb-3 border-b border-slate-200 dark:border-slate-800 pb-2">機台站點設定 Stations</h4>
@@ -230,17 +230,17 @@
     <!-- SQL Viewer Modal -->
     <div id="sql-modal" class="hidden fixed inset-0 z-[110] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 dark:bg-black/70 backdrop-blur-sm transition-opacity" onclick="closeModal('sql-modal')"></div>
-        <div id="sql-modal-content" class="relative bg-slate-900 rounded-xl shadow-2xl dark:shadow-[0_0_30px_rgba(0,0,0,0.9)] border border-slate-700 w-full max-w-3xl transform transition-all scale-95 opacity-0 duration-200 overflow-hidden">
-            <div class="flex justify-between items-center px-5 py-4 border-b border-slate-800 bg-slate-900">
-                <h3 class="text-sm font-bold text-sky-400 flex items-center gap-2">
+        <div id="sql-modal-content" class="relative bg-white dark:bg-slate-900 rounded-xl shadow-2xl dark:shadow-[0_0_30px_rgba(0,0,0,0.9)] border border-slate-200 dark:border-slate-700 w-full max-w-3xl transform transition-all scale-95 opacity-0 duration-200 overflow-hidden">
+            <div class="flex justify-between items-center px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900">
+                <h3 class="text-sm font-bold text-blue-600 dark:text-sky-400 flex items-center gap-2">
                     <i data-lucide="code" class="w-4 h-4"></i> Data Source
                 </h3>
-                <button onclick="closeModal('sql-modal')" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                <button onclick="closeModal('sql-modal')" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
-            <div class="p-5 overflow-x-auto max-h-[70vh] bg-slate-950 dark:bg-[#020617]">
-                <pre><code id="sql-viewer-code" class="text-[13px] font-mono text-emerald-400 whitespace-pre-wrap break-all leading-relaxed"></code></pre>
+            <div class="p-5 overflow-x-auto max-h-[70vh] bg-slate-50 dark:bg-[#020617]">
+                <pre><code id="sql-viewer-code" class="text-[13px] font-mono text-indigo-600 dark:text-emerald-400 whitespace-pre-wrap break-all leading-relaxed"></code></pre>
             </div>
         </div>
     </div>
@@ -396,7 +396,7 @@
         }
 
         async function deleteData(regId) {
-            if (confirm(`確定要刪除 RegID #${regId} 的需求資料嗎？資料庫會一併刪除關聯站點。`)) {
+            if (confirm(`確定要刪除 RegID #${regId} 的需求資料嗎？`)) {
                 try {
                     if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') {
                         throw new Error('Local preview mode');
@@ -670,7 +670,7 @@
                   <td class="px-3 py-2.5 text-center sticky left-[90px] z-10 bg-white group-hover:bg-[#f8fafc] dark:bg-slate-900 dark:group-hover:bg-[#121c2c] font-mono font-semibold text-blue-500 dark:text-sky-400 text-[13px] dark:text-[12px] w-[60px] min-w-[60px] transition-colors border-r border-slate-100/50 dark:border-slate-800/50">#${row.regId}</td>
                   <td class="px-3 py-2.5 text-center sticky left-[150px] z-10 bg-white group-hover:bg-[#f8fafc] dark:bg-slate-900 dark:group-hover:bg-[#121c2c] font-bold text-emerald-500 dark:text-white text-xs dark:text-[12px] w-[70px] min-w-[70px] sticky-left-shadow transition-colors">${row.itemNum}</td>
                   <td class="px-3 py-2.5 w-[100px] min-w-[100px]">
-                      <span class="inline-flex items-center px-2 py-0.5 rounded-[6px] text-[11px] font-bold border whitespace-nowrap dark:shadow-[0_1px_2px_rgba(0,0,0,0.2)] ${getStatusColorClass(row.status)}">
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded-[6px] text-[11px] font-bold border whitespace-nowrap dark:shadow-[0_1px_2px_rgba(0,0,0,0.2)] ${getStatusColorClass(row.status)}">
                          ${getStatusIconTag(row.status)} ${row.status}
                       </span>
                   </td>
@@ -821,6 +821,77 @@
             state.currentPage = 1;
             renderContent();
             renderPagination();
+        }
+
+        // ===== CRUD 視窗開啟邏輯 =====
+        function openModal(mode, regId = null) {
+            const modal = document.getElementById('crud-modal');
+            const content = document.getElementById('crud-modal-content');
+            document.getElementById('modal-mode').value = mode;
+            document.getElementById('crud-form').reset();
+            const baseInputs = ['form-dept', 'form-sec', 'form-applicant', 'form-desc'];
+
+            if (mode === 'add') {
+                document.getElementById('modal-title').innerHTML = '<i data-lucide="plus-circle" class="w-5 h-5 text-blue-600 dark:text-sky-400"></i> 新增任務';
+                document.getElementById('edit-advanced-section').classList.add('hidden');
+                baseInputs.forEach(id => document.getElementById(id).disabled = false);
+            } else {
+                document.getElementById('modal-title').innerHTML = `<i data-lucide="settings" class="w-5 h-5 text-blue-600 dark:text-sky-400"></i> 編輯任務 <span class="ml-2 text-sm font-mono text-slate-500">ID:${regId}</span>`;
+                document.getElementById('edit-advanced-section').classList.remove('hidden');
+                document.getElementById('modal-regid').value = regId;
+                baseInputs.forEach(id => document.getElementById(id).disabled = true);
+
+                const item = appData.find(d => d.regId === regId);
+                if (item) {
+                    document.getElementById('form-dept').value = item.dept; document.getElementById('form-sec').value = item.sec || '';
+                    document.getElementById('form-applicant').value = item.applicant; document.getElementById('form-desc').value = item.desc;
+                    document.getElementById('form-status').value = item.status; document.getElementById('form-owner').value = item.owner || '';
+                    document.getElementById('form-benefit').value = item.benefit || ''; document.getElementById('form-dbcat').value = item.dbCat || '';
+                    document.getElementById('form-tcd').value = item.tcd || ''; document.getElementById('form-applink').value = item.appLink || '';
+                    document.getElementById('form-datasource').value = item.dataSource || '';
+
+                    document.getElementById('form-stations-grid').innerHTML = stationColumns.map(col => {
+                        let val = item[col.toLowerCase()] || '', mp = '', url = '';
+                        if (val.includes('^')) { [mp, url] = val.split('^'); } else if (val.startsWith('http') || val.startsWith('Notes://')) { url = val; } else { mp = val; }
+                        
+                        // ★ 修復：深淺色兼容的表單輸入區塊
+                        return `
+                            <div class="p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50/50 dark:bg-slate-800/50 relative focus-within:border-blue-500 dark:focus-within:border-sky-500 transition-colors">
+                                <label class="absolute -top-2 left-2 px-1 text-[10px] font-bold bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-sky-400 uppercase tracking-widest">${col}</label>
+                                <div class="space-y-2 mt-2">
+                                    <div class="flex items-center bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded overflow-hidden focus-within:border-blue-500 dark:focus-within:border-sky-500 transition-colors shadow-sm dark:shadow-inner">
+                                        <span class="pl-2 text-slate-400 dark:text-slate-500"><i data-lucide="activity" class="w-3.5 h-3.5"></i></span>
+                                        <input type="text" id="st-mp-${col}" value="${mp}" placeholder="MP Saving" class="w-full text-xs font-mono px-2 py-1.5 bg-transparent text-slate-800 dark:text-slate-200 outline-none placeholder-slate-400 dark:placeholder-slate-600">
+                                    </div>
+                                    <div class="flex items-center bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded overflow-hidden focus-within:border-blue-500 dark:focus-within:border-sky-500 transition-colors shadow-sm dark:shadow-inner">
+                                        <span class="pl-2 text-slate-400 dark:text-slate-500"><i data-lucide="link" class="w-3.5 h-3.5"></i></span>
+                                        <input type="text" id="st-url-${col}" value="${url}" placeholder="URL" class="w-full text-xs font-mono px-2 py-1.5 bg-transparent text-slate-800 dark:text-slate-200 outline-none placeholder-slate-400 dark:placeholder-slate-600">
+                                    </div>
+                                </div>
+                            </div>`;
+                    }).join('');
+                }
+            }
+            modal.classList.remove('hidden'); lucide.createIcons();
+            setTimeout(() => { content.classList.remove('scale-95', 'opacity-0'); content.classList.add('scale-100', 'opacity-100'); }, 10);
+        }
+
+        function viewSqlModal(regId) {
+            const item = appData.find(d => d.regId === regId);
+            if (!item || !item.dataSource) return;
+            document.getElementById('sql-viewer-code').textContent = item.dataSource;
+            const modal = document.getElementById('sql-modal');
+            const content = document.getElementById('sql-modal-content');
+            modal.classList.remove('hidden');
+            lucide.createIcons();
+            setTimeout(() => { content.classList.remove('scale-95', 'opacity-0'); content.classList.add('scale-100', 'opacity-100'); }, 10);
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            const content = document.getElementById(modalId + '-content');
+            content.classList.remove('scale-100', 'opacity-100'); content.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 200);
         }
 
         document.addEventListener("DOMContentLoaded", () => {
