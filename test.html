@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>代辦中心 (戰情深色版 + 完整DB功能)</title>
+    <title>代辦中心 (高清晰深海藍完整版)</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -15,161 +15,150 @@
             darkMode: 'class',
             theme: { 
                 extend: { 
-                    fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'], mono: ['ui-monospace', 'monospace'], },
-                    colors: {
-                        // 戰情室專屬配色 (對應您提供的截圖)
-                        monitor: {
-                            bg: '#050b14',       // 最底層極深藍
-                            panel: '#0d1522',    // 面板底色
-                            card: '#162032',     // 卡片底色
-                            border: '#1e293b',   // 邊界線
-                            borderLight: '#334155',
-                            cyan: '#0ea5e9',     // 科技青色
-                            red: '#ef4444',      // 警示紅
-                            green: '#10b981',    // 正常綠
-                            yellow: '#f59e0b',   // 處理中黃
-                            textMain: '#e2e8f0', // 主文字
-                            textMuted: '#64748b' // 次要文字
-                        }
-                    }
+                    fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'], mono: ['ui-monospace', 'monospace'] }
                 } 
             }
         }
     </script>
 
     <style>
-        /* 深色科技感捲軸 */
+        /* 深色科技捲軸 */
         ::-webkit-scrollbar { width: 8px; height: 10px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: #020617; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; border: 2px solid #0f172a; }
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* 凍結窗格深色陰影 */
-        .sticky-left-shadow { box-shadow: 4px 0 10px -2px rgba(0, 0, 0, 0.5); }
-        .sticky-right-shadow { box-shadow: -4px 0 10px -2px rgba(0, 0, 0, 0.5); }
+        /* 凍結窗格陰影 */
+        .sticky-left-shadow { box-shadow: 4px 0 10px -2px rgba(0, 0, 0, 0.4); }
+        .sticky-right-shadow { box-shadow: -4px 0 10px -2px rgba(0, 0, 0, 0.4); }
 
         /* 表格 Hover 效果 (極淡的青色光暈) */
-        .table-row-hover:hover td { background-color: rgba(14, 165, 233, 0.08); }
+        .table-row-hover:hover td { background-color: rgba(14, 165, 233, 0.05); }
+
+        /* 解決深色模式下 Chrome 自動填入變成白色的問題 */
+        input:-webkit-autofill {
+            -webkit-box-shadow: 0 0 0 30px #020617 inset !important;
+            -webkit-text-fill-color: #f8fafc !important;
+        }
 
         @keyframes slideInUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
         .toast-enter { animation: slideInUp 0.3s ease-out forwards; }
         .toast-leave { animation: fadeOut 0.3s ease-out forwards; }
-        
-        body { background-color: #050b14; color: #e2e8f0; }
-        
-        /* 避免深色模式下 input 被瀏覽器預設樣式影響 */
-        input:-webkit-autofill {
-            -webkit-box-shadow: 0 0 0 30px #050b14 inset !important;
-            -webkit-text-fill-color: #e2e8f0 !important;
-        }
     </style>
 </head>
-<body class="font-sans min-h-screen flex flex-col antialiased selection:bg-monitor-cyan selection:text-white">
+<body class="bg-slate-950 text-slate-200 font-sans min-h-screen flex flex-col antialiased selection:bg-sky-500/30 selection:text-sky-200">
 
-    <!-- ★ 頂部資訊板 (顏色替換：改為深色面板) -->
-    <div class="bg-monitor-panel shrink-0 shadow-[0_4px_20px_rgba(0,0,0,0.5)] border-b border-monitor-border z-40 relative overflow-hidden">
-        <!-- 移除亮色背景的光暈，保持深邃感 -->
-        <div class="max-w-[1800px] w-full mx-auto px-4 relative">
-            <header class="flex items-center justify-between py-4 px-1">
+    <!-- ★ 頂部資訊板 (深海藍 Navy Slate) -->
+    <div class="bg-gradient-to-r from-slate-900 to-slate-800 shrink-0 shadow-[0_4px_20px_rgba(0,0,0,0.5)] border-b border-slate-800 z-40 relative">
+        <div class="max-w-[1800px] w-full mx-auto px-4 sm:px-6 relative">
+            <header class="flex items-center justify-between py-5">
                 <div class="flex items-center gap-3.5">
-                    <!-- Logo 區塊 -->
-                    <div class="relative flex items-center justify-center w-10 h-10 rounded-xl bg-monitor-card border border-monitor-borderLight shadow-md">
-                        <i data-lucide="cpu" class="w-5 h-5 text-monitor-cyan"></i>
+                    <div class="relative flex items-center justify-center w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/30 shadow-sm">
+                        <i data-lucide="cpu" class="w-5 h-5 text-sky-400"></i>
                     </div>
                     <div>
                         <h1 class="text-xl font-extrabold text-white tracking-wide leading-tight">代辦中心</h1>
-                        <p class="text-[11px] text-monitor-cyan font-mono uppercase tracking-widest mt-0.5">Task Control Monitor</p>
+                        <p class="text-[11px] text-slate-400 font-mono uppercase tracking-widest mt-0.5">Task Control Hub</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-5">
-                    <div class="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-monitor-card border border-monitor-border cursor-pointer hover:bg-slate-800 transition-colors">
+                    <div class="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 cursor-pointer hover:bg-slate-700 transition-colors shadow-sm">
                         <div class="text-right hidden sm:block">
                             <p class="text-xs font-bold text-white leading-tight">廠區高階主管</p>
-                            <p class="text-[10px] text-monitor-green font-mono uppercase">Online</p>
+                            <p class="text-[10px] text-emerald-400 font-mono uppercase tracking-widest">● Online</p>
                         </div>
-                        <div class="w-8 h-8 rounded bg-monitor-panel border border-monitor-borderLight flex items-center justify-center text-monitor-cyan">
+                        <div class="w-8 h-8 rounded bg-slate-950 border border-slate-700 flex items-center justify-center text-slate-300">
                             <i data-lucide="user" class="w-4 h-4"></i>
                         </div>
                     </div>
                 </div>
             </header>
-
-            <div id="kpi-container" class="flex pb-4 overflow-x-auto hide-scrollbar px-1 gap-4"></div>
         </div>
     </div>
 
     <!-- 內容區 -->
-    <main class="flex-1 px-4 pt-5 pb-12 max-w-[1800px] w-full mx-auto flex flex-col gap-4">
+    <main class="flex-1 px-4 sm:px-6 pt-6 pb-12 max-w-[1800px] w-full mx-auto flex flex-col gap-5">
 
-        <!-- ★ 控制列 (顏色替換：改為深色卡片) -->
-        <div class="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl border shrink-0 bg-monitor-panel border-monitor-border shadow-md">
-            <div class="flex flex-wrap items-center gap-2 sm:gap-3 pl-1.5">
-                <div class="flex items-center gap-2 mr-2 hidden sm:flex">
-                    <i data-lucide="layout-list" class="w-4 h-4 text-monitor-cyan"></i>
-                    <h2 class="text-[14px] font-bold text-white whitespace-nowrap tracking-wide">任務清單</h2>
-                </div>
-
-                <div class="relative flex items-center px-2 py-1.5 rounded-md border bg-monitor-bg border-monitor-borderLight focus-within:border-monitor-cyan focus-within:ring-1 focus-within:ring-monitor-cyan transition-all w-40 sm:w-64">
-                    <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 shrink-0"></i>
-                    <input type="text" id="search-input" placeholder="搜尋申請人、需求..." class="ml-2 bg-transparent outline-none text-xs w-full text-white placeholder-slate-500 font-medium" oninput="handleSearch(this.value)" />
-                </div>
-
-                <select id="status-filter" onchange="handleStatusFilter(this.value)" class="text-xs px-3 py-2 rounded-md border outline-none cursor-pointer bg-monitor-bg border-monitor-borderLight text-white focus:border-monitor-cyan transition-all font-medium appearance-none pr-8">
-                    <option value="All">全部狀態</option>
-                    <option value="已上線">已上線</option>
-                    <option value="處理中">處理中</option>
-                    <option value="缺欄位">缺欄位</option>
-                </select>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-2.5 pr-0.5">
-                <input type="file" id="excel-upload" accept=".xlsx" class="hidden" onchange="handleExcelImport(event)">
-                <button onclick="document.getElementById('excel-upload').click()" class="flex items-center gap-1.5 px-4 py-2 text-[12px] font-bold rounded-md text-slate-300 bg-monitor-card border border-monitor-borderLight hover:text-white hover:border-slate-500 transition-colors shadow-sm active:scale-95">
-                    <i data-lucide="upload" class="w-3.5 h-3.5"></i> 匯入 Excel
-                </button>
-
-                <button onclick="exportToExcel()" class="flex items-center gap-1.5 px-4 py-2 text-[12px] font-bold rounded-md text-slate-300 bg-monitor-card border border-monitor-borderLight hover:text-white hover:border-slate-500 transition-colors shadow-sm active:scale-95">
-                    <i data-lucide="download" class="w-3.5 h-3.5"></i> 匯出 Excel
-                </button>
-
-                <button onclick="openModal('add')" class="flex items-center gap-1.5 px-5 py-2 text-[12px] font-bold rounded-md text-white bg-monitor-cyan hover:bg-[#0284c7] shadow-[0_0_12px_rgba(14,165,233,0.3)] transition-all active:scale-95 ml-1">
-                    <i data-lucide="plus" class="w-3.5 h-3.5"></i> 新增需求
-                </button>
-
-                <div class="h-5 w-px bg-monitor-borderLight mx-2 hidden sm:block"></div>
-
-                <div class="flex p-0.5 rounded-md border bg-monitor-bg border-monitor-border shrink-0">
-                    <button id="btn-view-table" onclick="setView('table')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded bg-monitor-panel text-monitor-cyan border border-monitor-borderLight shadow-sm transition-colors">
-                        <i data-lucide="list" class="w-3.5 h-3.5"></i> 總覽
-                    </button>
-                    <button id="btn-view-card" onclick="setView('card')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded text-slate-400 hover:text-white transition-colors bg-transparent border border-transparent">
-                        <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i> 卡片
-                    </button>
-                </div>
-            </div>
+        <!-- ★ 修正：具有寬度保護機制的 KPI 卡片 -->
+        <div id="kpi-container" class="flex flex-row gap-4 overflow-x-auto hide-scrollbar shrink-0 pb-1">
+            <!-- 由 JS 動態渲染 -->
         </div>
 
-        <!-- 表格容器 -->
-        <div id="content-container" class="w-full relative"></div>
+        <!-- 核心控制列與表格 -->
+        <div class="bg-slate-900 rounded-2xl shadow-[0_4px_25px_rgba(0,0,0,0.3)] border border-slate-800 flex flex-col flex-1 overflow-hidden transition-all">
+            
+            <!-- 控制列 -->
+            <div class="px-5 py-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4 bg-slate-900 z-20">
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 mr-2 hidden sm:flex">
+                        <i data-lucide="layout-list" class="w-4 h-4 text-sky-400"></i>
+                        <h2 class="text-[14px] font-bold text-white whitespace-nowrap tracking-wide">任務清單</h2>
+                    </div>
 
-        <!-- 分頁列 -->
-        <div id="pagination-container" class="mt-2 shrink-0"></div>
+                    <div class="relative group">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 group-focus-within:text-sky-400 transition-colors"></i>
+                        <input type="text" id="search-input" placeholder="搜尋申請人、需求..." class="pl-9 pr-4 py-1.5 bg-slate-950 border border-slate-800 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded-lg text-[13px] text-slate-200 placeholder-slate-500 outline-none transition-all w-56 focus:w-72 font-medium shadow-inner" oninput="handleSearch(this.value)" />
+                    </div>
 
+                    <div class="relative">
+                        <select id="status-filter" onchange="handleStatusFilter(this.value)" class="text-[13px] px-3 py-1.5 bg-slate-950 border border-slate-800 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded-lg text-slate-300 outline-none cursor-pointer font-medium appearance-none pr-8 shadow-inner transition-all">
+                            <option value="All">全部狀態</option>
+                            <option value="已上線">已上線</option>
+                            <option value="處理中">處理中</option>
+                            <option value="缺欄位">缺欄位</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <input type="file" id="excel-upload" accept=".xlsx" class="hidden" onchange="handleExcelImport(event)">
+                    <button onclick="document.getElementById('excel-upload').click()" class="flex items-center gap-1.5 px-4 py-1.5 text-[12px] font-bold rounded-lg text-slate-300 bg-slate-800 border border-slate-700 hover:text-white hover:bg-slate-700 transition-colors shadow-sm active:scale-95">
+                        <i data-lucide="upload" class="w-3.5 h-3.5"></i> 匯入 Excel
+                    </button>
+                    <button onclick="exportToExcel()" class="flex items-center gap-1.5 px-4 py-1.5 text-[12px] font-bold rounded-lg text-slate-300 bg-slate-800 border border-slate-700 hover:text-white hover:bg-slate-700 transition-colors shadow-sm active:scale-95">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i> 匯出 Excel
+                    </button>
+
+                    <button onclick="openModal('add')" class="flex items-center gap-1.5 px-5 py-1.5 text-[12px] font-bold rounded-lg text-white bg-sky-600 hover:bg-sky-500 shadow-[0_0_12px_rgba(14,165,233,0.3)] transition-all active:scale-95 ml-1 border border-sky-500">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> 新增需求
+                    </button>
+
+                    <div class="h-5 w-px bg-slate-700 mx-2 hidden sm:block"></div>
+
+                    <div class="flex p-0.5 rounded-lg bg-slate-950 border border-slate-800 shrink-0">
+                        <button id="btn-view-table" onclick="setView('table')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded bg-slate-800 text-sky-400 border border-slate-700 shadow-sm transition-colors">
+                            <i data-lucide="list" class="w-3.5 h-3.5"></i> 總覽
+                        </button>
+                        <button id="btn-view-card" onclick="setView('card')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded text-slate-500 hover:text-slate-300 transition-colors bg-transparent border border-transparent">
+                            <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i> 卡片
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 表格容器 -->
+            <div id="content-container" class="w-full relative bg-slate-900"></div>
+
+            <!-- 分頁列 -->
+            <div id="pagination-container" class="border-t border-slate-800 bg-slate-900/50 rounded-b-2xl z-20 relative"></div>
+
+        </div>
     </main>
 
     <div id="toast-container" class="fixed bottom-6 right-6 z-[120] flex flex-col gap-3 pointer-events-none"></div>
 
-    <!-- ★ CRUD Modal (顏色替換：改為深色) -->
+    <!-- ★ CRUD Modal (深色面板修復版) -->
     <div id="crud-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
         <div class="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity" onclick="closeModal('crud-modal')"></div>
-        <div id="crud-modal-content" class="relative bg-monitor-panel border border-monitor-border rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.8)] w-full max-w-4xl flex flex-col transform transition-all scale-95 opacity-0 duration-200 max-h-[90vh] overflow-hidden">
-            <div class="flex justify-between items-center p-5 border-b border-monitor-border shrink-0 bg-monitor-card/50">
+        <div id="crud-modal-content" class="relative bg-slate-900 border border-slate-800 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.8)] w-full max-w-4xl flex flex-col transform transition-all scale-95 opacity-0 duration-200 max-h-[90vh] overflow-hidden">
+            <div class="flex justify-between items-center p-5 border-b border-slate-800 shrink-0 bg-slate-900">
                 <h3 id="modal-title" class="text-lg font-bold text-white flex items-center gap-2"></h3>
-                <button type="button" onclick="closeModal('crud-modal')" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                <button type="button" onclick="closeModal('crud-modal')" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -179,60 +168,60 @@
                     <input type="hidden" id="modal-regid" value="">
 
                     <div>
-                        <h4 class="text-[11px] font-bold text-monitor-cyan uppercase tracking-widest mb-3 border-b border-monitor-border pb-2">基礎資訊 Base Info</h4>
+                        <h4 class="text-[11px] font-bold text-sky-400 uppercase tracking-widest mb-3 border-b border-slate-800 pb-2">基礎資訊 Base Info</h4>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                            <div class="relative"><label class="block text-xs font-bold text-slate-400 mb-1.5">DEPT <span class="text-monitor-red">*</span></label><input type="text" id="form-dept" required class="w-full px-3 py-2 border rounded-md outline-none bg-monitor-bg border-monitor-border focus:border-monitor-cyan transition-all text-white disabled:opacity-50"></div>
-                            <div class="relative"><label class="block text-xs font-bold text-slate-400 mb-1.5">SECTION <span class="text-monitor-red">*</span></label><input type="text" id="form-sec" required class="w-full px-3 py-2 border rounded-md outline-none bg-monitor-bg border-monitor-border focus:border-monitor-cyan transition-all text-white disabled:opacity-50"></div>
-                            <div class="relative"><label class="block text-xs font-bold text-slate-400 mb-1.5">申請人 <span class="text-monitor-red">*</span></label><input type="text" id="form-applicant" required class="w-full px-3 py-2 border rounded-md outline-none bg-monitor-bg border-monitor-border focus:border-monitor-cyan transition-all text-white disabled:opacity-50"></div>
+                            <div class="relative"><label class="block text-xs font-bold text-slate-400 mb-1.5 uppercase">DEPT <span class="text-rose-500">*</span></label><input type="text" id="form-dept" required class="w-full px-3 py-2 border rounded-md outline-none bg-slate-950 border-slate-800 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all text-slate-200 placeholder-slate-600 disabled:opacity-50"></div>
+                            <div class="relative"><label class="block text-xs font-bold text-slate-400 mb-1.5 uppercase">SECTION <span class="text-rose-500">*</span></label><input type="text" id="form-sec" required class="w-full px-3 py-2 border rounded-md outline-none bg-slate-950 border-slate-800 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all text-slate-200 placeholder-slate-600 disabled:opacity-50"></div>
+                            <div class="relative"><label class="block text-xs font-bold text-slate-400 mb-1.5 uppercase">申請人 <span class="text-rose-500">*</span></label><input type="text" id="form-applicant" required class="w-full px-3 py-2 border rounded-md outline-none bg-slate-950 border-slate-800 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all text-slate-200 placeholder-slate-600 disabled:opacity-50"></div>
                         </div>
-                        <div class="relative"><label class="block text-xs font-bold text-slate-400 mb-1.5">需求摘要 <span class="text-monitor-red">*</span></label><textarea id="form-desc" required rows="2" class="w-full px-3 py-2 border rounded-md outline-none bg-monitor-bg border-monitor-border focus:border-monitor-cyan transition-all text-white disabled:opacity-50 resize-none"></textarea></div>
+                        <div class="relative"><label class="block text-xs font-bold text-slate-400 mb-1.5 uppercase">需求摘要 <span class="text-rose-500">*</span></label><textarea id="form-desc" required rows="2" class="w-full px-3 py-2 border rounded-md outline-none bg-slate-950 border-slate-800 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all text-slate-200 placeholder-slate-600 disabled:opacity-50 resize-none"></textarea></div>
                     </div>
 
                     <div id="edit-advanced-section" class="hidden space-y-6">
                         <div>
-                            <h4 class="text-[11px] font-bold text-monitor-cyan uppercase tracking-widest mb-3 border-b border-monitor-border pb-2">執行與追蹤 Tracking</h4>
+                            <h4 class="text-[11px] font-bold text-sky-400 uppercase tracking-widest mb-3 border-b border-slate-800 pb-2">執行與追蹤 Tracking</h4>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div><label class="block text-xs font-bold text-slate-400 mb-1.5">STATUS</label><select id="form-status" class="w-full px-3 py-2 border rounded-md outline-none bg-monitor-bg border-monitor-border text-white focus:border-monitor-cyan"><option value="缺欄位">缺欄位</option><option value="處理中">處理中</option><option value="已上線">已上線</option></select></div>
-                                <div><label class="block text-xs font-bold text-slate-400 mb-1.5">處理人員</label><input type="text" id="form-owner" class="w-full px-3 py-2 border rounded-md outline-none bg-monitor-bg border-monitor-border text-white focus:border-monitor-cyan"></div>
-                                <div><label class="block text-xs font-bold text-slate-400 mb-1.5">效益(MP/年)</label><input type="number" step="0.0001" id="form-benefit" class="w-full px-3 py-2 border rounded-md outline-none bg-monitor-bg border-monitor-border text-white focus:border-monitor-cyan"></div>
-                                <div><label class="block text-xs font-bold text-slate-400 mb-1.5">DBCat</label><input type="text" id="form-dbcat" class="w-full px-3 py-2 border rounded-md outline-none bg-monitor-bg border-monitor-border text-white focus:border-monitor-cyan"></div>
-                                <div><label class="block text-xs font-bold text-slate-400 mb-1.5">TCD</label><input type="text" id="form-tcd" class="w-full px-3 py-2 border rounded-md outline-none bg-monitor-bg border-monitor-border text-white focus:border-monitor-cyan"></div>
-                                <div><label class="block text-xs font-bold text-slate-400 mb-1.5">App LINK</label><input type="text" id="form-applink" class="w-full px-3 py-2 border rounded-md outline-none bg-monitor-bg border-monitor-border text-white focus:border-monitor-cyan"></div>
+                                <div><label class="block text-xs font-bold text-slate-400 mb-1.5 uppercase">STATUS</label><select id="form-status" class="w-full px-3 py-2 border rounded-md outline-none bg-slate-950 border-slate-800 text-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"><option value="缺欄位">缺欄位</option><option value="處理中">處理中</option><option value="已上線">已上線</option></select></div>
+                                <div><label class="block text-xs font-bold text-slate-400 mb-1.5 uppercase">處理人員</label><input type="text" id="form-owner" class="w-full px-3 py-2 border rounded-md outline-none bg-slate-950 border-slate-800 text-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"></div>
+                                <div><label class="block text-xs font-bold text-slate-400 mb-1.5 uppercase">效益(MP/年)</label><input type="number" step="0.0001" id="form-benefit" class="w-full px-3 py-2 border rounded-md outline-none bg-slate-950 border-slate-800 text-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"></div>
+                                <div><label class="block text-xs font-bold text-slate-400 mb-1.5 uppercase">DBCat</label><input type="text" id="form-dbcat" class="w-full px-3 py-2 border rounded-md outline-none bg-slate-950 border-slate-800 text-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"></div>
+                                <div><label class="block text-xs font-bold text-slate-400 mb-1.5 uppercase">TCD</label><input type="text" id="form-tcd" class="w-full px-3 py-2 border rounded-md outline-none bg-slate-950 border-slate-800 text-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"></div>
+                                <div><label class="block text-xs font-bold text-slate-400 mb-1.5 uppercase">App LINK</label><input type="text" id="form-applink" class="w-full px-3 py-2 border rounded-md outline-none bg-slate-950 border-slate-800 text-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"></div>
                             </div>
                         </div>
                         <div>
-                            <h4 class="text-[11px] font-bold text-monitor-cyan uppercase tracking-widest mb-3 border-b border-monitor-border pb-2">Data Source (SQL)</h4>
-                            <textarea id="form-datasource" rows="3" class="w-full px-4 py-3 border rounded-md outline-none bg-[#050b14] border-monitor-border text-monitor-cyan font-mono text-[13px] shadow-inner"></textarea>
+                            <h4 class="text-[11px] font-bold text-sky-400 uppercase tracking-widest mb-3 border-b border-slate-800 pb-2">Data Source (SQL)</h4>
+                            <textarea id="form-datasource" rows="3" class="w-full px-4 py-3 border rounded-md outline-none bg-[#020617] border-slate-800 text-emerald-400 font-mono text-[13px] shadow-inner focus:border-sky-500"></textarea>
                         </div>
                         <div>
-                            <h4 class="text-[11px] font-bold text-monitor-cyan uppercase tracking-widest mb-3 border-b border-monitor-border pb-2">機台站點設定 Stations</h4>
+                            <h4 class="text-[11px] font-bold text-sky-400 uppercase tracking-widest mb-3 border-b border-slate-800 pb-2">機台站點設定 Stations</h4>
                             <div id="form-stations-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
                         </div>
                     </div>
 
-                    <div class="pt-4 flex gap-3 justify-end border-t border-monitor-border mt-2">
-                        <button type="button" onclick="closeModal('crud-modal')" class="px-5 py-2 text-sm font-bold rounded-md border border-monitor-border text-slate-300 bg-monitor-card hover:bg-slate-800 transition-colors">取消</button>
-                        <button type="submit" class="px-5 py-2 text-sm font-bold rounded-md text-white bg-monitor-cyan hover:bg-[#0284c7] shadow-[0_0_10px_rgba(14,165,233,0.3)] transition-all active:scale-95">儲存變更</button>
+                    <div class="pt-5 flex gap-3 justify-end border-t border-slate-800 mt-2">
+                        <button type="button" onclick="closeModal('crud-modal')" class="px-5 py-2 text-sm font-bold rounded-lg border border-slate-700 text-slate-300 bg-slate-800 hover:bg-slate-700 transition-colors">取消</button>
+                        <button type="submit" class="px-6 py-2 text-sm font-bold rounded-lg text-white bg-sky-600 hover:bg-sky-500 shadow-[0_0_12px_rgba(14,165,233,0.3)] border border-sky-500 transition-all active:scale-95">儲存變更</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- SQL Viewer Modal (深色版) -->
+    <!-- SQL Viewer Modal -->
     <div id="sql-modal" class="hidden fixed inset-0 z-[110] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity" onclick="closeModal('sql-modal')"></div>
-        <div id="sql-modal-content" class="relative bg-monitor-panel rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.9)] border border-monitor-border w-full max-w-3xl transform transition-all scale-95 opacity-0 duration-200 overflow-hidden">
-            <div class="flex justify-between items-center px-5 py-4 border-b border-monitor-border bg-monitor-card/80">
-                <h3 class="text-sm font-bold text-monitor-cyan flex items-center gap-2">
+        <div id="sql-modal-content" class="relative bg-slate-900 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.9)] border border-slate-700 w-full max-w-3xl transform transition-all scale-95 opacity-0 duration-200 overflow-hidden">
+            <div class="flex justify-between items-center px-5 py-4 border-b border-slate-800 bg-slate-900">
+                <h3 class="text-sm font-bold text-sky-400 flex items-center gap-2">
                     <i data-lucide="code" class="w-4 h-4"></i> Data Source
                 </h3>
-                <button onclick="closeModal('sql-modal')" class="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                <button onclick="closeModal('sql-modal')" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
-            <div class="p-5 overflow-x-auto max-h-[70vh] bg-[#050b14]">
-                <pre><code id="sql-viewer-code" class="text-[13px] font-mono text-monitor-green whitespace-pre-wrap break-all leading-relaxed"></code></pre>
+            <div class="p-5 overflow-x-auto max-h-[70vh] bg-[#020617]">
+                <pre><code id="sql-viewer-code" class="text-[13px] font-mono text-emerald-400 whitespace-pre-wrap break-all leading-relaxed"></code></pre>
             </div>
         </div>
     </div>
@@ -284,11 +273,11 @@
                     showToast('預覽模式：已載入測試資料', 'info');
 
                     const mockDbData = [
-                        { regId: 22, date: '2026-04-29', status: '缺欄位', owner: '陳祥', dept: 'PTI', sec: 'ESI', applicant: '林玉婷', desc: 'TF-CUSPUT2-RDR-buffer-A_PM', benefit: 0.6, dbCat: '33', stations: [{ stationName: 'DF1', mpValue: 'V', urlLink: '' }] },
+                        { regId: 22, date: '2026-04-29', status: '缺欄位', owner: '陳祥', dept: 'PTI', sec: 'ESI', applicant: '林玉婷', desc: '這是一段用來測試的長文字，當摘要內容非常多的時候，需要自動換行且行距適中，確保主管可以舒服地閱讀所有的細節，而不必左右滾動。', benefit: 0.6, dbCat: '33', stations: [{ stationName: 'DF1', mpValue: 'V', urlLink: '' }] },
                         { regId: 21, date: '2026-02-10', status: '缺欄位', owner: '-', dept: 'TF5', sec: 'EQ2', applicant: '黃筱嵐', desc: 'CROSS_FAB_INLINE_BENCHMARK_RATATA', benefit: 0, dbCat: '-', stations: [] },
                         { regId: 20, date: '2026-02-03', status: '處理中', owner: '-', dept: 'DM1', sec: 'DM', applicant: '林宗緯', desc: 'DM Gen AI GPT 需求:連接到KLARITY資料', benefit: 0, dbCat: '-', stations: [] },
                         { regId: 19, date: '2026-02-12', status: '處理中', owner: '-', dept: 'DM1', sec: 'DM', applicant: '沈俊龑/林宗緯', desc: 'Hold rate 資訊(PT Hold Report)', benefit: 0, dbCat: '-', stations: [] },
-                        { regId: 18, date: '2026-02-12', status: '處理中', owner: '-', dept: 'TF5', sec: 'EQ2', applicant: '黃筱嵐', desc: 'hourly、Weekly HR TGT HOLD_WIP', benefit: 0.035, dbCat: '-', stations: [] },
+                        { regId: 18, date: '2026-02-12', status: '處理中', owner: '-', dept: 'TF5', sec: 'EQ2', applicant: '黃筱嵐', desc: 'hourly、Weekly HR TGT HOLD_WIP 所有Node的都要', benefit: 0.035, dbCat: '-', stations: [] },
                         { regId: 17, date: '2026-02-02', status: '已上線', owner: 'ESI:JH', dept: 'TF6', sec: 'PE2', applicant: '詹皓評', desc: 'PDS data 分析', benefit: 0.12, tcd: 'Notes://', dbCat: 'SEMAS', stations: [] }
                     ];
                     let expandedData = [];
@@ -376,7 +365,7 @@
         }
 
         async function deleteData(regId) {
-            if (confirm(`確定要刪除 RegID #${regId} 的需求資料嗎？資料庫會一併刪除關聯站點。`)) {
+            if (confirm(`確定要刪除 RegID #${regId} 的需求資料嗎？`)) {
                 try {
                     if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') {
                         throw new Error('Local preview mode');
@@ -395,7 +384,6 @@
             }
         }
 
-        // ===== 匯入 Excel 邏輯 =====
         async function handleExcelImport(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -532,61 +520,61 @@
         }
 
         // ===== UI 操作與互動函數 =====
-        // 深色 UI 的 Toast
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             const config = { 
-                success: { icon: 'check-circle', color: 'text-monitor-green', bg: 'bg-monitor-green/10', border: 'border-monitor-green/30' }, 
-                error: { icon: 'alert-circle', color: 'text-monitor-red', bg: 'bg-monitor-red/10', border: 'border-monitor-red/30' }, 
-                info: { icon: 'info', color: 'text-monitor-cyan', bg: 'bg-monitor-cyan/10', border: 'border-monitor-cyan/30' } 
+                success: { icon: 'check-circle', color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/20' }, 
+                error: { icon: 'alert-circle', color: 'text-rose-400', bg: 'bg-rose-400/10', border: 'border-rose-400/20' }, 
+                info: { icon: 'info', color: 'text-sky-400', bg: 'bg-sky-400/10', border: 'border-sky-400/20' } 
             }[type];
-            toast.className = `flex items-center gap-3 px-4 py-3 bg-monitor-card border ${config.border} shadow-2xl rounded-xl pointer-events-auto toast-enter`;
-            toast.innerHTML = `<div class="p-1 rounded-full ${config.bg} ${config.color}"><i data-lucide="${config.icon}" class="w-4 h-4"></i></div><p class="text-xs font-bold text-white tracking-wide">${message}</p>`;
+            toast.className = `flex items-center gap-3 px-4 py-3 bg-slate-900 border ${config.border} shadow-2xl rounded-xl pointer-events-auto toast-enter`;
+            toast.innerHTML = `<div class="p-1 rounded-full ${config.bg} ${config.color}"><i data-lucide="${config.icon}" class="w-4 h-4"></i></div><p class="text-xs font-bold text-slate-200 tracking-wide">${message}</p>`;
             container.appendChild(toast);
             lucide.createIcons();
             setTimeout(() => { toast.classList.replace('toast-enter', 'toast-leave'); setTimeout(() => toast.remove(), 300); }, 3000);
         }
 
-        // ★ 深色版：狀態顏色定義
+        // 深色版狀態膠囊
         function getStatusColorClass(status) {
             switch (status) { 
-                case '已上線': return 'text-monitor-green border-monitor-green/30 bg-monitor-green/10'; 
-                case '處理中': return 'text-monitor-yellow border-monitor-yellow/30 bg-monitor-yellow/10'; 
-                case '缺欄位': return 'text-monitor-red border-monitor-red/30 bg-monitor-red/10'; 
+                case '已上線': return 'text-emerald-400 border-emerald-400/20 bg-emerald-400/10'; 
+                case '處理中': return 'text-amber-400 border-amber-400/20 bg-amber-400/10'; 
+                case '缺欄位': return 'text-rose-400 border-rose-400/20 bg-rose-400/10'; 
                 default: return 'text-slate-400 border-slate-600 bg-slate-800'; 
             }
         }
         function getStatusIconTag(status) {
             switch (status) { 
-                case '已上線': return '<i data-lucide="check-circle" class="w-3 h-3 mr-1"></i>'; 
-                case '處理中': return '<i data-lucide="clock" class="w-3 h-3 mr-1"></i>'; 
-                case '缺欄位': return '<i data-lucide="alert-circle" class="w-3 h-3 mr-1"></i>'; 
+                case '已上線': return '<i data-lucide="check-circle" class="w-3.5 h-3.5 mr-1.5 opacity-90"></i>'; 
+                case '處理中': return '<i data-lucide="clock" class="w-3.5 h-3.5 mr-1.5 opacity-90"></i>'; 
+                case '缺欄位': return '<i data-lucide="alert-octagon" class="w-3.5 h-3.5 mr-1.5 opacity-90"></i>'; 
                 default: return ''; 
             }
         }
 
-        // ★ KPI 渲染：加入截圖風格的高亮色彩 (保留寬度保護)
+        // ★ KPI 卡片 (具備 truncate 與橫向滾動保護)
         function renderKPI() {
             const filteredData = getProcessedData();
             const totalBenefit = filteredData.reduce((s, i) => s + (Number(i.benefit) || 0), 0).toFixed(3);
             const kpis = [
-                { title: "目前總任務數", value: filteredData.length, icon: "database", color: "text-monitor-cyan", border: "border-monitor-cyan/30", glow: "bg-monitor-cyan" },
-                { title: "高風險異常(缺欄位)", value: appData.filter(d => d.status === '缺欄位').length, icon: "alert-octagon", color: "text-monitor-red", border: "border-monitor-red/30", glow: "bg-monitor-red" },
-                { title: "處理中專案", value: appData.filter(d => d.status === '處理中').length, icon: "clock", color: "text-monitor-yellow", border: "border-monitor-yellow/30", glow: "bg-monitor-yellow" },
-                { title: "全區預估效益", value: totalBenefit, icon: "trending-up", color: "text-monitor-green", border: "border-monitor-green/30", glow: "bg-monitor-green" },
+                { title: "總需求數量", value: appData.length, icon: "database", color: "text-sky-400", border: "border-sky-400/30", glow: "bg-sky-400" },
+                { title: "已上線完成", value: appData.filter(d => d.status === '已上線').length, icon: "check-circle", color: "text-emerald-400", border: "border-emerald-400/30", glow: "bg-emerald-400" },
+                { title: "處理中專案", value: appData.filter(d => d.status === '處理中').length, icon: "clock", color: "text-amber-400", border: "border-amber-400/30", glow: "bg-amber-400" },
+                { title: "缺欄位專案", value: appData.filter(d => d.status === '缺欄位').length, icon: "alert-octagon", color: "text-rose-400", border: "border-rose-400/30", glow: "bg-rose-400" },
+                { title: "預估總效益", value: totalBenefit, icon: "trending-up", color: "text-purple-400", border: "border-purple-400/30", glow: "bg-purple-400" },
             ];
 
             const kpiCardsHtml = kpis.map((k) => {
                 const isLongValue = String(k.value).length > 8;
                 return `
-                <div class="flex-1 min-w-[200px] flex items-center justify-between px-5 py-4 bg-monitor-card rounded-xl border border-monitor-border hover:border-slate-500 transition-colors duration-300 group cursor-default relative overflow-hidden">
+                <div class="flex-1 min-w-[200px] flex items-center justify-between px-5 py-4 bg-slate-900 rounded-xl border border-slate-800 hover:border-slate-700 transition-colors duration-300 group cursor-default relative overflow-hidden shadow-sm">
                   <div class="absolute -right-6 -top-6 w-20 h-20 rounded-full ${k.glow}/10 blur-xl group-hover:scale-150 transition-transform duration-500"></div>
                   <div class="flex flex-col gap-1 min-w-0 pr-2 relative z-10">
-                    <p class="text-[11px] font-bold text-monitor-textMuted tracking-widest uppercase whitespace-nowrap">${k.title}</p>
+                    <p class="text-[11px] font-bold text-slate-400 tracking-widest uppercase whitespace-nowrap">${k.title}</p>
                     <h3 class="${isLongValue ? 'text-2xl' : 'text-[28px]'} font-mono font-bold ${k.color} tracking-tight leading-none mt-1 truncate drop-shadow-[0_0_8px_currentColor]" title="${k.value}">${k.value}</h3>
                   </div>
-                  <div class="shrink-0 w-9 h-9 rounded bg-monitor-panel border ${k.border} flex items-center justify-center transition-transform group-hover:rotate-3 shadow-sm relative z-10">
+                  <div class="shrink-0 w-9 h-9 rounded bg-slate-950 border ${k.border} flex items-center justify-center transition-transform group-hover:rotate-3 shadow-sm relative z-10">
                     <i data-lucide="${k.icon}" class="w-4 h-4 ${k.color}"></i>
                   </div>
                 </div>
@@ -597,26 +585,25 @@
             lucide.createIcons();
         }
 
-        // ★ 表頭：深色微光雙向小箭頭 (不突兀)
+        // ★ 表頭：無干擾的淡藍色雙向小箭頭
         function renderSortHeader(label, sortKey, className) {
             const isActive = state.sortConfig.key === sortKey;
             const isAsc = isActive && state.sortConfig.direction === 'asc';
             const isDesc = isActive && state.sortConfig.direction === 'desc';
 
             return `
-            <th class="px-3 py-3.5 cursor-pointer select-none group border-b border-monitor-border bg-monitor-card hover:bg-[#162032] transition-colors ${className}" onclick="setSort('${sortKey}')">
+            <th class="px-3 py-3.5 cursor-pointer select-none group border-b border-slate-800/50 bg-slate-900/80 hover:bg-slate-800 transition-colors ${className}" onclick="setSort('${sortKey}')">
               <div class="flex items-center text-[11px] font-bold text-slate-400 uppercase tracking-widest ${className.includes('text-center') ? 'justify-center' : ''}">
                 ${label}
                 <div class="flex items-center -space-x-[2px] ml-1 transition-opacity">
-                    <i data-lucide="arrow-up" class="w-[11px] h-[11px] ${isAsc ? 'text-monitor-cyan opacity-100' : 'text-slate-500 opacity-0 group-hover:opacity-100'} transition-all"></i>
-                    <i data-lucide="arrow-down" class="w-[11px] h-[11px] ${isDesc ? 'text-monitor-cyan opacity-100' : 'text-slate-500 opacity-0 group-hover:opacity-100'} transition-all"></i>
+                    <i data-lucide="arrow-up" class="w-[11px] h-[11px] ${isAsc ? 'text-sky-400 opacity-100' : 'text-slate-500 opacity-0 group-hover:opacity-100'} transition-all"></i>
+                    <i data-lucide="arrow-down" class="w-[11px] h-[11px] ${isDesc ? 'text-sky-400 opacity-100' : 'text-slate-500 opacity-0 group-hover:opacity-100'} transition-all"></i>
                 </div>
               </div>
             </th>
           `;
         }
 
-        // 表格內容 (深色版)
         function renderContent() {
             const filtered = getProcessedData();
             let currentData;
@@ -630,59 +617,61 @@
             const contentContainer = document.getElementById('content-container');
 
             if (state.view === 'table') {
-                let stationHeaders = stationColumns.map(col => `<th class="px-2 py-3.5 text-center border-b border-monitor-border bg-monitor-card text-[11px] font-bold text-slate-400 uppercase tracking-widest min-w-[60px] max-w-[100px] border-l border-monitor-border/50">${col}</th>`).join('');
+                let stationHeaders = stationColumns.map(col => `<th class="px-2 py-3.5 text-center border-b border-slate-800/50 bg-slate-900/80 text-[11px] font-bold text-slate-400 uppercase tracking-widest min-w-[60px] max-w-[100px] border-l border-slate-800/50">${col}</th>`).join('');
                 
                 let rowsHtml = currentData.map(row => {
                     let stationCells = stationColumns.map(col => {
                         const val = row[col.toLowerCase()];
-                        if (!val) return `<td class="px-2 py-2 text-center border-l border-monitor-border/50"><span class="text-slate-600 font-mono">-</span></td>`;
+                        if (!val) return `<td class="px-2 py-2.5 text-center border-l border-slate-800/50"><span class="text-slate-600 font-mono">-</span></td>`;
                         let mp = val, url = ''; if (val.includes('^')) { [mp, url] = val.split('^'); } else if (val.startsWith('http') || val.startsWith('Notes://')) { mp = 'Link'; url = val; }
-                        return `<td class="px-2 py-2 text-center min-w-[60px] max-w-[100px] whitespace-normal break-words border-l border-monitor-border/50">
-                            <span class="font-mono text-[11px] text-monitor-cyan break-all">${mp}</span>
-                            ${url ? `<a href="${url}" target="_blank" class="inline-block ml-1 opacity-60 hover:opacity-100 transition-all" onclick="event.stopPropagation()"><i data-lucide="external-link" class="w-3 h-3 text-monitor-cyan"></i></a>` : ''}
+                        return `<td class="px-2 py-2.5 text-center min-w-[60px] max-w-[100px] whitespace-normal break-words border-l border-slate-800/50">
+                            <div class="inline-flex flex-wrap items-center justify-center gap-1 px-1.5 py-0.5 rounded border border-slate-700 bg-slate-800 w-full group-hover:bg-slate-700 transition-colors">
+                                <span class="font-mono text-[11px] text-slate-300 break-all leading-none">${mp}</span>
+                                ${url ? `<a href="${url}" target="_blank" class="inline-block opacity-60 hover:opacity-100 transition-all" onclick="event.stopPropagation()"><i data-lucide="external-link" class="w-3 h-3 text-sky-400"></i></a>` : ''}
+                            </div>
                         </td>`;
                     }).join('');
 
                     let sqlBtn = row.dataSource ? `
-                        <button onclick="viewSqlModal(${row.regId})" class="text-monitor-cyan hover:text-white transition-colors" title="檢視語法">
+                        <button onclick="viewSqlModal(${row.regId})" class="text-sky-400 hover:text-white transition-colors" title="檢視語法">
                             <i data-lucide="code" class="w-4 h-4 mx-auto"></i>
                         </button>` : `<span class="text-slate-600">-</span>`;
 
-                    let tcdIcon = row.tcd ? `<i data-lucide="file-text" class="w-4 h-4 text-monitor-cyan hover:text-white mx-auto cursor-pointer transition-colors" title="開啟連結" onclick="window.open('${row.tcd.startsWith('http')?row.tcd:'#'}')"></i>` : `<span class="text-slate-600">-</span>`;
+                    let tcdIcon = row.tcd ? `<i data-lucide="file-text" class="w-4 h-4 text-sky-400 hover:text-white mx-auto cursor-pointer transition-colors" title="開啟連結" onclick="window.open('${row.tcd.startsWith('http')?row.tcd:'#'}')"></i>` : `<span class="text-slate-600">-</span>`;
 
-                    // ★ 去外框操作按鈕
+                    // ★ 去框線純淨操作按鈕 (Naked Icons)
                     let actionHtml = `
                       <div class="flex items-center justify-center gap-3 opacity-30 group-hover:opacity-100 transition-opacity">
-                        <button onclick="openModal('edit', ${row.regId})" class="text-monitor-cyan hover:text-white transition-colors" title="編輯">
+                        <button onclick="openModal('edit', ${row.regId})" class="text-sky-400 hover:text-white transition-colors" title="編輯">
                           <i data-lucide="pen-line" class="w-4 h-4"></i>
                         </button>
-                        <button onclick="deleteData(${row.regId})" class="text-monitor-red hover:text-white transition-colors" title="刪除">
+                        <button onclick="deleteData(${row.regId})" class="text-rose-400 hover:text-rose-400 transition-colors" title="刪除">
                           <i data-lucide="trash-2" class="w-4 h-4"></i>
                         </button>
                       </div>
                     `;
 
                     return `
-                <tr class="table-row-hover transition-colors border-b border-monitor-border/50 bg-monitor-panel group cursor-default">
-                  <td class="px-4 py-3 sticky left-0 z-10 bg-monitor-panel group-hover:bg-[#121c2c] text-slate-400 font-mono text-[11px] w-[90px] min-w-[90px] transition-colors border-r border-monitor-border/50">${row.date}</td>
-                  <td class="px-4 py-3 text-center sticky left-[90px] z-10 bg-monitor-panel group-hover:bg-[#121c2c] font-mono font-bold text-monitor-cyan text-[12px] w-[60px] min-w-[60px] transition-colors border-r border-monitor-border/50">#${row.regId}</td>
-                  <td class="px-4 py-3 text-center sticky left-[150px] z-10 bg-monitor-panel group-hover:bg-[#121c2c] font-mono font-bold text-white text-[12px] w-[60px] min-w-[60px] sticky-left-shadow transition-colors">${row.itemNum}</td>
+                <tr class="table-row-hover transition-colors border-b border-slate-800/50 bg-transparent group cursor-default">
+                  <td class="px-4 py-3 sticky left-0 z-10 bg-slate-900 group-hover:bg-[#121c2c] text-slate-400 font-mono text-[11px] w-[90px] min-w-[90px] transition-colors border-r border-slate-800/50">${row.date}</td>
+                  <td class="px-4 py-3 text-center sticky left-[90px] z-10 bg-slate-900 group-hover:bg-[#121c2c] font-mono font-bold text-sky-400 text-[12px] w-[60px] min-w-[60px] transition-colors border-r border-slate-800/50">#${row.regId}</td>
+                  <td class="px-4 py-3 text-center sticky left-[150px] z-10 bg-slate-900 group-hover:bg-[#121c2c] font-mono font-bold text-white text-[12px] w-[60px] min-w-[60px] sticky-left-shadow transition-colors">${row.itemNum}</td>
                   <td class="px-4 py-3 w-[110px] min-w-[110px]">
-                      <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border whitespace-nowrap ${getStatusColorClass(row.status)}">
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-[6px] text-[10px] font-bold border whitespace-nowrap shadow-[0_1px_2px_rgba(0,0,0,0.2)] ${getStatusColorClass(row.status)}">
                          ${getStatusIconTag(row.status)} ${row.status}
                       </span>
                   </td>
-                  <td class="px-4 py-3 min-w-[60px] max-w-[100px] whitespace-normal break-words"><span class="text-[12px] font-bold text-white">${row.dept}</span></td>
+                  <td class="px-4 py-3 min-w-[60px] max-w-[100px] whitespace-normal break-words"><span class="text-[12px] font-bold text-slate-200">${row.dept}</span></td>
                   <td class="px-4 py-3 min-w-[60px] max-w-[100px] whitespace-normal break-words"><span class="text-[12px] font-mono text-slate-400">${row.sec || '-'}</span></td>
                   <td class="px-4 py-3 font-medium text-slate-300 text-[12px] min-w-[70px] max-w-[120px] whitespace-normal break-words">${row.applicant}</td>
                   <td class="px-4 py-3 min-w-[300px] max-w-[450px] whitespace-normal break-words leading-relaxed text-slate-300 text-[12px] font-medium">${row.desc}</td>
                   <td class="px-4 py-3 text-slate-400 text-[12px] font-medium min-w-[80px] max-w-[120px] whitespace-normal break-words">${row.owner || '-'}</td>
                   <td class="px-4 py-3 text-center min-w-[50px]">${tcdIcon}</td>
-                  <td class="px-4 py-3 font-mono font-bold text-right text-[12px] min-w-[70px] ${row.benefit > 0 ? 'text-monitor-green' : 'text-slate-600'}">${row.benefit > 0 ? row.benefit : '-'}</td>
-                  <td class="px-4 py-3 text-[12px] font-mono text-slate-400 min-w-[70px] max-w-[120px] text-center">${row.dbCat || '-'}</td>
+                  <td class="px-4 py-3 font-mono font-bold text-right text-[12px] min-w-[70px] ${row.benefit > 0 ? 'text-emerald-400' : 'text-slate-600'}">${row.benefit > 0 ? row.benefit : '-'}</td>
+                  <td class="px-4 py-3 text-[12px] font-mono text-slate-500 min-w-[70px] max-w-[120px] text-center">${row.dbCat || '-'}</td>
                   <td class="px-4 py-3 text-center min-w-[50px]">${sqlBtn}</td>
                   ${stationCells}
-                  <td class="px-3 py-3 sticky right-0 z-10 bg-monitor-panel group-hover:bg-[#121c2c] text-center sticky-right-shadow transition-colors">
+                  <td class="px-3 py-3 sticky right-0 z-10 bg-slate-900 group-hover:bg-[#121c2c] text-center sticky-right-shadow transition-colors">
                     ${actionHtml}
                   </td>
                 </tr>
@@ -694,12 +683,12 @@
                 }
 
                 contentContainer.innerHTML = `
-              <div class="w-full overflow-x-auto bg-monitor-panel">
+              <div class="w-full overflow-x-auto bg-slate-900">
                 <table class="w-full text-left whitespace-nowrap min-w-max border-collapse">
                   <thead>
                     <tr>
-                      ${renderSortHeader('Date', 'date', 'sticky left-0 z-30 border-r border-monitor-border/50')}
-                      ${renderSortHeader('ID', 'regId', 'text-center sticky left-[90px] z-30 border-r border-monitor-border/50')}
+                      ${renderSortHeader('Date', 'date', 'sticky left-0 z-30 border-r border-slate-800/50')}
+                      ${renderSortHeader('ID', 'regId', 'text-center sticky left-[90px] z-30 border-r border-slate-800/50')}
                       ${renderSortHeader('No.', 'itemNum', 'text-center sticky left-[150px] z-30 sticky-left-shadow')}
                       ${renderSortHeader('Status', 'status', '')}
                       ${renderSortHeader('Dept', 'dept', 'min-w-[60px] max-w-[100px]')}
@@ -707,12 +696,12 @@
                       ${renderSortHeader('Applicant', 'applicant', 'min-w-[70px] max-w-[120px]')}
                       ${renderSortHeader('Description', 'desc', 'min-w-[300px] max-w-[450px]')}
                       ${renderSortHeader('Owner', 'owner', 'min-w-[80px] max-w-[120px]')}
-                      <th class="px-3 py-3.5 border-b border-monitor-border bg-monitor-card text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest min-w-[50px]">TCD</th>
+                      <th class="px-3 py-3.5 border-b border-slate-800/50 bg-slate-900/80 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest min-w-[50px]">TCD</th>
                       ${renderSortHeader('MP', 'benefit', 'text-right min-w-[70px]')}
-                      <th class="px-3 py-3.5 border-b border-monitor-border bg-monitor-card text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest min-w-[70px] max-w-[120px]">DB</th>
-                      <th class="px-3 py-3.5 border-b border-monitor-border bg-monitor-card text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest min-w-[50px]">SQL</th>
+                      <th class="px-3 py-3.5 border-b border-slate-800/50 bg-slate-900/80 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest min-w-[70px] max-w-[120px]">DB</th>
+                      <th class="px-3 py-3.5 border-b border-slate-800/50 bg-slate-900/80 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest min-w-[50px]">SQL</th>
                       ${stationHeaders}
-                      <th class="px-2 py-3.5 sticky right-0 z-30 border-b border-monitor-border bg-monitor-card text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest sticky-right-shadow">Action</th>
+                      <th class="px-2 py-3.5 sticky right-0 z-30 border-b border-slate-800/50 bg-slate-900/80 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest sticky-right-shadow">Action</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y-0">${rowsHtml}</tbody>
@@ -725,28 +714,28 @@
                     let statusIcon = getStatusIconTag(row.status);
                     
                     return `
-                    <div class="flex flex-col p-4 rounded-xl border transition-all bg-monitor-card border-monitor-border hover:border-monitor-cyan relative group shadow-sm">
+                    <div class="flex flex-col p-4 rounded-xl border transition-all bg-slate-900 border-slate-800 hover:border-sky-500/50 relative group shadow-sm">
                         <div class="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="openModal('edit', ${row.regId})" class="text-monitor-cyan hover:text-white"><i data-lucide="pen-line" class="w-4 h-4"></i></button>
-                            <button onclick="deleteData(${row.regId})" class="text-monitor-red hover:text-white"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            <button onclick="openModal('edit', ${row.regId})" class="text-sky-400 hover:text-white"><i data-lucide="pen-line" class="w-4 h-4"></i></button>
+                            <button onclick="deleteData(${row.regId})" class="text-rose-400 hover:text-white"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                         </div>
                         <div class="flex justify-between items-start mb-3">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${statusColor}">${statusIcon}${row.status}</span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-[6px] text-[10px] font-bold border shadow-sm ${statusColor}">${statusIcon}${row.status}</span>
                         </div>
                         <div class="flex justify-between items-end mb-2">
-                            <div class="text-xs font-mono font-bold text-monitor-cyan">#${row.regId}</div>
+                            <div class="text-xs font-mono font-bold text-sky-400">#${row.regId}</div>
                             <div class="text-[10px] font-mono text-slate-500">${row.date}</div>
                         </div>
                         <h3 class="font-bold mb-3 flex-grow line-clamp-2 leading-relaxed text-[13px] text-slate-200" title="${row.desc}">${row.desc}</h3>
-                        <div class="mt-auto pt-3 border-t border-monitor-borderLight flex justify-between items-center">
+                        <div class="mt-auto pt-3 border-t border-slate-800 flex justify-between items-center">
                             <span class="text-[11px] text-slate-400">${row.applicant}</span>
-                            <span class="text-[11px] font-mono font-bold text-monitor-green">${row.benefit > 0 ? row.benefit + ' MP' : ''}</span>
+                            <span class="text-[11px] font-mono font-bold text-emerald-400">${row.benefit > 0 ? row.benefit + ' MP' : ''}</span>
                         </div>
                     </div>
                 `}).join('');
 
                 if (currentData.length === 0) cardsHtml = `<div class="col-span-full py-16 text-center text-slate-500 font-bold uppercase tracking-widest opacity-60">No Data Found</div>`;
-                contentContainer.innerHTML = `<div class="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">${cardsHtml}</div>`;
+                contentContainer.innerHTML = `<div class="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 bg-slate-950/50">${cardsHtml}</div>`;
             }
             lucide.createIcons();
         }
@@ -763,13 +752,13 @@
 
             document.getElementById('pagination-container').innerHTML = `
             <div class="flex items-center justify-between px-5 py-3">
-              <div class="text-[11px] text-monitor-textMuted font-mono">
+              <div class="text-[11px] text-slate-400 font-mono">
                 Showing <span class="text-white font-bold">${startNum}</span> to <span class="text-white font-bold">${endNum}</span> of <span class="text-white font-bold">${totalItems}</span> entries
               </div>
               <div class="flex items-center gap-4">
                  <div class="flex items-center gap-2">
                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Rows:</span>
-                   <select onchange="changeItemsPerPage(this.value)" class="text-xs font-mono font-bold px-2 py-1 rounded border border-monitor-borderLight bg-monitor-card text-white cursor-pointer hover:border-monitor-cyan shadow-sm transition-all outline-none">
+                   <select onchange="changeItemsPerPage(this.value)" class="text-xs font-mono font-bold px-2 py-1 rounded-lg border border-slate-700 bg-slate-800 text-white cursor-pointer hover:border-sky-500 shadow-sm transition-all outline-none">
                       <option value="15" ${state.itemsPerPage === 15 ? 'selected' : ''}>15</option>
                       <option value="30" ${state.itemsPerPage === 30 ? 'selected' : ''}>30</option>
                       <option value="50" ${state.itemsPerPage === 50 ? 'selected' : ''}>50</option>
@@ -777,11 +766,11 @@
                     </select>
                  </div>
                  <div class="flex items-center gap-1.5">
-                   <button onclick="changePage(${Math.max(1, state.currentPage - 1)})" ${prevDisabled ? 'disabled' : ''} class="p-1.5 rounded border transition-colors ${prevDisabled ? 'border-monitor-borderLight text-slate-600 cursor-not-allowed' : 'border-monitor-borderLight text-slate-300 hover:border-monitor-cyan hover:text-white'}">
+                   <button onclick="changePage(${Math.max(1, state.currentPage - 1)})" ${prevDisabled ? 'disabled' : ''} class="p-1.5 rounded-lg border transition-colors ${prevDisabled ? 'border-slate-800 text-slate-600 cursor-not-allowed' : 'border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white shadow-sm'}">
                      <i data-lucide="chevron-left" class="w-4 h-4"></i>
                    </button>
                    <span class="text-[11px] font-mono px-2 text-white">${state.currentPage} / ${totalPages}</span>
-                   <button onclick="changePage(${Math.min(totalPages, state.currentPage + 1)})" ${nextDisabled ? 'disabled' : ''} class="p-1.5 rounded border transition-colors ${nextDisabled ? 'border-monitor-borderLight text-slate-600 cursor-not-allowed' : 'border-monitor-borderLight text-slate-300 hover:border-monitor-cyan hover:text-white'}">
+                   <button onclick="changePage(${Math.min(totalPages, state.currentPage + 1)})" ${nextDisabled ? 'disabled' : ''} class="p-1.5 rounded-lg border transition-colors ${nextDisabled ? 'border-slate-800 text-slate-600 cursor-not-allowed' : 'border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white shadow-sm'}">
                      <i data-lucide="chevron-right" class="w-4 h-4"></i>
                    </button>
                  </div>
@@ -796,11 +785,11 @@
             const btnTable = document.getElementById('btn-view-table');
             const btnCard = document.getElementById('btn-view-card');
             if (viewMode === 'table') {
-                btnTable.className = "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded bg-monitor-panel text-monitor-cyan border border-monitor-borderLight shadow-sm transition-colors";
-                btnCard.className = "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded text-slate-400 hover:text-white transition-colors bg-transparent border border-transparent";
+                btnTable.className = "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded bg-slate-800 text-sky-400 border border-slate-700 shadow-sm transition-colors";
+                btnCard.className = "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded text-slate-500 hover:text-slate-300 transition-colors bg-transparent border border-transparent";
             } else {
-                btnCard.className = "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded bg-monitor-panel text-monitor-cyan border border-monitor-borderLight shadow-sm transition-colors";
-                btnTable.className = "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded text-slate-400 hover:text-white transition-colors bg-transparent border border-transparent";
+                btnCard.className = "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded bg-slate-800 text-sky-400 border border-slate-700 shadow-sm transition-colors";
+                btnTable.className = "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded text-slate-500 hover:text-slate-300 transition-colors bg-transparent border border-transparent";
             }
             renderContent();
         }
@@ -820,6 +809,77 @@
             state.currentPage = 1;
             renderContent();
             renderPagination();
+        }
+
+        // ★ Modal 修復：全面採用深色面板並加強層次，解決白字在白底上的問題
+        function openModal(mode, regId = null) {
+            const modal = document.getElementById('crud-modal');
+            const content = document.getElementById('crud-modal-content');
+            document.getElementById('modal-mode').value = mode;
+            document.getElementById('crud-form').reset();
+            const baseInputs = ['form-dept', 'form-sec', 'form-applicant', 'form-desc'];
+
+            if (mode === 'add') {
+                document.getElementById('modal-title').innerHTML = '<i data-lucide="plus-circle" class="w-5 h-5 text-sky-400"></i> 新增任務';
+                document.getElementById('edit-advanced-section').classList.add('hidden');
+                baseInputs.forEach(id => document.getElementById(id).disabled = false);
+            } else {
+                document.getElementById('modal-title').innerHTML = `<i data-lucide="settings" class="w-5 h-5 text-sky-400"></i> 編輯任務 <span class="ml-2 text-sm font-mono text-slate-500">ID:${regId}</span>`;
+                document.getElementById('edit-advanced-section').classList.remove('hidden');
+                document.getElementById('modal-regid').value = regId;
+                baseInputs.forEach(id => document.getElementById(id).disabled = true);
+
+                const item = appData.find(d => d.regId === regId);
+                if (item) {
+                    document.getElementById('form-dept').value = item.dept; document.getElementById('form-sec').value = item.sec || '';
+                    document.getElementById('form-applicant').value = item.applicant; document.getElementById('form-desc').value = item.desc;
+                    document.getElementById('form-status').value = item.status; document.getElementById('form-owner').value = item.owner || '';
+                    document.getElementById('form-benefit').value = item.benefit || ''; document.getElementById('form-dbcat').value = item.dbCat || '';
+                    document.getElementById('form-tcd').value = item.tcd || ''; document.getElementById('form-applink').value = item.appLink || '';
+                    document.getElementById('form-datasource').value = item.dataSource || '';
+
+                    document.getElementById('form-stations-grid').innerHTML = stationColumns.map(col => {
+                        let val = item[col.toLowerCase()] || '', mp = '', url = '';
+                        if (val.includes('^')) { [mp, url] = val.split('^'); } else if (val.startsWith('http') || val.startsWith('Notes://')) { url = val; } else { mp = val; }
+                        
+                        // 修復：Modal 內部採用深色背景 bg-slate-900 與白字
+                        return `
+                            <div class="p-3 border border-slate-700 rounded-lg bg-slate-800/50 relative focus-within:border-sky-500 transition-colors">
+                                <label class="absolute -top-2 left-2 px-1 text-[10px] font-bold bg-slate-900 text-sky-400 uppercase tracking-widest">${col}</label>
+                                <div class="space-y-2 mt-2">
+                                    <div class="flex items-center bg-slate-950 border border-slate-700 rounded overflow-hidden focus-within:border-sky-500 transition-colors shadow-inner">
+                                        <span class="pl-2 text-slate-500"><i data-lucide="activity" class="w-3.5 h-3.5"></i></span>
+                                        <input type="text" id="st-mp-${col}" value="${mp}" placeholder="MP Saving" class="w-full text-xs font-mono px-2 py-1.5 bg-transparent text-slate-200 outline-none placeholder-slate-600">
+                                    </div>
+                                    <div class="flex items-center bg-slate-950 border border-slate-700 rounded overflow-hidden focus-within:border-sky-500 transition-colors shadow-inner">
+                                        <span class="pl-2 text-slate-500"><i data-lucide="link" class="w-3.5 h-3.5"></i></span>
+                                        <input type="text" id="st-url-${col}" value="${url}" placeholder="URL" class="w-full text-xs font-mono px-2 py-1.5 bg-transparent text-slate-200 outline-none placeholder-slate-600">
+                                    </div>
+                                </div>
+                            </div>`;
+                    }).join('');
+                }
+            }
+            modal.classList.remove('hidden'); lucide.createIcons();
+            setTimeout(() => { content.classList.remove('scale-95', 'opacity-0'); content.classList.add('scale-100', 'opacity-100'); }, 10);
+        }
+
+        function viewSqlModal(regId) {
+            const item = appData.find(d => d.regId === regId);
+            if (!item || !item.dataSource) return;
+            document.getElementById('sql-viewer-code').textContent = item.dataSource;
+            const modal = document.getElementById('sql-modal');
+            const content = document.getElementById('sql-modal-content');
+            modal.classList.remove('hidden');
+            lucide.createIcons();
+            setTimeout(() => { content.classList.remove('scale-95', 'opacity-0'); content.classList.add('scale-100', 'opacity-100'); }, 10);
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            const content = document.getElementById(modalId + '-content');
+            content.classList.remove('scale-100', 'opacity-100'); content.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 200);
         }
 
         document.addEventListener("DOMContentLoaded", () => {
