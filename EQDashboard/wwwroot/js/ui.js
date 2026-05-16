@@ -1,9 +1,11 @@
-﻿// ====== UI 交互與畫面控制邏輯 ======
+// ====== UI 交互與畫面控制邏輯 ======
 
 // ⭐️ 終極 ID 洗淨器：強行脫去所有括號、引號、空白與大小寫差異
 window.cleanId = function (id) {
     if (id == null) return '';
-    return String(id).replace(/[\[\]"']/g, '').trim().toLowerCase();
+    // 加入 \s 徹底去除所有的全形/半形空白與換行字元，完美防禦 Excel 輸入誤差！
+    let s = String(id).replace(/[\s\[\]"']/g, '').toLowerCase();
+    return s === 'null' ? '' : s;
 };
 
 // 切換側邊欄
