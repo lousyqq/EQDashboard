@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -256,9 +256,10 @@ namespace EQDashboard.Controllers
                                                                     {
                                                                         paramValue = (val.ValueKind == JsonValueKind.True || strVal.Equals("true", StringComparison.OrdinalIgnoreCase) || strVal == "1");
                                                                     }
+                                                                    // 改成：
                                                                     else if (dbType.Contains("int"))
                                                                     {
-                                                                        if (int.TryParse(strVal, out int parsedInt)) paramValue = parsedInt;
+                                                                        if (long.TryParse(strVal, out long parsedLong)) paramValue = parsedLong;
                                                                         else isNull = true;
                                                                     }
                                                                     else if (dbType.Contains("float") || dbType.Contains("decimal") || dbType.Contains("numeric"))
