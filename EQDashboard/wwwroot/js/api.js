@@ -1,4 +1,4 @@
-﻿// === 全域變數：取代原本的 localStorage，達成真正的 DB 讀寫 ===
+// === 全域變數：取代原本的 localStorage，達成真正的 DB 讀寫 ===
 window.appState = window.appState || {
     menus: [],
     fabs: [],
@@ -234,6 +234,27 @@ async function fetchInitialDataFromDB() {
         window.appState.apps = mappedApps;
         window.appState.requests = mappedReqs;
 
+        // ⭐ 7. 讀取 PersonalSettings 並寫入 localStorage（讓既有讀取函式無縫銜接）
+        const psData = getVal(result, 'PersonalSettings') || [];
+        const psByEmp = {};
+        psData.forEach(row => {
+            const eId = String(getVal(row, 'EmpId') || '');
+            const mId = String(getVal(row, 'MenuId') || '');
+            if (!eId || !mId) return;
+            if (!psByEmp[eId]) psByEmp[eId] = {};
+            const rawOrder = getVal(row, 'SortOrder');
+            psByEmp[eId][mId] = {
+                hidden: String(getVal(row, 'IsHidden')).toLowerCase() === 'true',
+                target: String(getVal(row, 'OpenTarget') || ''),
+                icon: String(getVal(row, 'Icon') || ''),
+                order: (rawOrder != null && rawOrder !== '' && !isNaN(rawOrder))
+                    ? parseInt(rawOrder) : undefined
+            };
+        });
+        Object.keys(psByEmp).forEach(empId => {
+            localStorage.setItem('umc_personal_menus_' + empId, JSON.stringify(psByEmp[empId]));
+        });
+
         console.log("資料庫載入與轉換完成:", window.appState);
 
         // ⭐️ 終極霸道覆寫：在資料確實抵達記憶體後，強行覆寫系統中所有的讀取函式！
@@ -329,6 +350,24 @@ function getDatabasePayload() {
         Timestamp: safeStr(r.timestamp, 50), Status: safeStr(r.status, 20),
         WithdrawReason: safeLongStr(r.withdrawReason), Reply: safeLongStr(r.reply)
     }));
+
+    // ⭐ PersonalSettings 雙向同步
+    payload.PersonalSettings = [];
+    accs.forEach(a => {
+        try {
+            const pSet = JSON.parse(localStorage.getItem('umc_personal_menus_' + a.empId)) || {};
+            Object.keys(pSet).forEach(mId => {
+                payload.PersonalSettings.push({
+                    EmpId: String(a.empId),
+                    MenuId: String(mId),
+                    IsHidden: pSet[mId].hidden === true,
+                    OpenTarget: safeStr(pSet[mId].target || '', 20),
+                    Icon: safeLongStr(pSet[mId].icon || ''),
+                    SortOrder: pSet[mId].order !== undefined ? pSet[mId].order : null
+                });
+            });
+        } catch (e) { /* 忽略單一帳號的 localStorage 解析錯誤 */ }
+    });
 
     // 組裝關聯表 (當後端升級為新版結構時，這些關聯表將自動發揮作用)
     payload.Map_Fab_Role = []; fabs.forEach(f => { if (f.assignedRoles) f.assignedRoles.forEach(rId => payload.Map_Fab_Role.push({ FabId: String(f.id), RoleId: String(rId) })); });
