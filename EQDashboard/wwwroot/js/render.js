@@ -1,9 +1,10 @@
 // ====== DataTable 與畫面動態產生渲染引擎 ======
 
-// ⭐️ 終極 ID 洗淨器 (防止 null、undefined、空字串、"null" 造成的比對災難)
-window.cleanId = (id) => {
+// ⭐️ 終極 ID 洗淨器 (防止 null、undefined、空字串、"null" 以及「空白鍵」造成的比對災難)
+window.cleanId = function (id) {
     if (id == null) return '';
-    let s = String(id).replace(/[\[\]"']/g, '').trim().toLowerCase();
+    // 加入 \s 徹底去除所有的全形/半形空白與換行字元，完美防禦 Excel 輸入誤差！
+    let s = String(id).replace(/[\s\[\]"']/g, '').toLowerCase();
     return s === 'null' ? '' : s;
 };
 
@@ -306,6 +307,8 @@ function renderSidebarMenus() {
                 }
 
                 subMenus.sort((a, b) => (a.parentOrders?.[activeRoot.id] ?? a.order ?? 0) - (b.parentOrders?.[activeRoot.id] ?? b.order ?? 0));
+
+                // ⭐️ 確保呼叫時，forceExpand 預設為 true (全展開)
                 subMenus.forEach(child => { html += generateSidebarMenuItem(child, menus, 1, true); });
             }
         }
@@ -315,7 +318,7 @@ function renderSidebarMenus() {
     } catch (err) { }
 }
 
-function generateSidebarMenuItem(menu, allMenus, level, forceExpand = false) {
+function generateSidebarMenuItem(menu, allMenus, level, forceExpand = true) { // ⭐️ 修正：預設值強制為 true，所有目錄預設全開！
     if (!menu || !menu.id) return '';
 
     const subMenus = allMenus.filter(m => m.id !== menu.id && (window.isParentMatch(m.parentId, menu) || (m.parentIds || []).some(pid => window.isParentMatch(pid, menu))));
@@ -327,7 +330,7 @@ function generateSidebarMenuItem(menu, allMenus, level, forceExpand = false) {
     if (hasChildren && window.currentActiveSidebarMenuId && typeof window.localIsMenuDescendant === 'function') {
         isDescendant = window.localIsMenuDescendant(menu.id, window.currentActiveSidebarMenuId, allMenus);
     }
-    const isExpanded = forceExpand || isDescendant;
+    const isExpanded = forceExpand || isDescendant; // 這裡將會是 true
 
     let iconClass = menu.icon || 'far fa-file-alt';
     if (menu.menuMode === 'folder' && !menu.icon) iconClass = 'fas fa-folder';
@@ -336,12 +339,11 @@ function generateSidebarMenuItem(menu, allMenus, level, forceExpand = false) {
         iconHtml = `<img src="${menu.icon}" class="custom-icon menu-icon" alt="icon">`;
     }
 
-    // ⭐️ 核心修正：將 ID 進行 URL 編碼並替換特殊字元，確保成為合法且唯一的 HTML/CSS ID
-    // 解決因資料庫 ID 含有中括號 []、引號或中文字，導致 Bootstrap 選擇器當機無法展開的問題
     const safeDomId = 'collapse_' + encodeURIComponent(String(menu.id)).replace(/%/g, '_').replace(/[^a-zA-Z0-9_-]/g, '');
 
+    // ⭐️ 核心修正：棄用 Bootstrap 原生觸發器，改用完全自己掌控的 onclick，絕對不卡死！
     let actionAttr = '';
-    if (hasChildren) actionAttr = `data-bs-toggle="collapse" data-bs-target="#${safeDomId}"`;
+    if (hasChildren) actionAttr = `onclick="window.toggleSubMenu(event, '${safeDomId}', this)"`;
     else if (menu.menuMode === 'app_grid') actionAttr = `onclick="window.activateMenu('${menu.id}')"`;
     else if (menu.url) {
         if (menu.target === 'blank') actionAttr = `onclick="window.open('${menu.url}', '_blank')"`
@@ -358,20 +360,44 @@ function generateSidebarMenuItem(menu, allMenus, level, forceExpand = false) {
         const expClass = isExpanded ? 'show' : '';
         const ariaAttr = isExpanded ? 'true' : 'false';
         const collapsedClass = isExpanded ? '' : 'collapsed';
-        let html = `<div class="menu-item ${collapsedClass}" ${actionAttr} title="${dName}" aria-expanded="${ariaAttr}">
+        let html = `<div class="menu-item ${collapsedClass}" ${actionAttr} title="${dName}" aria-expanded="${ariaAttr}" style="cursor:pointer;">
                         ${iconHtml}<span class="text-truncate">${dName}</span>
                         <i class="fas fa-chevron-right dropdown-arrow"></i>
                     </div>
-                    <div class="collapse ${expClass}" id="${safeDomId}">
+                    <div class="collapse ${expClass}" id="${safeDomId}" style="${isExpanded ? 'display:block;' : 'display:none;'}">
                         <div class="sub-menu-container">`;
-        subMenus.forEach(child => html += generateSidebarMenuItem(child, allMenus, level + 1, false));
+        subMenus.forEach(child => html += generateSidebarMenuItem(child, allMenus, level + 1, forceExpand));
         html += `</div></div>`;
         return html;
     } else {
         const itemClass = level > 1 ? 'menu-item sub-item' : 'menu-item';
-        return `<div class="${itemClass}" ${actionAttr} title="${dName}">${iconHtml}<span class="text-truncate">${dName}</span></div>`;
+        return `<div class="${itemClass}" ${actionAttr} title="${dName}" style="cursor:pointer;">${iconHtml}<span class="text-truncate">${dName}</span></div>`;
     }
 }
+
+// ⭐️ 新增：物理展開/收合控制器 (保證 100% 絕對能開能關，不受外部套件干擾)
+window.toggleSubMenu = function (e, targetId, element) {
+    e.preventDefault();
+    e.stopPropagation();
+    const targetEl = document.getElementById(targetId);
+    if (!targetEl) return;
+
+    // 不依賴 Bootstrap，直接暴力操作 DOM
+    const isShowing = targetEl.classList.contains('show');
+    if (isShowing) {
+        // 執行手動收合
+        targetEl.classList.remove('show');
+        targetEl.style.display = 'none';
+        element.classList.add('collapsed');
+        element.setAttribute('aria-expanded', 'false');
+    } else {
+        // 執行手動展開
+        targetEl.classList.add('show');
+        targetEl.style.display = 'block';
+        element.classList.remove('collapsed');
+        element.setAttribute('aria-expanded', 'true');
+    }
+};
 
 // == 首頁儀表板資料 ==
 function renderHomeDashboard() {
