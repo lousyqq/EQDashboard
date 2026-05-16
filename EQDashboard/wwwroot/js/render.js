@@ -1,4 +1,4 @@
-﻿// ====== DataTable 與畫面動態產生渲染引擎 ======
+// ====== DataTable 與畫面動態產生渲染引擎 ======
 
 // ⭐️ 終極 ID 洗淨器 (防止 null、undefined、空字串、"null" 造成的比對災難)
 window.cleanId = (id) => {
@@ -306,7 +306,7 @@ function renderSidebarMenus() {
                 }
 
                 subMenus.sort((a, b) => (a.parentOrders?.[activeRoot.id] ?? a.order ?? 0) - (b.parentOrders?.[activeRoot.id] ?? b.order ?? 0));
-                subMenus.forEach(child => { html += generateSidebarMenuItem(child, menus, 1, false); });
+                subMenus.forEach(child => { html += generateSidebarMenuItem(child, menus, 1, true); });
             }
         }
         const sidebarContainer = document.getElementById('dynamic-sidebar-menus');
