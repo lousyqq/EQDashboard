@@ -1,4 +1,4 @@
-﻿function doLogin() {
+function doLogin() {
     const empId = document.getElementById('empId').value.trim().toLowerCase();
     let acc = null;
 
@@ -31,6 +31,7 @@
         localStorage.setItem('umc_user_stats_' + acc.empId, JSON.stringify(stats));
 
         currentUser = {
+            lastLoginDisplay: stats.lastLogin || nowStr,  // ⭐ 確認此行存在
             id: acc.empId, name: acc.name, department: acc.department || '', roleLevel: acc.roleLevel || 'user',
             assignedRoles: acc.assignedRoles || [], manageableMenus: acc.manageableMenus || [],
             canEditOthers: acc.canEditOthers || false, loginCount: stats.count,
