@@ -203,10 +203,14 @@
                             <button class="btn btn-sm btn-primary fw-bold" id="btn-add-main-menu" onclick="openAddMenuNodeModal()"><i class="fas fa-plus me-1"></i> 新增主選單配置</button>
                         </div>
                     </div>
+                    <div class="alert alert-primary bg-primary bg-opacity-10 border-0 mb-3 d-flex align-items-center">
+                        <i class="fas fa-sitemap fs-5 me-2 text-primary"></i>
+                        <span class="small fw-bold text-primary">此處用於建立「主選單群組」或「獨立網頁」。子選單請點擊「編輯結構」進入調整。</span>
+                    </div>
                     <div class="card border-0 overflow-hidden shadow-sm">
                         <div class="card-body p-3 table-responsive">
                             <table id="dtMenuConfig" class="table table-custom align-middle text-center w-100">
-                                <thead><tr><th class="text-start ps-3" style="width: 280px;">顯示名稱</th><th style="width: 110px;">類型</th><th style="width: 80px;">狀態</th><th class="text-start">內容配置</th><th class="text-center" style="width: 90px;">操作</th></tr></thead>
+                                <thead><tr><th class="text-start ps-3" style="width: 250px;">顯示名稱 (系統名稱)</th><th style="width: 120px;">類型</th><th style="width: 80px;">狀態</th><th class="text-start">內容配置 (子選單 / 網址)</th><th class="text-center" style="width: 90px;">操作</th></tr></thead>
                                 <tbody id="menuConfigTableBody"></tbody>
                             </table>
                         </div>
@@ -426,41 +430,68 @@
     <div class="modal fade" id="menuNodeModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-light border-bottom"><h5 class="modal-title fw-bold">選單結構編輯</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-header bg-light border-bottom">
+                    <h5 class="modal-title fw-bold text-primary"><i class="fas fa-sitemap me-2"></i>配置主選單</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
                 <div class="modal-body py-4">
                     <form id="nodeForm" onsubmit="saveMenuNodeItem(event)">
                         <input type="hidden" id="editNodeId">
-                        <div class="mb-3 d-flex gap-3">
-                            <div class="form-check"><input class="form-check-input" type="radio" name="nodeMode" id="nodeModeFolder" onchange="toggleNodeMode()" checked><label class="form-check-label fw-bold text-warning" for="nodeModeFolder"><i class="fas fa-folder me-1"></i>群組目錄</label></div>
-                            <div class="form-check"><input class="form-check-input" type="radio" name="nodeMode" id="nodeModeLink" onchange="toggleNodeMode()"><label class="form-check-label fw-bold text-info" for="nodeModeLink"><i class="fas fa-link me-1"></i>獨立網頁</label></div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold small text-danger mb-1">選單類型 *</label>
+                            <div class="d-flex gap-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="nodeMode" id="nodeModeFolder" onchange="toggleNodeMode()" checked>
+                                    <label class="form-check-label fw-bold text-primary" for="nodeModeFolder"><i class="fas fa-folder text-warning me-1"></i>選單群組 <small class="text-muted">(可包含多個子看板)</small></label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="nodeMode" id="nodeModeLink" onchange="toggleNodeMode()">
+                                    <label class="form-check-label fw-bold text-primary" for="nodeModeLink"><i class="fas fa-link me-1"></i>獨立看板 <small class="text-muted">(單一網址連結)</small></label>
+                                </div>
+                            </div>
                         </div>
+
                         <div class="row g-3 mb-3">
-                            <div class="col-md-6"><label class="form-label fw-bold small">系統名稱</label><input type="text" id="nodeName" class="form-control" required></div>
-                            <div class="col-md-6"><label class="form-label fw-bold small">顯示名稱</label><input type="text" id="nodeDisplayName" class="form-control" required></div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-bold small text-danger mb-1">系統名稱 *</label>
+                                <input type="text" id="nodeName" class="form-control" required placeholder="例如: ZE 強化防禦">
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-bold small text-danger mb-1">前台顯示名稱 *</label>
+                                <input type="text" id="nodeDisplayName" class="form-control" required placeholder="例如: ZE 強化防禦群組">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-bold small text-muted mb-1">圖示 (Icon)</label>
+                                <select id="nodeIcon" class="form-select" onchange="handleIconSelectChange('node')">
+                                    <option value="">無圖示</option>
+                                    <option value="fas fa-folder-open text-warning">資料夾</option>
+                                    <option value="fas fa-shield-alt text-primary">防禦圖示</option>
+                                    <option value="fas fa-chart-line text-success">圖表圖示</option>
+                                    <option value="custom">自訂...</option>
+                                </select>
+                                <input type="file" id="nodeIconFile" class="form-control form-control-sm mt-2" accept="image/*" style="display:none;" onchange="compressImageFile(this.files[0], base64 => document.getElementById('nodeCustomIconBase64').value = base64)">
+                                <input type="hidden" id="nodeCustomIconBase64">
+                            </div>
                         </div>
 
-                        <div class="mb-3" id="nodeUrlGroup" style="display:none;"><label class="form-label fw-bold small">連結網址</label><input type="text" id="nodeUrl" class="form-control"></div>
-                        <div class="mb-3" id="nodeTargetGroup" style="display:none;"><label class="form-label fw-bold small">開啟方式</label><select id="nodeTarget" class="form-select"><option value="iframe">內部嵌入</option><option value="blank">另開分頁</option><option value="fullscreen">全螢幕</option></select></div>
+                        <div class="mb-3" id="nodeUrlGroup" style="display:none;"><label class="form-label fw-bold small text-muted mb-1">連結網址</label><input type="text" id="nodeUrl" class="form-control" placeholder="請輸入網址或 page-id"></div>
+                        <div class="mb-3" id="nodeTargetGroup" style="display:none;"><label class="form-label fw-bold small text-muted mb-1">開啟方式</label><select id="nodeTarget" class="form-select"><option value="iframe">內部嵌入</option><option value="blank">另開分頁</option><option value="fullscreen">全螢幕</option></select></div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small">選單圖示</label>
-                            <select id="nodeIcon" class="form-select mb-2" onchange="handleIconSelectChange('node')">
-                                <option value="">無圖示 (自動套用預設)</option>
-                                <option value="fas fa-folder-open">開啟的資料夾</option>
-                                <option value="fas fa-layer-group">圖層組合</option>
-                                <option value="fas fa-chart-pie">圓餅圖</option>
-                                <option value="custom">自訂上傳圖示...</option>
-                            </select>
-                            <input type="file" id="nodeIconFile" class="form-control form-control-sm" accept="image/*" style="display:none;" onchange="compressImageFile(this.files[0], base64 => document.getElementById('nodeCustomIconBase64').value = base64)">
-                            <input type="hidden" id="nodeCustomIconBase64">
+                        <div id="treeBuilderSection" class="mt-4 pt-3 border-top">
+                            <div class="mb-2 text-primary fw-bold"><i class="fas fa-list-ul me-1"></i> 底下包含的看板與群組配置 <small class="text-muted fw-normal">(拖曳左側圖示可排序)</small></div>
+                            <div class="border rounded bg-white p-3 shadow-sm">
+                                <div id="treeBuilderContainer" style="min-height: 50px;"></div>
+                                <div class="d-flex gap-2 mt-3 pt-2 border-top border-light">
+                                    <button type="button" class="btn btn-sm btn-outline-primary fw-bold bg-white" onclick="window.tbAddLink(document.getElementById('treeBuilderContainer'))"><i class="fas fa-link me-1"></i>加入現有看板</button>
+                                    <button type="button" class="btn btn-sm btn-dark fw-bold" onclick="window.tbAddFolder(document.getElementById('treeBuilderContainer'))"><i class="fas fa-folder me-1"></i>建立子群組</button>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="mb-3" id="treeBuilderSection">
-                            <div class="d-flex justify-content-between align-items-center mb-2"><label class="form-label fw-bold small mb-0">目錄包含項目 (拖曳可排序)</label><button type="button" class="btn btn-sm btn-outline-success py-0 px-2 fw-bold" onclick="tbAddWebpage()"><i class="fas fa-plus me-1"></i>加入現有看板</button></div>
-                            <div id="treeBuilderContainer" class="border rounded p-2 bg-light" style="min-height:120px; max-height:250px; overflow-y:auto;"></div>
+                        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                            <button type="button" class="btn btn-light border fw-bold px-4" data-bs-dismiss="modal">取消</button>
+                            <button type="submit" class="btn btn-primary fw-bold px-4"><i class="fas fa-save me-2"></i>儲存選單結構</button>
                         </div>
-
-                        <div class="text-end mt-4"><button type="submit" class="btn btn-primary fw-bold px-4">儲存結構</button></div>
                     </form>
                 </div>
             </div>
@@ -601,13 +632,13 @@
     <div class="modal fade" id="systemConfirmModal" tabindex="-1" style="z-index: 1060;"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content border-0 shadow"><div class="modal-body text-center py-4"><i class="fas fa-exclamation-triangle text-warning mb-3" style="font-size: 2.5rem;"></i><p class="fs-6 fw-bold mb-0 text-dark" id="systemConfirmMsg"></p></div><div class="modal-footer justify-content-center border-0 bg-light py-2"><button type="button" class="btn btn-light btn-sm border px-3 fw-bold" data-bs-dismiss="modal">取消</button><button type="button" class="btn btn-danger btn-sm px-3 fw-bold" id="systemConfirmBtn" onclick="if(confirmActionCallback) confirmActionCallback(); bootstrap.Modal.getInstance(document.getElementById('systemConfirmModal')).hide();">確定</button></div></div></div></div>
 
     <!-- ⭐️ 快取破解碼：確保瀏覽器抓到最新版 JS 檔案！ -->
-    <script src="js/config.js?v=20240516"></script>
-    <script src="js/api.js?v=20240516"></script>
-    <script src="js/auth.js?v=20240516"></script>
-    <script src="js/ui.js?v=20240516"></script>
-    <script src="js/render.js?v=20240516"></script>
-    <script src="js/admin.js?v=20240516"></script>
-    <script src="js/main.js?v=20240516"></script>
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/render.js"></script>
+    <script src="js/admin.js"></script>
+    <script src="js/main.js"></script>
 
 </body>
 </html>
