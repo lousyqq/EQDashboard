@@ -206,7 +206,8 @@ async function fetchInitialDataFromDB() {
         let mappedApps = appData.map(a => ({
             id: String(getVal(a, 'AppId') || ''),
             menuId: String(getVal(a, 'MenuId') || ''),
-            appName: String(getVal(a, 'AppName') || ''),
+            name: String(getVal(a, 'AppName') || getVal(a, 'name') || ''),
+            appName: String(getVal(a, 'AppName') || getVal(a, 'name') || ''),
             url: String(getVal(a, 'Url') || ''),
             iconBase64: String(getVal(a, 'IconBase64') || ''),
             target: String(getVal(a, 'Target') || '_blank')
