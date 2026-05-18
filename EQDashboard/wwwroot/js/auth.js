@@ -1,4 +1,4 @@
-﻿function doLogin() {
+function doLogin() {
     const empId = document.getElementById('empId').value.trim().toLowerCase();
     let acc = null;
 

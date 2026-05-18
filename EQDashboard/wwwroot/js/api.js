@@ -1,4 +1,4 @@
-﻿// === 全域變數：取代原本的 localStorage，達成真正的 DB 讀寫 ===
+// === 全域變數：取代原本的 localStorage，達成真正的 DB 讀寫 ===
 window.appState = window.appState || {
     menus: [],
     fabs: [],

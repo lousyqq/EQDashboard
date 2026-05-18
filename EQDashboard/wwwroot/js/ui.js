@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿// ⭐️ 核心修復：切換系統/自訂版面 (保留系統設定狀態，即時切換側邊欄與按鈕效果)
 window.switchLayoutMode = function (mode) {
     let finalMode = 'system';
@@ -70,6 +71,16 @@ window.switchLayoutMode = function (mode) {
 
     // 4. 強制執行 UI 隱藏保護機制
     if (typeof enforceSystemModeUI === 'function') enforceSystemModeUI();
+=======
+// ====== UI 交互與畫面控制邏輯 ======
+
+// ⭐️ 終極 ID 洗淨器：強行脫去所有括號、引號、空白與大小寫差異
+window.cleanId = function (id) {
+    if (id == null) return '';
+    // 加入 \s 徹底去除所有的全形/半形空白與換行字元，完美防禦 Excel 輸入誤差！
+    let s = String(id).replace(/[\s\[\]"']/g, '').toLowerCase();
+    return s === 'null' ? '' : s;
+>>>>>>> 777b3b462cbbe13da2f6a4f1fd610ddeac046cf1
 };
 
 // 切換側邊欄
@@ -623,6 +634,7 @@ function customConfirm(msg, callback) {
     confirmActionCallback = callback;
     if (systemConfirmModalObj) systemConfirmModalObj.show();
 }
+<<<<<<< HEAD
 
 // 4. 綁定 MutationObserver 監視器
 // 攔截 render.js 的動態渲染：只要 HTML 結構有新增節點，就立刻觸發檢查
@@ -647,3 +659,5 @@ if (typeof window !== 'undefined') {
         observer.observe(document.body, { childList: true, subtree: true });
     });
 }
+=======
+>>>>>>> 777b3b462cbbe13da2f6a4f1fd610ddeac046cf1
