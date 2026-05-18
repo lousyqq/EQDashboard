@@ -72,3 +72,4 @@ C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net8.0\refint\EQDashboard.dll
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net8.0\EQDashboard.pdb
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net8.0\EQDashboard.genruntimeconfig.cache
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net8.0\ref\EQDashboard.dll
+C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net8.0\EQDashboard.sourcelink.json

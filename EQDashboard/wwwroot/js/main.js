@@ -22,7 +22,7 @@ function initDashboardUI() {
     if (typeof renderFabTable === 'function') renderFabTable();
     if (typeof renderAccountTable === 'function') renderAccountTable();
     if (typeof renderSidebarMenus === 'function') renderSidebarMenus();
-
+    if (typeof renderFabSwitcher === 'function') renderFabSwitcher(); // ⭐️ 補上廠區切換選單的初始化
     if (typeof switchLayoutMode === 'function') switchLayoutMode('system');
     if (typeof renderHomeDashboard === 'function') renderHomeDashboard();
 }

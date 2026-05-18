@@ -279,6 +279,32 @@ body.nav-hidden .top-navbar-group {
     overflow: hidden;
 }
 
+/* ⭐ 側邊欄模組 Header（index.html 使用此 class，原 style.css 缺少定義） */
+.sidebar-module-header {
+    background: #f1f5f9;
+    padding: 10px 16px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #0b1120;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+    .sidebar-module-header i {
+        color: var(--navbar-accent);
+        font-size: 0.9rem;
+    }
+
+.module-title-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 #sidebar {
     width: var(--sidebar-width);
     background: white;

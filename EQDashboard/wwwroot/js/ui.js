@@ -1,9 +1,75 @@
-﻿// ====== UI 交互與畫面控制邏輯 ======
+﻿// ⭐️ 核心修復：切換系統/自訂版面 (保留系統設定狀態，即時切換側邊欄與按鈕效果)
+window.switchLayoutMode = function (mode) {
+    let finalMode = 'system';
 
-// ⭐️ 終極 ID 洗淨器：強行脫去所有括號、引號、空白與大小寫差異
-window.cleanId = function (id) {
-    if (id == null) return '';
-    return String(id).replace(/[\[\]"']/g, '').trim().toLowerCase();
+    // 1. 正確解析點擊來源的模式
+    if (typeof mode === 'string') {
+        finalMode = (mode.toLowerCase().includes('custom') || mode.includes('自訂') || mode.includes('personal')) ? 'custom' : 'system';
+    } else {
+        const cusRadio = document.getElementById('btn-custom-mode');
+        if (cusRadio && cusRadio.checked) finalMode = 'custom';
+    }
+
+    currentLayoutMode = finalMode;
+    console.log("切換模式至:", finalMode);
+
+    // 2. ⭐️ 同步 Bootstrap 原生 Radio 狀態 (僅改變 checked 屬性，讓 CSS 瞬間套用色彩)
+    const sysRadio = document.getElementById('btn-system-mode');
+    const cusRadio = document.getElementById('btn-custom-mode');
+    if (sysRadio && sysRadio.tagName === 'INPUT') sysRadio.checked = (finalMode === 'system');
+    if (cusRadio && cusRadio.tagName === 'INPUT') cusRadio.checked = (finalMode === 'custom');
+
+    // (兼顧若您未來改用 Slider 滑動開關的備用相容邏輯)
+    const wrapper = document.getElementById('layout-toggle-wrapper');
+    const sysText = document.getElementById('btn-layout-system');
+    const perText = document.getElementById('btn-layout-personal');
+    if (wrapper) {
+        if (finalMode === 'system') {
+            wrapper.classList.remove('personal-active');
+            if (sysText) sysText.classList.add('active');
+            if (perText) perText.classList.remove('active');
+        } else {
+            wrapper.classList.add('personal-active');
+            if (sysText) sysText.classList.remove('active');
+            if (perText) perText.classList.add('active');
+        }
+    }
+
+    // 3. 執行資料與畫面跳轉
+    try {
+        // ⭐️ 核心修復：判斷目前是否正在「系統設定」裡面
+        const isCurrentlyInSystemSettings = (window.currentActiveTopMenuId === 'system_settings');
+
+        if (!isCurrentlyInSystemSettings) {
+            // 不在系統設定內，才需要清空選單記憶
+            window.currentActiveTopMenuId = null;
+            window.currentActiveSidebarMenuId = null;
+        }
+
+        // 確保側邊欄能即時重繪 (側邊欄會因為這裡的重繪瞬間生出或隱藏「個人頁面管理」)
+        if (typeof renderTopMenus === 'function') renderTopMenus();
+        if (typeof renderSidebarMenus === 'function') renderSidebarMenus();
+
+        if (isCurrentlyInSystemSettings) {
+            // 如果在系統設定內切換：留在原地，不要踢回首頁！
+            // 特殊防呆：若目前正停在「個人頁面管理」卻切回「系統模式」，需將畫面踢回帳號管理以免畫面空白卡死
+            const personalPage = document.getElementById('page-personal-manage');
+            if (finalMode === 'system' && personalPage && personalPage.classList.contains('active')) {
+                if (typeof navTo === 'function') {
+                    if (typeof currentUser !== 'undefined' && currentUser.roleLevel === 'admin') navTo('page-account-manage', null, '帳號管理');
+                    else navTo('page-apply', null, '需求申請');
+                }
+            }
+        } else {
+            // ⭐️ 徹底封殺 page-home 首頁總覽！無論切換到什麼模式，一律強迫直接導向使用者設定的預設首頁
+            if (typeof goDefaultHome === 'function') goDefaultHome();
+        }
+    } catch (error) {
+        console.error("🚨 畫面切換過程中發生非預期錯誤:", error);
+    }
+
+    // 4. 強制執行 UI 隱藏保護機制
+    if (typeof enforceSystemModeUI === 'function') enforceSystemModeUI();
 };
 
 // 切換側邊欄
@@ -82,24 +148,75 @@ function toggleFullscreen() {
     }
 }
 
-// 切換系統/自訂版面
-function switchLayoutMode(mode) {
-    currentLayoutMode = mode;
-    const btnSys = document.getElementById('btn-layout-system');
-    const btnPer = document.getElementById('btn-layout-personal');
-    const wrapper = document.getElementById('layout-toggle-wrapper');
+// ============================================================================
+// ⭐️ 重構：安全、精準補獲側邊欄「個人頁面管理」按鈕 (絕不影響主畫面 Table 內容)
+// ============================================================================
+let enforceTimer = null;
+function enforceSystemModeUI() {
+    if (typeof currentLayoutMode === 'undefined') return;
 
-    if (mode === 'system') {
-        if (btnSys) btnSys.classList.add('active');
-        if (btnPer) btnPer.classList.remove('active');
-        if (wrapper) wrapper.classList.remove('personal-active');
-    } else {
-        if (btnPer) btnPer.classList.add('active');
-        if (btnSys) btnSys.classList.remove('active');
-        if (wrapper) wrapper.classList.add('personal-active');
+    if (enforceTimer) clearTimeout(enforceTimer);
+    enforceTimer = setTimeout(() => {
+        // ⭐️ 精準且安全地尋找「個人頁面管理」按鈕，避開 querySelectorAll('*') 對主畫面表格的干擾
+        const personalBtn = document.querySelector('[data-bs-target="#personalMenuModal"]');
+        if (personalBtn) {
+            // 尋找其外層包裝容器 (如 border-top 分隔線或是 sidebar-footer 底部區塊)
+            const wrapper = personalBtn.closest('li, .nav-item, .sidebar-footer, .mt-auto, .border-top') || personalBtn;
+
+            if (currentLayoutMode === 'system') {
+                // 系統模式下：隱藏按鈕與其外層容器
+                wrapper.style.setProperty('display', 'none', 'important');
+            } else {
+                // 自訂模式下：還原顯示狀態
+                wrapper.style.removeProperty('display');
+            }
+        }
+    }, 20); // 確保畫面渲染完成後再隱藏
+}
+
+// ⭐️ 核心修復：切換系統/自訂版面
+function switchLayoutMode(mode) {
+    // 1. 防呆：萬一傳入的是 Event 點擊事件，自動解析出是 system 還是 custom
+    if (typeof mode !== 'string') {
+        let el = (mode && (mode.currentTarget || mode.target));
+        if (el) {
+            let searchStr = (el.outerHTML || '') + (el.textContent || '') + (el.value || '');
+            let forAttr = el.getAttribute('for') || '';
+            if (searchStr.toLowerCase().includes('custom') || searchStr.includes('自訂') || forAttr.includes('custom')) {
+                mode = 'custom';
+            } else {
+                mode = 'system';
+            }
+        } else {
+            mode = 'system';
+        }
     }
-    if (typeof renderSidebarMenus === 'function') renderSidebarMenus();
-    if (typeof renderHomeDashboard === 'function') renderHomeDashboard();
+
+    currentLayoutMode = mode;
+    console.log("切換版面模式為:", mode);
+
+    // 2. ⭐️ 核心同步：僅設定 Radio 的 checked 狀態，切勿手動用 JS 暴悍修改 label 顏色！
+    // 讓 index.html 內建的 Bootstrap .btn-check:checked + .btn-layout-mode-lbl 原生 CSS 機制自然且流暢地套用！
+    const sysRadio = document.getElementById('btn-system-mode');
+    const cusRadio = document.getElementById('btn-custom-mode');
+    if (sysRadio && sysRadio.tagName === 'INPUT') sysRadio.checked = (mode === 'system');
+    if (cusRadio && cusRadio.tagName === 'INPUT') cusRadio.checked = (mode === 'custom');
+
+    try {
+        // 3. 重新渲染導覽列與側邊欄 (這會根據自訂/系統模式決定要載入哪一種選單結構)
+        if (typeof renderTopMenus === 'function') renderTopMenus();
+        if (typeof renderSidebarMenus === 'function') renderSidebarMenus();
+
+        // 4. ⭐️ 核心：無論切換到哪種模式，都自動導向該模式下的「預設首頁」，絕不出現空白的「首頁總覽」
+        if (typeof goDefaultHome === 'function') {
+            goDefaultHome();
+        }
+    } catch (error) {
+        console.error("🚨 畫面切換過程中發生非預期錯誤:", error);
+    }
+
+    // 5. 呼叫檢查與隱藏邏輯 (控制個人頁面管理按鈕的顯示隱藏)
+    enforceSystemModeUI();
 }
 
 // 切換語言
@@ -124,10 +241,15 @@ function getTopMenuName() {
     if (!window.currentActiveTopMenuId) return '';
     const menus = getCustomMenus();
     const cTargetId = window.cleanId(window.currentActiveTopMenuId);
-    const topMenu = menus.find(m => window.cleanId(m.id) === cTargetId);
+    const topMenu = menus.find(m => window.cleanId(m.id || m.MenuId || m.menuId) === cTargetId);
     if (topMenu) {
-        let dName = topMenu.displayName;
-        if (typeof i18n !== 'undefined' && i18n[currentLang] && i18n[currentLang]['dyn_' + topMenu.id] && !topMenu.isEdited) dName = i18n[currentLang]['dyn_' + topMenu.id];
+        let mId = topMenu.id || topMenu.MenuId || topMenu.menuId;
+        let dName = topMenu.displayName || topMenu.DisplayName || topMenu.sysName || topMenu.SysName;
+        let isEdited = topMenu.isEdited || topMenu.IsEdited;
+
+        if (typeof i18n !== 'undefined' && i18n[currentLang] && i18n[currentLang]['dyn_' + mId] && !isEdited) {
+            dName = i18n[currentLang]['dyn_' + mId];
+        }
         return dName;
     }
     return '';
@@ -155,18 +277,23 @@ function getMenuPath(element) {
 function getFullMenuPathStr(menuId, allMenus) {
     let path = [];
     let cTargetId = window.cleanId(menuId);
-    let curr = allMenus.find(m => window.cleanId(m.id) === cTargetId);
+    let curr = allMenus.find(m => window.cleanId(m.id || m.MenuId || m.menuId) === cTargetId);
+
     while (curr) {
-        let dName = curr.displayName;
-        if (typeof i18n !== 'undefined' && i18n[currentLang] && i18n[currentLang]['dyn_' + curr.id] && !curr.isEdited) {
-            dName = i18n[currentLang]['dyn_' + curr.id];
+        let mId = curr.id || curr.MenuId || curr.menuId;
+        let dName = curr.displayName || curr.DisplayName || curr.sysName || curr.SysName;
+        let isEdited = curr.isEdited || curr.IsEdited;
+
+        if (typeof i18n !== 'undefined' && i18n[currentLang] && i18n[currentLang]['dyn_' + mId] && !isEdited) {
+            dName = i18n[currentLang]['dyn_' + mId];
         }
         path.unshift(dName);
 
-        let pId = curr.parentId || (curr.parentIds && curr.parentIds.length > 0 ? curr.parentIds[0] : null);
+        let pId = curr.parentId || curr.ParentMenuId || curr.parentMenuId || (curr.parentIds && curr.parentIds.length > 0 ? curr.parentIds[0] : null);
         let cPId = window.cleanId(pId);
+
         if (cPId && cPId !== 'null') {
-            curr = allMenus.find(m => window.cleanId(m.id) === cPId);
+            curr = allMenus.find(m => window.cleanId(m.id || m.MenuId || m.menuId) === cPId);
         } else {
             curr = null;
         }
@@ -179,12 +306,16 @@ window.isMenuDescendant = function (folderId, targetId, allMenus) {
     let cFolderId = window.cleanId(folderId);
     let cTargetId = window.cleanId(targetId);
     if (cFolderId === cTargetId) return true;
+
     let queue = [cFolderId];
     while (queue.length > 0) {
         let curr = queue.shift();
-        let children = allMenus.filter(m => window.cleanId(m.parentId) === curr || (m.parentIds || []).map(window.cleanId).includes(curr));
+        let children = allMenus.filter(m => {
+            let pId = m.parentId || m.ParentMenuId || m.parentMenuId;
+            return window.cleanId(pId) === curr || (m.parentIds || []).map(window.cleanId).includes(curr);
+        });
         for (let child of children) {
-            let cId = window.cleanId(child.id);
+            let cId = window.cleanId(child.id || child.MenuId || child.menuId);
             if (cId === cTargetId) return true;
             queue.push(cId);
         }
@@ -213,18 +344,28 @@ function selectTopMenu(menuId) {
         if (!hasSidebarItems) {
             // 側邊欄沒有東西，代表這是一個獨立的主選單網頁，直接執行開啟動作
             const menus = getCustomMenus();
-            const activeRoot = menus.find(m => window.cleanId(m.id) === window.cleanId(menuId));
-            if (activeRoot) {
-                let dName = activeRoot.displayName;
-                if (typeof i18n !== 'undefined' && i18n[currentLang] && i18n[currentLang]['dyn_' + activeRoot.id] && !activeRoot.isEdited) dName = i18n[currentLang]['dyn_' + activeRoot.id];
+            const activeRoot = menus.find(m => window.cleanId(m.id || m.MenuId || m.menuId) === window.cleanId(menuId));
 
-                if (activeRoot.menuMode === 'app_grid') openAppGridPage(activeRoot.id, dName, null);
-                else if (activeRoot.url) {
-                    if (activeRoot.target === 'blank') window.open(activeRoot.url, '_blank');
-                    else if (activeRoot.target === 'fullscreen') openDynamicIframe(activeRoot.url, dName, null, true);
-                    else openDynamicIframe(activeRoot.url, dName, null, false);
+            if (activeRoot) {
+                let mId = activeRoot.id || activeRoot.MenuId || activeRoot.menuId;
+                let dName = activeRoot.displayName || activeRoot.DisplayName || activeRoot.sysName || activeRoot.SysName;
+                let mMode = activeRoot.menuMode || activeRoot.MenuMode;
+                let mUrl = activeRoot.url || activeRoot.Url;
+                let mTarget = activeRoot.target || activeRoot.Target || activeRoot.openTarget || activeRoot.OpenTarget;
+                let mTargetPage = activeRoot.targetPage || activeRoot.TargetPage;
+                let isEdited = activeRoot.isEdited || activeRoot.IsEdited;
+
+                if (typeof i18n !== 'undefined' && i18n[currentLang] && i18n[currentLang]['dyn_' + mId] && !isEdited) {
+                    dName = i18n[currentLang]['dyn_' + mId];
                 }
-                else if (activeRoot.targetPage) navTo(activeRoot.targetPage, null, dName);
+
+                if (mMode === 'app_grid') openAppGridPage(mId, dName, null);
+                else if (mUrl) {
+                    if (mTarget === 'blank') window.open(mUrl, '_blank');
+                    else if (mTarget === 'fullscreen') openDynamicIframe(mUrl, dName, null, true);
+                    else openDynamicIframe(mUrl, dName, null, false);
+                }
+                else if (mTargetPage) navTo(mTargetPage, null, dName);
                 else {
                     let underConstructionPage = document.getElementById('page-under-construction');
                     const mainContent = document.getElementById('main-content');
@@ -249,98 +390,135 @@ function selectTopMenu(menuId) {
     }, 50);
 }
 
-// 點擊啟動特定看板 (跨階層支援)
+// ⭐️ 核心修復：點擊啟動特定看板 (加入對 DB 欄位大寫的全面支援)
 function activateMenu(menuId) {
-    if (!menuId) return;
-    const menus = getCustomMenus();
-    const targetMenu = menus.find(m => window.cleanId(m.id) === window.cleanId(menuId));
-    if (!targetMenu) return;
+    try {
+        if (!menuId) {
+            // ⭐️ 徹底封殺 page-home 迴圈，不顯示多餘的總覽
+            return;
+        }
 
-    let rootId = targetMenu.id;
-    let currNode = targetMenu;
-    while (currNode) {
-        let pId = currNode.parentId || (currNode.parentIds && currNode.parentIds.length > 0 ? currNode.parentIds[0] : null);
-        let cPId = window.cleanId(pId);
-        if (cPId && cPId !== 'null') {
-            currNode = menus.find(m => window.cleanId(m.id) === cPId);
-            if (currNode) rootId = currNode.id;
-            else break;
+        const menus = getCustomMenus();
+        const targetMenu = menus.find(m => window.cleanId(m.id || m.MenuId || m.menuId) === window.cleanId(menuId));
+
+        if (!targetMenu) {
+            console.warn("🚨 無法在資料庫找到對應的選單 ID:", menuId);
+            // ⭐️ 徹底封殺 page-home 迴圈
+            return;
+        }
+
+        let rootId = targetMenu.id || targetMenu.MenuId || targetMenu.menuId;
+        let currNode = targetMenu;
+        while (currNode) {
+            let pId = currNode.parentId || currNode.ParentMenuId || currNode.parentMenuId || (currNode.parentIds && currNode.parentIds.length > 0 ? currNode.parentIds[0] : null);
+            let cPId = window.cleanId(pId);
+            if (cPId && cPId !== 'null') {
+                currNode = menus.find(m => window.cleanId(m.id || m.MenuId || m.menuId) === cPId);
+                if (currNode) rootId = currNode.id || currNode.MenuId || currNode.menuId;
+                else break;
+            } else {
+                break;
+            }
+        }
+
+        window.currentActiveTopMenuId = rootId;
+        window.currentActiveSidebarMenuId = menuId;
+
+        if (typeof renderSidebarMenus === 'function') renderSidebarMenus();
+
+        let mId = targetMenu.id || targetMenu.MenuId || targetMenu.menuId;
+        let dName = targetMenu.displayName || targetMenu.DisplayName || targetMenu.sysName || targetMenu.SysName;
+        let mMode = targetMenu.menuMode || targetMenu.MenuMode;
+        let mUrl = targetMenu.url || targetMenu.Url;
+        let mTarget = targetMenu.target || targetMenu.Target || targetMenu.openTarget || targetMenu.OpenTarget;
+        let mTargetPage = targetMenu.targetPage || targetMenu.TargetPage;
+        let isEdited = targetMenu.isEdited || targetMenu.IsEdited;
+
+        if (typeof i18n !== 'undefined' && i18n[currentLang] && i18n[currentLang]['dyn_' + mId] && !isEdited) {
+            dName = i18n[currentLang]['dyn_' + mId];
+        }
+
+        const elList = document.querySelectorAll('.menu-item');
+        let targetEl = null;
+        elList.forEach(el => { if (el.getAttribute('onclick') && el.getAttribute('onclick').includes(mId)) targetEl = el; });
+
+        if (mMode === 'app_grid') openAppGridPage(mId, dName, targetEl);
+        else if (mUrl) openDynamicIframe(mUrl, dName, targetEl, mTarget === 'fullscreen');
+        else if (mTargetPage) {
+            navTo(mTargetPage, targetEl, dName);
         } else {
-            break;
+            let underConstructionPage = document.getElementById('page-under-construction');
+            const mainContent = document.getElementById('main-content');
+            if (!underConstructionPage) {
+                underConstructionPage = document.createElement('div');
+                underConstructionPage.id = 'page-under-construction';
+                underConstructionPage.className = 'page-section';
+                underConstructionPage.innerHTML = `<div class="manage-alert" id="under-construction-text"></div>`;
+                if (mainContent) mainContent.appendChild(underConstructionPage);
+            } else if (underConstructionPage.parentElement && underConstructionPage.parentElement.id !== 'main-content') {
+                if (mainContent) mainContent.appendChild(underConstructionPage);
+            }
+            const textEl = document.getElementById('under-construction-text');
+            if (textEl) textEl.innerText = `${dName} 內容建置中`;
+            navTo('page-under-construction', targetEl, dName);
         }
-    }
-
-    window.currentActiveTopMenuId = rootId;
-    window.currentActiveSidebarMenuId = menuId;
-
-    if (typeof renderSidebarMenus === 'function') renderSidebarMenus();
-
-    let dName = targetMenu.displayName;
-    if (typeof i18n !== 'undefined' && i18n[currentLang] && i18n[currentLang]['dyn_' + targetMenu.id] && !targetMenu.isEdited) {
-        dName = i18n[currentLang]['dyn_' + targetMenu.id];
-    }
-
-    const elList = document.querySelectorAll('.menu-item');
-    let targetEl = null;
-    elList.forEach(el => { if (el.getAttribute('onclick') && el.getAttribute('onclick').includes(targetMenu.id)) targetEl = el; });
-
-    if (targetMenu.menuMode === 'app_grid') openAppGridPage(targetMenu.id, dName, targetEl);
-    else if (targetMenu.url) openDynamicIframe(targetMenu.url, dName, targetEl, targetMenu.target === 'fullscreen');
-    else if (targetMenu.targetPage) {
-        navTo(targetMenu.targetPage, targetEl, dName);
-    } else {
-        let underConstructionPage = document.getElementById('page-under-construction');
-        const mainContent = document.getElementById('main-content');
-        if (!underConstructionPage) {
-            underConstructionPage = document.createElement('div');
-            underConstructionPage.id = 'page-under-construction';
-            underConstructionPage.className = 'page-section';
-            underConstructionPage.innerHTML = `<div class="manage-alert" id="under-construction-text"></div>`;
-            if (mainContent) mainContent.appendChild(underConstructionPage);
-        } else if (underConstructionPage.parentElement && underConstructionPage.parentElement.id !== 'main-content') {
-            if (mainContent) mainContent.appendChild(underConstructionPage);
-        }
-        const textEl = document.getElementById('under-construction-text');
-        if (textEl) textEl.innerText = `${dName} 內容建置中`;
-        navTo('page-under-construction', targetEl, dName);
+    } catch (error) {
+        console.error("🚨 啟動看板時發生錯誤:", error);
     }
 }
 
-// 跳轉回預設首頁
+// ⭐️ 核心修復：跳轉回預設首頁 (確保資料庫找不到時不會卡死)
 function goDefaultHome() {
-    if (!currentUser) return;
+    try {
+        if (!currentUser) return;
 
-    let defPage = null;
-    if (currentUser.defaultPages && currentUser.defaultPages[currentFab]) {
-        defPage = currentUser.defaultPages[currentFab];
-    } else if (currentUser.defaultPage) {
-        defPage = currentUser.defaultPage;
-    }
+        let defPage = null;
+        if (currentUser.defaultPages && currentUser.defaultPages[currentFab]) {
+            defPage = currentUser.defaultPages[currentFab];
+        } else if (currentUser.defaultPage) {
+            defPage = currentUser.defaultPage;
+        }
 
-    if (!defPage) {
-        const currentFabObj = getFabs().find(f => window.cleanId(f.fabName) === window.cleanId(currentFab) || window.cleanId(f.id) === window.cleanId(currentFab));
-        if (currentFabObj) {
-            const fabRoleIds = currentFabObj.assignedRoles || [];
-            const userRoleIds = currentUser.assignedRoles || [];
-            const activeRoleIds = (currentUser.roleLevel === 'admin') ? fabRoleIds : fabRoleIds.filter(id => userRoleIds.some(uid => window.cleanId(uid) === window.cleanId(id)));
+        const menus = getCustomMenus() || [];
 
-            const roles = getRoles();
+        // 如果沒有個人設定預設首頁，依照登入者的群組找尋第一個開放選單
+        if (!defPage || !menus.find(m => window.cleanId(m.id || m.MenuId || m.menuId) === window.cleanId(defPage))) {
+            let activeRoleIds = currentUser.assignedRoles || currentUser.AssignedRoles || [];
+            const roles = getRoles() || [];
             let initialMenuIds = [];
+
             activeRoleIds.forEach(roleId => {
-                const role = roles.find(r => window.cleanId(r.id) === window.cleanId(roleId));
-                if (role && role.allowedMenuIds) initialMenuIds.push(...role.allowedMenuIds);
+                const role = roles.find(r => window.cleanId(r.id || r.RoleId || r.roleId) === window.cleanId(roleId));
+                if (role) {
+                    const roleMenus = role.menus || role.Menus || role.allowedMenuIds || [];
+                    initialMenuIds.push(...roleMenus);
+                }
             });
 
-            const menus = getCustomMenus();
-            if (initialMenuIds.length > 0) {
-                // 找出第一個可視清單
-                defPage = initialMenuIds[0];
+            for (let id of initialMenuIds) {
+                if (menus.find(m => window.cleanId(m.id || m.MenuId || m.menuId) === window.cleanId(id))) {
+                    defPage = id;
+                    break;
+                }
             }
         }
-    }
 
-    if (!defPage) defPage = 'm_ze_1';
-    activateMenu(defPage);
+        // 防呆：如果還是沒找到，挑選第一個非資料夾的系統看板顯示
+        if (!defPage || !menus.find(m => window.cleanId(m.id || m.MenuId || m.menuId) === window.cleanId(defPage))) {
+            let firstVisible = menus.find(m => (m.menuMode || m.MenuMode || '').toLowerCase() !== 'folder');
+            if (firstVisible) {
+                defPage = firstVisible.id || firstVisible.MenuId || firstVisible.menuId;
+            } else if (menus.length > 0) {
+                defPage = menus[0].id || menus[0].MenuId || menus[0].menuId;
+            }
+        }
+
+        if (defPage) {
+            activateMenu(defPage);
+        }
+    } catch (error) {
+        console.error("🚨 導向預設首頁時發生錯誤:", error);
+    }
 }
 
 // 導航到指定區域塊
@@ -444,4 +622,28 @@ function customConfirm(msg, callback) {
     }
     confirmActionCallback = callback;
     if (systemConfirmModalObj) systemConfirmModalObj.show();
+}
+
+// 4. 綁定 MutationObserver 監視器
+// 攔截 render.js 的動態渲染：只要 HTML 結構有新增節點，就立刻觸發檢查
+if (typeof window !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', () => {
+        const observer = new MutationObserver((mutations) => {
+            let hasNewNodes = false;
+            for (let m of mutations) {
+                if (m.addedNodes.length > 0) {
+                    hasNewNodes = true;
+                    break;
+                }
+            }
+            if (hasNewNodes) {
+                // 利用 requestAnimationFrame 確保畫面已經真正被畫出來
+                requestAnimationFrame(() => {
+                    enforceSystemModeUI();
+                });
+            }
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+    });
 }
