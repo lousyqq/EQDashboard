@@ -58,6 +58,7 @@ C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net8.0\EQDashboard.AssemblyInfo
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net8.0\EQDashboard.AssemblyInfo.cs
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net8.0\EQDashboard.csproj.CoreCompileInputs.cache
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net8.0\EQDashboard.MvcApplicationPartsAssemblyInfo.cache
+C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net8.0\EQDashboard.sourcelink.json
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net8.0\staticwebassets.build.json
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net8.0\staticwebassets.development.json
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net8.0\staticwebassets\msbuild.EQDashboard.Microsoft.AspNetCore.StaticWebAssets.props
@@ -72,4 +73,3 @@ C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net8.0\refint\EQDashboard.dll
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net8.0\EQDashboard.pdb
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net8.0\EQDashboard.genruntimeconfig.cache
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net8.0\ref\EQDashboard.dll
-C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net8.0\EQDashboard.sourcelink.json

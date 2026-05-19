@@ -150,11 +150,7 @@ function saveFabItem(e) {
             let f = fabs.find(x => window.cleanId(x.id) === window.cleanId(id));
             if (f) { f.displayName = displayName; f.defaultLang = lang; f.assignedRoles = assignedRoles; }
         } else {
-<<<<<<< HEAD
             if (fabs.some(f => window.cleanId(f.fabName) === window.cleanId(fabName))) { customAlert('廠區ID已存在！'); return false; }
-=======
-            if (fabs.some(f => window.cleanId(f.fabName) === window.cleanId(fabName))) { customAlert('廠區ID已存在！'); return; }
->>>>>>> 777b3b462cbbe13da2f6a4f1fd610ddeac046cf1
             fabs.push({ id: 'fab_' + Date.now(), fabName: fabName, displayName: displayName || fabName, defaultLang: lang, assignedRoles: assignedRoles });
         }
 
@@ -442,11 +438,7 @@ function saveAccountItem(e) {
                 a.canEditOthers = canEditOthers; a.defaultPages = JSON.parse(JSON.stringify(tempDefaultPages));
             }
         } else {
-<<<<<<< HEAD
             if (accs.some(a => window.cleanId(a.empId) === window.cleanId(empId))) { customAlert('工號已存在！'); return false; }
-=======
-            if (accs.some(a => window.cleanId(a.empId) === window.cleanId(empId))) { customAlert('工號已存在！'); return; }
->>>>>>> 777b3b462cbbe13da2f6a4f1fd610ddeac046cf1
             accs.push({
                 empId: empId, name: name, department: dept, roleLevel: lvl,
                 assignedRoles: assigned, manageableMenus: manageable,
@@ -1026,7 +1018,6 @@ function handleDrop(e, targetId, targetParentId, mode) {
 function reorderSystemMenu(srcId, targetId, parentId) {
     const pId = (!parentId || parentId === 'null') ? null : parentId;
     let menus = getCustomMenus();
-<<<<<<< HEAD
 
     // ⭐️ 核心修復：精準比對，當拖曳的是主選單(Root)時，需採用與 Table 相同的過濾邏輯
     let siblings = [];
@@ -1040,9 +1031,6 @@ function reorderSystemMenu(srcId, targetId, parentId) {
         siblings = menus.filter(m => String(m.isPoolItem).toLowerCase() !== 'true' && (window.cleanId(m.parentId) === window.cleanId(pId) || (m.parentIds && m.parentIds.some(pid => window.cleanId(pid) === window.cleanId(pId)))));
     }
 
-=======
-    let siblings = menus.filter(m => String(m.isPoolItem).toLowerCase() !== 'true' && (window.cleanId(m.parentId) === window.cleanId(pId) || (m.parentIds && m.parentIds.some(pid => window.cleanId(pid) === window.cleanId(pId)))));
->>>>>>> 777b3b462cbbe13da2f6a4f1fd610ddeac046cf1
     siblings.sort((a, b) => (a.parentOrders?.[pId] ?? a.order ?? 0) - (b.parentOrders?.[pId] ?? b.order ?? 0));
 
     const srcIdx = siblings.findIndex(m => window.cleanId(m.id) === window.cleanId(srcId));
@@ -1192,12 +1180,8 @@ function saveAppItem(e) {
 
         hideModalSafely('appGridModal');
         if (currentAppGridMenuId && typeof renderAppGrid === 'function') renderAppGrid('app-grid-container', getAppItems().filter(a => window.cleanId(a.menuId) === window.cleanId(currentAppGridMenuId)));
-<<<<<<< HEAD
     } catch (error) { console.error("[saveAppItem] 錯誤:", error); }
     return false;
-=======
-    } catch (e) { console.error("[saveAppItem] 錯誤:", e); }
->>>>>>> 777b3b462cbbe13da2f6a4f1fd610ddeac046cf1
 }
 
 function deleteAppItem(id) {
@@ -1366,12 +1350,8 @@ function saveAuditItem(e) {
 
         if (typeof renderAuditTable === 'function') renderAuditTable();
         customAlert("已成功儲存並同步回覆狀態給使用者！");
-<<<<<<< HEAD
     } catch (error) { console.error("[saveAuditItem] 錯誤:", error); }
     return false;
-=======
-    } catch (e) { console.error("[saveAuditItem] 錯誤:", e); }
->>>>>>> 777b3b462cbbe13da2f6a4f1fd610ddeac046cf1
 }
 
 // === Icon Helpers ===

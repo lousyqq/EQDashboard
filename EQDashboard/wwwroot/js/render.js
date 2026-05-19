@@ -1,15 +1,8 @@
 // ====== DataTable 與畫面動態產生渲染引擎 ======
 
-<<<<<<< HEAD
 // ⭐️ 終極 ID 洗淨器
 window.cleanId = function (id) {
     if (id == null) return '';
-=======
-// ⭐️ 終極 ID 洗淨器 (防止 null、undefined、空字串、"null" 以及「空白鍵」造成的比對災難)
-window.cleanId = function (id) {
-    if (id == null) return '';
-    // 加入 \s 徹底去除所有的全形/半形空白與換行字元，完美防禦 Excel 輸入誤差！
->>>>>>> 777b3b462cbbe13da2f6a4f1fd610ddeac046cf1
     let s = String(id).replace(/[\s\[\]"']/g, '').toLowerCase();
     return s === 'null' ? '' : s;
 };
@@ -266,11 +259,6 @@ function renderSidebarMenus() {
                     setTimeout(() => { if (triggerLeft) triggerLeft.style.display = 'block'; if (isPinned) document.body.classList.remove('sidebar-hidden'); }, 10);
                 }
                 subMenus.sort((a, b) => (a.parentOrders?.[activeRoot.id] ?? a.order ?? 0) - (b.parentOrders?.[activeRoot.id] ?? b.order ?? 0));
-<<<<<<< HEAD
-=======
-
-                // ⭐️ 確保呼叫時，forceExpand 預設為 true (全展開)
->>>>>>> 777b3b462cbbe13da2f6a4f1fd610ddeac046cf1
                 subMenus.forEach(child => { html += generateSidebarMenuItem(child, menus, 1, true); });
             }
         }
@@ -280,11 +268,7 @@ function renderSidebarMenus() {
     } catch (err) { }
 }
 
-<<<<<<< HEAD
 function generateSidebarMenuItem(menu, allMenus, level, forceExpand = true) {
-=======
-function generateSidebarMenuItem(menu, allMenus, level, forceExpand = true) { // ⭐️ 修正：預設值強制為 true，所有目錄預設全開！
->>>>>>> 777b3b462cbbe13da2f6a4f1fd610ddeac046cf1
     if (!menu || !menu.id) return '';
     const subMenus = allMenus.filter(m => m.id !== menu.id && (window.isParentMatch(m.parentId, menu) || (m.parentIds || []).some(pid => window.isParentMatch(pid, menu))));
     subMenus.sort((a, b) => (a.parentOrders?.[menu.id] ?? a.order ?? 0) - (b.parentOrders?.[menu.id] ?? b.order ?? 0));
@@ -293,7 +277,7 @@ function generateSidebarMenuItem(menu, allMenus, level, forceExpand = true) { //
     if (hasChildren && window.currentActiveSidebarMenuId && typeof window.localIsMenuDescendant === 'function') {
         isDescendant = window.localIsMenuDescendant(menu.id, window.currentActiveSidebarMenuId, allMenus);
     }
-    const isExpanded = forceExpand || isDescendant; // 這裡將會是 true
+    const isExpanded = forceExpand || isDescendant;
 
     let iconClass = menu.icon || 'far fa-file-alt';
     if (menu.menuMode === 'folder' && !menu.icon) iconClass = 'fas fa-folder';
@@ -304,7 +288,6 @@ function generateSidebarMenuItem(menu, allMenus, level, forceExpand = true) { //
 
     const safeDomId = 'collapse_' + encodeURIComponent(String(menu.id)).replace(/%/g, '_').replace(/[^a-zA-Z0-9_-]/g, '');
 
-    // ⭐️ 核心修正：棄用 Bootstrap 原生觸發器，改用完全自己掌控的 onclick，絕對不卡死！
     let actionAttr = '';
     if (hasChildren) actionAttr = `onclick="window.toggleSubMenu(event, '${safeDomId}', this)"`;
     else if (menu.menuMode === 'app_grid') actionAttr = `onclick="window.activateMenu('${menu.id}')"`;
@@ -338,7 +321,6 @@ function generateSidebarMenuItem(menu, allMenus, level, forceExpand = true) { //
     }
 }
 
-<<<<<<< HEAD
 window.toggleSubMenu = function (e, targetId, element) {
     e.preventDefault(); e.stopPropagation();
     const targetEl = document.getElementById(targetId);
@@ -353,33 +335,6 @@ window.toggleSubMenu = function (e, targetId, element) {
     }
 };
 
-=======
-// ⭐️ 新增：物理展開/收合控制器 (保證 100% 絕對能開能關，不受外部套件干擾)
-window.toggleSubMenu = function (e, targetId, element) {
-    e.preventDefault();
-    e.stopPropagation();
-    const targetEl = document.getElementById(targetId);
-    if (!targetEl) return;
-
-    // 不依賴 Bootstrap，直接暴力操作 DOM
-    const isShowing = targetEl.classList.contains('show');
-    if (isShowing) {
-        // 執行手動收合
-        targetEl.classList.remove('show');
-        targetEl.style.display = 'none';
-        element.classList.add('collapsed');
-        element.setAttribute('aria-expanded', 'false');
-    } else {
-        // 執行手動展開
-        targetEl.classList.add('show');
-        targetEl.style.display = 'block';
-        element.classList.remove('collapsed');
-        element.setAttribute('aria-expanded', 'true');
-    }
-};
-
-// == 首頁儀表板資料 ==
->>>>>>> 777b3b462cbbe13da2f6a4f1fd610ddeac046cf1
 function renderHomeDashboard() {
     try {
         if (!currentUser) return;
@@ -686,7 +641,6 @@ function renderMenuConfigTable() {
         return badges;
     }
 
-<<<<<<< HEAD
     roots.forEach(m => {
         const mEnabled = m.enabled !== undefined ? m.enabled : (m.IsEnabled !== undefined ? m.IsEnabled : true);
         const mMode = m.menuMode || m.MenuMode; const mTarget = m.target || m.OpenTarget;
@@ -712,64 +666,7 @@ function renderMenuConfigTable() {
 
         // ⭐️ 核心修復：加入 draggable="true" 與對應的拖曳事件，開啟「選單配置管理」的全局排序功能
         tbody.innerHTML += `<tr class="draggable-row" draggable="true" ondragstart="handleDragStart(event, '${mId}', null)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '${mId}', null, 'system')"><td class="text-start ps-3 align-middle">${sysNameHtml}</td><td class="align-middle">${typeBadge}</td><td class="align-middle">${statusSwitch}</td><td class="text-start align-middle" style="max-width: 400px; white-space: normal;">${contentTxt}</td><td class="text-center align-middle" style="white-space: nowrap; width: 1%;">${actionBtns}</td></tr>`;
-=======
-    // ⭐️ 遞迴取得所有子孫節點的膠囊 UI (加入 visited 防止無窮迴圈崩潰！)
-    function getDescendantBadges(parentId, allMenus, visited = new Set()) {
-        if (visited.has(parentId)) return '';
-        visited.add(parentId);
-
-        let badges = '';
-        let children = allMenus.filter(x => x.id !== parentId && (window.isParentMatch(x.parentId, { id: parentId }) || (x.parentIds || []).some(pid => window.isParentMatch(pid, { id: parentId }))));
-        children.sort((a, b) => (a.parentOrders?.[parentId] ?? a.order ?? 0) - (b.parentOrders?.[parentId] ?? b.order ?? 0));
-
-        children.forEach(child => {
-            let isFolder = child.menuMode === 'folder';
-            let icon = isFolder ? '<i class="fas fa-folder text-warning me-1"></i>' : '';
-            badges += `<span class="badge border border-secondary text-dark bg-white shadow-sm me-1 mb-1 fw-normal px-2 py-1">${icon}${child.displayName}</span>`;
-            if (isFolder) {
-                badges += getDescendantBadges(child.id, allMenus, visited);
-            }
-        });
-        return badges;
-    }
-
-    roots.forEach(m => {
-        // ⭐️ 狀態開關互動功能：移除 disabled 並綁定 onchange 事件
-        let statusSwitch = `<div class="form-check form-switch d-flex justify-content-center"><input class="form-check-input cursor-pointer" type="checkbox" ${m.enabled ? 'checked' : ''} onchange="window.toggleMenuEnable('${m.id}', this.checked)"></div>`;
-        let typeBadge = m.menuMode === 'folder' ? '<span class="badge bg-warning text-dark border"><i class="fas fa-folder me-1"></i>主選單</span>' : (m.menuMode === 'app_grid' ? '<span class="badge bg-success text-white border"><i class="fas fa-th-large me-1"></i>應用集合</span>' : '<span class="badge border border-primary text-primary bg-white"><i class="fas fa-link me-1"></i>獨立網頁</span>');
-
-        let contentTxt = '';
-        if (m.menuMode === 'folder') {
-            contentTxt = getDescendantBadges(m.id, menus);
-            if (!contentTxt) contentTxt = '<span class="text-muted small">無內容</span>';
-        } else if (m.menuMode === 'app_grid') {
-            contentTxt = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 me-1"><i class="fas fa-th-large me-1"></i>內部應用集合區</span>`;
-        } else {
-            let targetTxt = m.target === 'iframe' ? '嵌入網頁' : (m.target === 'fullscreen' ? '全螢幕' : '另開分頁');
-            contentTxt = `<span class="text-muted small"><i class="fas fa-link me-1"></i>${m.url || m.targetPage}</span>`;
-        }
-
-        let actionBtnsHtml = `<button type="button" class="btn btn-sm btn-outline-primary shadow-sm" style="width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px;" onclick="event.stopPropagation(); openAddMenuNodeModal('${m.id}');" title="編輯"><i class="fas fa-edit"></i></button>`;
-        if (typeof canManageFolderStructure === 'function' && canManageFolderStructure(m.id)) {
-            actionBtnsHtml += `<button type="button" class="btn btn-sm btn-outline-danger shadow-sm" style="width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px;" onclick="event.stopPropagation(); deleteMenuNodeItem('${m.id}')" title="刪除"><i class="fas fa-trash-alt"></i></button>`;
-        }
-        let actionBtns = `<div class="d-flex flex-nowrap justify-content-center gap-2">${actionBtnsHtml}</div>`;
-
-        let sysNameHtml = `<div class="fw-bold text-dark fs-6">${m.displayName}</div><div class="text-muted small">${m.name}</div>`;
-
-        tbody.innerHTML += `
-        <tr>
-            <td class="text-start ps-3 align-middle">${sysNameHtml}</td>
-            <td class="align-middle">${typeBadge}</td>
-            <td class="align-middle">${statusSwitch}</td>
-            <td class="text-start align-middle" style="max-width: 400px; white-space: normal;">${contentTxt}</td>
-            <td class="text-center align-middle" style="white-space: nowrap; width: 1%;">
-                ${actionBtns}
-            </td>
-        </tr>`;
->>>>>>> 777b3b462cbbe13da2f6a4f1fd610ddeac046cf1
     });
-    // 初始化 DataTables
     initDataTable('dtMenuConfig', false);
 }
 
@@ -1123,7 +1020,6 @@ window.filterMenuSelectDrawer = function () {
             grpItem.style.display = 'none';
         }
     });
-<<<<<<< HEAD
 };
 
 // =========================================================================
@@ -1214,6 +1110,3 @@ window.saveRoleItem = function (e) {
     } catch (error) { console.error("[saveRoleItem] 錯誤:", error); }
     return false;
 };
-=======
-}
->>>>>>> 777b3b462cbbe13da2f6a4f1fd610ddeac046cf1
