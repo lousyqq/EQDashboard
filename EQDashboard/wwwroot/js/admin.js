@@ -439,6 +439,7 @@ function saveAccountItem(e) {
             }
         } else {
             if (accs.some(a => window.cleanId(a.empId) === window.cleanId(empId))) { customAlert('工號已存在！'); return false; }
+
             accs.push({
                 empId: empId, name: name, department: dept, roleLevel: lvl,
                 assignedRoles: assigned, manageableMenus: manageable,
@@ -1180,8 +1181,10 @@ function saveAppItem(e) {
 
         hideModalSafely('appGridModal');
         if (currentAppGridMenuId && typeof renderAppGrid === 'function') renderAppGrid('app-grid-container', getAppItems().filter(a => window.cleanId(a.menuId) === window.cleanId(currentAppGridMenuId)));
+
     } catch (error) { console.error("[saveAppItem] 錯誤:", error); }
     return false;
+
 }
 
 function deleteAppItem(id) {
@@ -1350,8 +1353,10 @@ function saveAuditItem(e) {
 
         if (typeof renderAuditTable === 'function') renderAuditTable();
         customAlert("已成功儲存並同步回覆狀態給使用者！");
+
     } catch (error) { console.error("[saveAuditItem] 錯誤:", error); }
     return false;
+
 }
 
 // === Icon Helpers ===

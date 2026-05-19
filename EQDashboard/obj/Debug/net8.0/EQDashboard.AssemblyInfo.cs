@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("EQDashboard")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7bbe9fe2890cdfa68214cd374830739dadbb1daf")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b7c28f268edadbee5fe0e2d7b52d0cd198fc960e")]
 [assembly: System.Reflection.AssemblyProductAttribute("EQDashboard")]
 [assembly: System.Reflection.AssemblyTitleAttribute("EQDashboard")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
