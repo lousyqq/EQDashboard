@@ -1,80 +1,3 @@
-
-// ⭐️ 核心修復：切換系統/自訂版面 (保留系統設定狀態，即時切換側邊欄與按鈕效果)
-window.switchLayoutMode = function (mode) {
-    let finalMode = 'system';
-
-    // 1. 正確解析點擊來源的模式
-    if (typeof mode === 'string') {
-        finalMode = (mode.toLowerCase().includes('custom') || mode.includes('自訂') || mode.includes('personal')) ? 'custom' : 'system';
-    } else {
-        const cusRadio = document.getElementById('btn-custom-mode');
-        if (cusRadio && cusRadio.checked) finalMode = 'custom';
-    }
-
-    currentLayoutMode = finalMode;
-    console.log("切換模式至:", finalMode);
-
-    // 2. ⭐️ 同步 Bootstrap 原生 Radio 狀態 (僅改變 checked 屬性，讓 CSS 瞬間套用色彩)
-    const sysRadio = document.getElementById('btn-system-mode');
-    const cusRadio = document.getElementById('btn-custom-mode');
-    if (sysRadio && sysRadio.tagName === 'INPUT') sysRadio.checked = (finalMode === 'system');
-    if (cusRadio && cusRadio.tagName === 'INPUT') cusRadio.checked = (finalMode === 'custom');
-
-    // (兼顧若您未來改用 Slider 滑動開關的備用相容邏輯)
-    const wrapper = document.getElementById('layout-toggle-wrapper');
-    const sysText = document.getElementById('btn-layout-system');
-    const perText = document.getElementById('btn-layout-personal');
-    if (wrapper) {
-        if (finalMode === 'system') {
-            wrapper.classList.remove('personal-active');
-            if (sysText) sysText.classList.add('active');
-            if (perText) perText.classList.remove('active');
-        } else {
-            wrapper.classList.add('personal-active');
-            if (sysText) sysText.classList.remove('active');
-            if (perText) perText.classList.add('active');
-        }
-    }
-
-    // 3. 執行資料與畫面跳轉
-    try {
-        // ⭐️ 核心修復：判斷目前是否正在「系統設定」裡面
-        const isCurrentlyInSystemSettings = (window.currentActiveTopMenuId === 'system_settings');
-
-        if (!isCurrentlyInSystemSettings) {
-            // 不在系統設定內，才需要清空選單記憶
-            window.currentActiveTopMenuId = null;
-            window.currentActiveSidebarMenuId = null;
-        }
-
-        // 確保側邊欄能即時重繪 (側邊欄會因為這裡的重繪瞬間生出或隱藏「個人頁面管理」)
-        if (typeof renderTopMenus === 'function') renderTopMenus();
-        if (typeof renderSidebarMenus === 'function') renderSidebarMenus();
-
-        if (isCurrentlyInSystemSettings) {
-            // 如果在系統設定內切換：留在原地，不要踢回首頁！
-            // 特殊防呆：若目前正停在「個人頁面管理」卻切回「系統模式」，需將畫面踢回帳號管理以免畫面空白卡死
-            const personalPage = document.getElementById('page-personal-manage');
-            if (finalMode === 'system' && personalPage && personalPage.classList.contains('active')) {
-                if (typeof navTo === 'function') {
-                    if (typeof currentUser !== 'undefined' && currentUser.roleLevel === 'admin') navTo('page-account-manage', null, '帳號管理');
-                    else navTo('page-apply', null, '需求申請');
-                }
-            }
-        } else {
-            // ⭐️ 徹底封殺 page-home 首頁總覽！無論切換到什麼模式，一律強迫直接導向使用者設定的預設首頁
-            if (typeof goDefaultHome === 'function') goDefaultHome();
-        }
-    } catch (error) {
-        console.error("🚨 畫面切換過程中發生非預期錯誤:", error);
-    }
-
-    // 4. 強制執行 UI 隱藏保護機制
-    if (typeof enforceSystemModeUI === 'function') enforceSystemModeUI();
-
-
-};
-
 // 切換側邊欄
 function toggleSidebar() {
     let hasChildren = false;
@@ -94,52 +17,60 @@ function toggleSidebar() {
     document.body.classList.toggle('sidebar-hidden');
 }
 
-// 切換釘選/自動隱藏模式
+// 全域釘選狀態（對齊 TEST：預設固定）
+window.isPinned = (typeof window.isPinned === 'boolean') ? window.isPinned : true;
+
 function togglePin() {
-    isPinned = !isPinned;
+    window.isPinned = !window.isPinned;
+
     const btnPin = document.getElementById('btn-pin');
 
-    if (isPinned) {
+    if (window.isPinned) {
+        // 固定模式：nav 一定顯示
         document.body.classList.remove('nav-hidden');
+
+        // 只有「有子選單 / 系統設定」才展開 sidebar（對齊 TEST）
         let hasChildren = false;
-        if (window.currentActiveTopMenuId === 'system_settings') {
+        try {
+            if (window.currentActiveTopMenuId === 'system_settings') {
+                hasChildren = true;
+            } else if (window.currentActiveTopMenuId && typeof getCustomMenus === 'function') {
+                const cTargetId = window.cleanId(window.currentActiveTopMenuId);
+                const menus = getCustomMenus() || [];
+                const children = menus.filter(m =>
+                    window.cleanId(m.parentId) === cTargetId ||
+                    (m.parentIds || []).map(window.cleanId).includes(cTargetId)
+                );
+                if (children.length > 0) hasChildren = true;
+            } else {
+                hasChildren = true; // 無資料可判斷時保守展開
+            }
+        } catch (e) {
             hasChildren = true;
-        } else if (window.currentActiveTopMenuId) {
-            const cTargetId = window.cleanId(window.currentActiveTopMenuId);
-            const menus = getCustomMenus();
-            const children = menus.filter(m => window.cleanId(m.parentId) === cTargetId || (m.parentIds || []).map(window.cleanId).includes(cTargetId));
-            if (children.length > 0) hasChildren = true;
         }
 
-        if (hasChildren) {
-            document.body.classList.remove('sidebar-hidden');
-        } else {
-            document.body.classList.add('sidebar-hidden');
-        }
+        if (hasChildren) document.body.classList.remove('sidebar-hidden');
+        else document.body.classList.add('sidebar-hidden');
 
         if (btnPin) {
             btnPin.classList.add('is-pinned');
-            if (btnPin.innerHTML.includes('自動隱藏')) {
-                btnPin.innerHTML = '<i class="fas fa-thumbtack text-primary"></i> 已固定版面';
-            } else {
-                btnPin.innerHTML = '<i class="fas fa-thumbtack text-danger" style="font-size: 0.9rem;"></i>';
-                btnPin.style.background = 'transparent';
-                btnPin.style.color = 'inherit';
-            }
+            btnPin.innerHTML = '<i class="fa-solid fa-thumbtack text-danger" style="font-size: 0.9rem;"></i>';
+            btnPin.style.background = 'transparent';
+            btnPin.style.color = 'inherit';
         }
     } else {
+        // 對齊舊版：取消釘選後不立即隱藏，等滑鼠移出 navbar/sidebar 才由 mouseleave 監聽器接手
         if (btnPin) {
             btnPin.classList.remove('is-pinned');
-            if (btnPin.innerHTML.includes('已固定版面')) {
-                btnPin.innerHTML = '<i class="fas fa-expand-arrows-alt"></i> 自動隱藏';
-            } else {
-                btnPin.innerHTML = '<i class="fas fa-unlock text-white-50" style="font-size: 0.9rem;"></i>';
-                btnPin.style.background = 'transparent';
-                btnPin.style.color = 'inherit';
-            }
+            btnPin.innerHTML = '<i class="fa-solid fa-unlock text-white-50" style="font-size: 0.9rem;"></i>';
+            btnPin.style.background = 'transparent';
+            btnPin.style.color = 'inherit';
         }
     }
 }
+
+// 讓 index.html 的 onclick="togglePin()" 一定能呼叫到
+window.togglePin = togglePin;
 
 // 切換全螢幕
 function toggleFullscreen() {
@@ -178,65 +109,112 @@ function enforceSystemModeUI() {
 }
 
 // ⭐️ 核心修復：切換系統/自訂版面
+// ===== 單一真實來源：切換系統/自訂版面（對齊 TEST_20260429.html，統一使用 'personal'）=====
 function switchLayoutMode(mode) {
-    // 1. 防呆：萬一傳入的是 Event 點擊事件，自動解析出是 system 還是 custom
-    if (typeof mode !== 'string') {
-        let el = (mode && (mode.currentTarget || mode.target));
-        if (el) {
-            let searchStr = (el.outerHTML || '') + (el.textContent || '') + (el.value || '');
-            let forAttr = el.getAttribute('for') || '';
-            if (searchStr.toLowerCase().includes('custom') || searchStr.includes('自訂') || forAttr.includes('custom')) {
-                mode = 'custom';
-            } else {
-                mode = 'system';
-            }
+    // normalize to: system / personal （與 TEST_20260429.html:2147 currentLayoutMode='system' 一致）
+    const m = String(mode ?? 'system').toLowerCase();
+    const finalMode = (m.includes('custom') || m.includes('personal') || m.includes('自訂')) ? 'personal' : 'system';
+
+    currentLayoutMode = finalMode;
+
+    // 同步 slider UI
+    const wrapper = document.getElementById('layout-toggle-wrapper');
+    const sysText = document.getElementById('btn-layout-system');
+    const perText = document.getElementById('btn-layout-personal');
+    if (wrapper) {
+        if (finalMode === 'system') {
+            wrapper.classList.remove('personal-active');
+            sysText?.classList.add('active');
+            perText?.classList.remove('active');
         } else {
-            mode = 'system';
+            wrapper.classList.add('personal-active');
+            sysText?.classList.remove('active');
+            perText?.classList.add('active');
         }
     }
-
-    currentLayoutMode = mode;
-    console.log("切換版面模式為:", mode);
-
-    // 2. ⭐️ 核心同步：僅設定 Radio 的 checked 狀態，切勿手動用 JS 暴悍修改 label 顏色！
-    // 讓 index.html 內建的 Bootstrap .btn-check:checked + .btn-layout-mode-lbl 原生 CSS 機制自然且流暢地套用！
-    const sysRadio = document.getElementById('btn-system-mode');
-    const cusRadio = document.getElementById('btn-custom-mode');
-    if (sysRadio && sysRadio.tagName === 'INPUT') sysRadio.checked = (mode === 'system');
-    if (cusRadio && cusRadio.tagName === 'INPUT') cusRadio.checked = (mode === 'custom');
 
     try {
-        // 3. 重新渲染導覽列與側邊欄 (這會根據自訂/系統模式決定要載入哪一種選單結構)
-        if (typeof renderTopMenus === 'function') renderTopMenus();
+        const isInSystemSettings = (window.currentActiveTopMenuId === 'system_settings');
+
+        if (!isInSystemSettings) {
+            window.currentActiveTopMenuId = null;
+            window.currentActiveSidebarMenuId = null;
+        }
+
+        // 頂部頁籤已由 renderSidebarMenus 一併渲染，無需另外呼叫 renderTopMenus
         if (typeof renderSidebarMenus === 'function') renderSidebarMenus();
 
-        // 4. ⭐️ 核心：無論切換到哪種模式，都自動導向該模式下的「預設首頁」，絕不出現空白的「首頁總覽」
-        if (typeof goDefaultHome === 'function') {
-            goDefaultHome();
+        if (isInSystemSettings) {
+            // 留在系統設定，不要踢回首頁
+            const personalPage = document.getElementById('page-personal-manage');
+            if (finalMode === 'system' && personalPage && personalPage.classList.contains('active')) {
+                if (typeof navTo === 'function') {
+                    if (typeof currentUser !== 'undefined' && currentUser?.roleLevel === 'admin') navTo('page-account-manage', null, '帳號管理');
+                    else navTo('page-apply', null, '需求申請');
+                }
+            }
+        } else {
+            // 對齊 TEST：切換模式一律導回「預設首頁」，不顯示 page-home
+            if (typeof goDefaultHome === 'function') goDefaultHome();
         }
-    } catch (error) {
-        console.error("🚨 畫面切換過程中發生非預期錯誤:", error);
+    } catch (e) {
+        console.error("🚨 切換模式錯誤:", e);
     }
 
-    // 5. 呼叫檢查與隱藏邏輯 (控制個人頁面管理按鈕的顯示隱藏)
-    enforceSystemModeUI();
+    if (typeof enforceSystemModeUI === 'function') enforceSystemModeUI();
 }
 
-// 切換語言
+// 讓 index.html 的 onclick="switchLayoutMode(...)" 一定能呼叫到
+window.switchLayoutMode = switchLayoutMode;
+
 function changeLanguage(lang) {
     currentLang = lang;
+
     if (typeof i18n !== 'undefined') {
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
             if (i18n[lang] && i18n[lang][key]) el.innerHTML = i18n[lang][key];
         });
     }
-    const langCodes = { 'zh': 'ZH', 'en': 'EN', 'ja': 'JA' };
-    const langEl = document.getElementById('current-lang-code');
-    if (langEl) langEl.innerText = langCodes[lang] || lang.toUpperCase();
 
-    if (currentUser && typeof renderSidebarMenus === 'function') renderSidebarMenus();
+    const langCodes = { 'zh': 'ZH', 'en': 'EN', 'ja': 'JA' };
+    const langNames = { 'zh': '繁中', 'en': 'EN', 'ja': '日本語' };
+    const langCodeEl = document.getElementById('current-lang-code');
+    if (langCodeEl) langCodeEl.innerText = langCodes[lang] || lang.toUpperCase();
+    const langDisplayEl = document.getElementById('current-lang-display');
+    if (langDisplayEl) langDisplayEl.innerText = langNames[lang] || lang.toUpperCase();
+
+    // ✅ 新增：重繪語言下拉，套用 active + 打勾
+    renderLangSwitcher();
+
+    // ✅ 對齊 TEST：有登入才重繪側邊欄
+    if (currentUser) renderSidebarMenus();
 }
+window.changeLanguage = changeLanguage;
+
+
+function renderLangSwitcher() {
+    const container = document.getElementById('lang-dropdown-menu');
+    if (!container) return;
+
+    const langs = [
+        { code: 'zh', label: '繁體中文' },
+        { code: 'en', label: 'English' },
+        { code: 'ja', label: '日本語' }
+    ];
+
+    container.innerHTML = langs.map(l => `
+        <li>
+            <a class="dropdown-item py-1 fw-bold cursor-pointer d-flex justify-content-between align-items-center
+                ${currentLang === l.code ? 'active bg-light text-primary' : ''}"
+               onclick="changeLanguage('${l.code}')">
+                ${l.label}
+                ${currentLang === l.code ? '<i class="fa-solid fa-check"></i>' : ''}
+            </a>
+        </li>
+    `).join('');
+}
+window.renderLangSwitcher = renderLangSwitcher;
 
 // 取得上方導覽列名稱
 function getTopMenuName() {
@@ -470,55 +448,89 @@ function activateMenu(menuId) {
     }
 }
 
-// ⭐️ 核心修復：跳轉回預設首頁 (確保資料庫找不到時不會卡死)
+// ⭐️ 對齊 TEST_20260429.html:3496 的預設首頁跳轉（含廠區過濾、folder 自動取第一個子節點）
 function goDefaultHome() {
     try {
         if (!currentUser) return;
 
         let defPage = null;
+
+        // 1. 優先使用該帳號在目前廠區設定的專屬首頁
         if (currentUser.defaultPages && currentUser.defaultPages[currentFab]) {
             defPage = currentUser.defaultPages[currentFab];
         } else if (currentUser.defaultPage) {
-            defPage = currentUser.defaultPage;
+            defPage = currentUser.defaultPage; // 向下相容舊資料
         }
 
         const menus = getCustomMenus() || [];
 
-        // 如果沒有個人設定預設首頁，依照登入者的群組找尋第一個開放選單
-        if (!defPage || !menus.find(m => window.cleanId(m.id || m.MenuId || m.menuId) === window.cleanId(defPage))) {
-            let activeRoleIds = currentUser.assignedRoles || currentUser.AssignedRoles || [];
-            const roles = getRoles() || [];
-            let initialMenuIds = [];
+        // 2. 未設定 → 依目前廠區 fab.assignedRoles 與帳號 assignedRoles 的交集，找出該帳號可看的第一個 root
+        if (!defPage) {
+            const currentFabObj = getFabs().find(f => window.cleanId(f.fabName || f.FabName) === window.cleanId(currentFab));
+            if (currentFabObj) {
+                const fabRoleIds = currentFabObj.assignedRoles || currentFabObj.AssignedRoles || [];
+                const userRoleIds = currentUser.assignedRoles || currentUser.AssignedRoles || [];
+                const activeRoleIds = (currentUser.roleLevel === 'admin')
+                    ? fabRoleIds
+                    : fabRoleIds.filter(id => userRoleIds.some(uId => window.cleanId(uId) === window.cleanId(id)));
 
-            activeRoleIds.forEach(roleId => {
-                const role = roles.find(r => window.cleanId(r.id || r.RoleId || r.roleId) === window.cleanId(roleId));
-                if (role) {
-                    const roleMenus = role.menus || role.Menus || role.allowedMenuIds || [];
-                    initialMenuIds.push(...roleMenus);
-                }
-            });
+                const roles = getRoles();
+                let initialMenuIds = [];
+                activeRoleIds.forEach(roleId => {
+                    const role = roles.find(r => window.cleanId(r.id || r.RoleId) === window.cleanId(roleId));
+                    if (role && (role.allowedMenuIds || role.AllowedMenuIds)) {
+                        initialMenuIds.push(...(role.allowedMenuIds || role.AllowedMenuIds));
+                    }
+                });
 
-            for (let id of initialMenuIds) {
-                if (menus.find(m => window.cleanId(m.id || m.MenuId || m.menuId) === window.cleanId(id))) {
-                    defPage = id;
-                    break;
+                const allowedIds = typeof window.getAllowedIdsWithHierarchy === 'function'
+                    ? window.getAllowedIdsWithHierarchy(menus, initialMenuIds)
+                    : new Set(initialMenuIds);
+
+                // 找出第一層 root（非 pool、無父節點、啟用、且在 allowedIds 中）
+                let validRoots = menus.filter(m =>
+                    m.isPoolItem === false &&
+                    !m.parentId &&
+                    (!m.parentIds || m.parentIds.length === 0) &&
+                    m.enabled !== false &&
+                    allowedIds.has(m.id)
+                );
+
+                // 依群組權限指定的順序排序
+                validRoots.sort((a, b) => {
+                    let idxA = initialMenuIds.indexOf(a.id);
+                    let idxB = initialMenuIds.indexOf(b.id);
+                    return (idxA === -1 ? 9999 : idxA) - (idxB === -1 ? 9999 : idxB);
+                });
+
+                if (validRoots.length > 0) {
+                    let firstRoot = validRoots[0];
+                    // root 若為 folder，自動取其下第一個子看板，避免顯示空殼
+                    if (firstRoot.menuMode === 'folder') {
+                        let children = menus.filter(m =>
+                            m.parentId === firstRoot.id ||
+                            (m.parentIds && m.parentIds.includes(firstRoot.id))
+                        );
+                        children.sort((a, b) =>
+                            (a.parentOrders && a.parentOrders[firstRoot.id] != null ? a.parentOrders[firstRoot.id] : (a.order || 0)) -
+                            (b.parentOrders && b.parentOrders[firstRoot.id] != null ? b.parentOrders[firstRoot.id] : (b.order || 0))
+                        );
+                        defPage = children.length > 0 ? children[0].id : firstRoot.id;
+                    } else {
+                        defPage = firstRoot.id;
+                    }
                 }
             }
         }
 
-        // 防呆：如果還是沒找到，挑選第一個非資料夾的系統看板顯示
-        if (!defPage || !menus.find(m => window.cleanId(m.id || m.MenuId || m.menuId) === window.cleanId(defPage))) {
-            let firstVisible = menus.find(m => (m.menuMode || m.MenuMode || '').toLowerCase() !== 'folder');
-            if (firstVisible) {
-                defPage = firstVisible.id || firstVisible.MenuId || firstVisible.menuId;
-            } else if (menus.length > 0) {
-                defPage = menus[0].id || menus[0].MenuId || menus[0].menuId;
-            }
+        // 3. 終極防呆：仍找不到 → 第一個非資料夾的看板
+        if (!defPage || !menus.find(m => window.cleanId(m.id) === window.cleanId(defPage))) {
+            let firstVisible = menus.find(m => (m.menuMode || '').toLowerCase() !== 'folder');
+            if (firstVisible) defPage = firstVisible.id;
+            else if (menus.length > 0) defPage = menus[0].id;
         }
 
-        if (defPage) {
-            activateMenu(defPage);
-        }
+        if (defPage) activateMenu(defPage);
     } catch (error) {
         console.error("🚨 導向預設首頁時發生錯誤:", error);
     }
@@ -610,12 +622,56 @@ function updateSyncButtonUI() {
     }
 }
 
+// === Alert 防重複 / 匯入訊息控管 ===
+window.__alertState = window.__alertState || {
+    lastHtml: null,
+    lastAt: 0
+};
+
+// 預設：不讓「匯入結果」在每次一般儲存時一直彈出
+window.__allowImportResultAlert = window.__allowImportResultAlert || false;
+
+// 提供一個工具：只允許接下來 1 次匯入結果訊息彈出
+window.allowNextImportResultAlert = function () {
+    window.__allowImportResultAlert = true;
+    // 10 秒後自動關掉，避免忘記關
+    setTimeout(() => { window.__allowImportResultAlert = false; }, 10000);
+};
+
+
 function customAlert(msg) {
     const msgEl = document.getElementById('systemAlertMsg');
-    if (msgEl) {
-        msgEl.innerHTML = (typeof msg === 'object' && msg !== null) ? (msg.message || JSON.stringify(msg)) : msg;
+
+    // 轉成 HTML 字串
+    const html = (typeof msg === 'object' && msg !== null)
+        ? (msg.message || JSON.stringify(msg))
+        : String(msg ?? '');
+
+    // 1) 若是「匯入結果」訊息：預設不彈，避免你每次編輯/儲存都一直跳
+    const isImportResult =
+        html.includes('匯入完畢') ||
+        html.includes('成功同步至資料庫') ||
+        html.includes('略過異常') ||
+        html.includes('全部資料');
+
+    if (isImportResult && window.__allowImportResultAlert !== true) {
+        // 直接忽略
+        return;
     }
-    if (systemAlertModalObj) systemAlertModalObj.show();
+
+    // 2) 防止同一訊息短時間內重複彈出
+    const now = Date.now();
+    if (window.__alertState.lastHtml === html && (now - window.__alertState.lastAt) < 1500) {
+        return;
+    }
+    window.__alertState.lastHtml = html;
+    window.__alertState.lastAt = now;
+
+    if (msgEl) msgEl.innerHTML = html;
+    if (typeof systemAlertModalObj !== 'undefined' && systemAlertModalObj) systemAlertModalObj.show();
+
+    // 匯入結果只允許彈一次就關掉
+    if (isImportResult) window.__allowImportResultAlert = false;
 }
 
 function customConfirm(msg, callback) {
@@ -628,25 +684,94 @@ function customConfirm(msg, callback) {
 }
 
 // 4. 綁定 MutationObserver 監視器
-// 攔截 render.js 的動態渲染：只要 HTML 結構有新增節點，就立刻觸發檢查
+// 限縮在 #dynamic-sidebar-menus，避免在 DataTable/Modal 渲染時被全域觸發造成效能瓶頸
 if (typeof window !== 'undefined') {
     document.addEventListener('DOMContentLoaded', () => {
-        const observer = new MutationObserver((mutations) => {
-            let hasNewNodes = false;
-            for (let m of mutations) {
-                if (m.addedNodes.length > 0) {
-                    hasNewNodes = true;
-                    break;
-                }
-            }
-            if (hasNewNodes) {
-                // 利用 requestAnimationFrame 確保畫面已經真正被畫出來
-                requestAnimationFrame(() => {
-                    enforceSystemModeUI();
-                });
-            }
+        const target = document.getElementById('dynamic-sidebar-menus');
+        if (!target) return;
+        const observer = new MutationObserver(() => {
+            requestAnimationFrame(() => enforceSystemModeUI());
         });
-
-        observer.observe(document.body, { childList: true, subtree: true });
+        observer.observe(target, { childList: true, subtree: true });
     });
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    // ✅ 初始化：先渲染語言下拉（active + 打勾）
+    if (typeof renderLangSwitcher === 'function') renderLangSwitcher();
+    // ✅ 初始化：同步釘選圖示（避免 icon 空白）
+    if (typeof syncPinButtonUI === 'function') syncPinButtonUI();
+    const contentZone = document.getElementById('main-content');
+    const triggerTop = document.getElementById('trigger-top');
+    const triggerLeft = document.getElementById('trigger-left');
+    const topNavbar = document.getElementById('top-navbar');
+    const sidebar = document.getElementById('sidebar');
+
+    if (contentZone) {
+        contentZone.addEventListener('mouseenter', () => {
+            if (!window.isPinned) document.body.classList.add('nav-hidden', 'sidebar-hidden');
+        });
+    }
+
+    if (topNavbar) {
+        topNavbar.addEventListener('mouseleave', () => {
+            if (!window.isPinned) document.body.classList.add('nav-hidden');
+        });
+    }
+
+    if (sidebar) {
+        sidebar.addEventListener('mouseleave', () => {
+            if (!window.isPinned) document.body.classList.add('sidebar-hidden');
+        });
+    }
+
+    if (triggerTop) {
+        triggerTop.addEventListener('mouseenter', () => {
+            if (!window.isPinned) document.body.classList.remove('nav-hidden');
+        });
+    }
+
+    if (triggerLeft) {
+        triggerLeft.addEventListener('mouseenter', () => {
+            if (!window.isPinned) document.body.classList.remove('sidebar-hidden');
+        });
+    }
+});
+
+
+function syncPinButtonUI() {
+    const btnPin = document.getElementById('btn-pin');
+    if (!btnPin) return;
+
+    const pinned = (typeof isPinned !== 'undefined') ? isPinned : (window.isPinned ?? true);
+
+    btnPin.innerHTML = pinned
+        ? '<i class="fa-solid fa-thumbtack text-danger" style="font-size: 0.9rem;"></i>'
+        : '<i class="fa-solid fa-unlock text-white-50" style="font-size: 0.9rem;"></i>';
+}
+
+// =========================================================================
+// ⭐️ 新增：語言切換 Dropdown UI 更新與聯動邏輯
+// =========================================================================
+window.updateLangUI = function (langCode, langName) {
+    // 1. 更新頂部按鈕的顯示文字
+    const display = document.getElementById('current-lang-display');
+    if (display) display.innerText = langName;
+
+    // 2. 切換下拉選單裡面的打勾 (Check) 圖示狀態
+    document.querySelectorAll('.lang-check').forEach(el => el.classList.add('d-none'));
+    const checkIcon = document.getElementById('check-' + langCode);
+    if (checkIcon) checkIcon.classList.remove('d-none');
+
+    // 3. 呼叫系統原有的語言切換核心函式 (觸發網頁翻譯與重繪)
+    if (typeof changeLanguage === 'function') {
+        changeLanguage(langCode);
+    }
+
+    // 4. 自動滑順收合 Bootstrap 下拉選單
+    const dropdownBtn = document.getElementById('langDropdown');
+    if (dropdownBtn && typeof bootstrap !== 'undefined') {
+        const bsDropdown = bootstrap.Dropdown.getInstance(dropdownBtn) || new bootstrap.Dropdown(dropdownBtn);
+        if (bsDropdown) bsDropdown.hide();
+    }
+};

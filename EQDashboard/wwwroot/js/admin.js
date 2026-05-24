@@ -154,6 +154,7 @@ function saveFabItem(e) {
             fabs.push({ id: 'fab_' + Date.now(), fabName: fabName, displayName: displayName || fabName, defaultLang: lang, assignedRoles: assignedRoles });
         }
 
+        // 異動立即靜默同步到 DB（一般操作不需手動觸發）
         if (typeof syncDataToDB === 'function') syncDataToDB();
 
         hideModalSafely('fabModal');
@@ -169,7 +170,8 @@ function deleteFab(id) {
             let fabs = getFabs().filter(f => window.cleanId(f.id) !== window.cleanId(id));
             window.appState.fabs = fabs;
 
-            if (typeof syncDataToDB === 'function') syncDataToDB();
+            // 異動立即靜默同步到 DB（一般操作不需手動觸發）
+        if (typeof syncDataToDB === 'function') syncDataToDB();
 
             if (typeof renderFabTable === 'function') renderFabTable();
             if (typeof renderFabSwitcher === 'function') renderFabSwitcher();
@@ -329,6 +331,7 @@ function saveRoleItem(e) {
             roles.push({ id: 'role_' + Date.now(), groupName: name, allowedMenuIds: allowed });
         }
 
+        // 異動立即靜默同步到 DB（一般操作不需手動觸發）
         if (typeof syncDataToDB === 'function') syncDataToDB();
 
         hideModalSafely('roleModal');
@@ -350,7 +353,8 @@ function deleteRole(id) {
             let accs = getAccounts();
             accs.forEach(a => { if (a.assignedRoles) a.assignedRoles = a.assignedRoles.filter(r => window.cleanId(r) !== window.cleanId(id)); });
 
-            if (typeof syncDataToDB === 'function') syncDataToDB();
+            // 異動立即靜默同步到 DB（一般操作不需手動觸發）
+        if (typeof syncDataToDB === 'function') syncDataToDB();
 
             if (typeof renderRoleTable === 'function') renderRoleTable();
             if (typeof renderFabTable === 'function') renderFabTable();
@@ -447,6 +451,7 @@ function saveAccountItem(e) {
             });
         }
 
+        // 異動立即靜默同步到 DB（一般操作不需手動觸發）
         if (typeof syncDataToDB === 'function') syncDataToDB();
 
         hideModalSafely('accModal');
@@ -469,7 +474,8 @@ function deleteAccount(empId) {
             let accs = getAccounts().filter(a => window.cleanId(a.empId) !== window.cleanId(empId));
             window.appState.accounts = accs;
 
-            if (typeof syncDataToDB === 'function') syncDataToDB();
+            // 異動立即靜默同步到 DB（一般操作不需手動觸發）
+        if (typeof syncDataToDB === 'function') syncDataToDB();
 
             if (typeof renderAccountTable === 'function') renderAccountTable();
         });
@@ -504,7 +510,7 @@ function toggleDelegationDetails() {
     if (det) det.style.display = checked ? 'block' : 'none';
 }
 
-// === Personal Menus 個人選單 ===
+// === Personal Menus 個人選單（對齊 TEST_20260429.html:3744-3771）===
 function togglePerMenuExpand(id) {
     if (expandedPerMenuIds.has(id)) expandedPerMenuIds.delete(id);
     else expandedPerMenuIds.add(id);
@@ -513,19 +519,33 @@ function togglePerMenuExpand(id) {
 }
 
 function togglePerAllMenus() {
-    isPerAllExpanded = !isPerAllExpanded;
-    if (!isPerAllExpanded) expandedPerMenuIds.clear();
+    const menusData = getCustomMenus().filter(m =>
+        String(m.isPoolItem || m.IsPoolItem).toLowerCase() !== 'true'
+    );
+    const menusWithChildren = menusData.filter(m =>
+        menusData.some(child => child.parentId === m.id || (child.parentIds && child.parentIds.includes(m.id)))
+    );
+
+    const btn = document.getElementById('btn-per-toggle-all');
+    if (isPerAllExpanded) {
+        expandedPerMenuIds.clear();
+        isPerAllExpanded = false;
+        if (btn) btn.innerHTML = '<i class="fas fa-expand-arrows-alt me-1"></i> 全部展開';
+    } else {
+        menusWithChildren.forEach(m => expandedPerMenuIds.add(m.id));
+        isPerAllExpanded = true;
+        if (btn) btn.innerHTML = '<i class="fas fa-compress-arrows-alt me-1"></i> 全部收合';
+    }
     if (typeof renderPersonalMenuManage === 'function') renderPersonalMenuManage();
 }
 
 function restoreDefaultPersonalMenu() {
-    customConfirm('確定要清除所有個人化設定，還原為系統預設版面嗎？', () => {
+    customConfirm('確定要還原成預設系統版面嗎？您所有的個人自訂排序與隱藏設定將會被清除。', () => {
         localStorage.removeItem('umc_personal_menus_' + currentUser.id);
-
         if (typeof syncDataToDB === 'function') syncDataToDB();
-
         if (typeof renderPersonalMenuManage === 'function') renderPersonalMenuManage();
         if (typeof renderSidebarMenus === 'function') renderSidebarMenus();
+        if (typeof customAlert === 'function') customAlert('已成功還原為預設版面！');
     });
 }
 
@@ -570,6 +590,7 @@ function savePersonalMenu(e) {
 
         savePersonalSettings(currentUser.id, pSets);
 
+        // 異動立即靜默同步到 DB（一般操作不需手動觸發）
         if (typeof syncDataToDB === 'function') syncDataToDB();
 
         hideModalSafely('personalMenuModal');
@@ -649,6 +670,7 @@ function saveWebpageItem(e) {
 
         if (!id) { mObj.order = menus.length * 10; menus.push(mObj); }
 
+        // 異動立即靜默同步到 DB（一般操作不需手動觸發）
         if (typeof syncDataToDB === 'function') syncDataToDB();
 
         hideModalSafely('webpageModal');
@@ -666,7 +688,8 @@ function deleteWebpageItem(id) {
             let menus = getCustomMenus().filter(m => window.cleanId(m.id) !== window.cleanId(id));
             window.appState.menus = menus;
 
-            if (typeof syncDataToDB === 'function') syncDataToDB();
+            // 異動立即靜默同步到 DB（一般操作不需手動觸發）
+        if (typeof syncDataToDB === 'function') syncDataToDB();
 
             if (typeof renderWebpageTable === 'function') renderWebpageTable();
             if (typeof renderMenuConfigTable === 'function') renderMenuConfigTable();
@@ -912,12 +935,17 @@ function saveMenuNodeItem(e) {
 
             menus = menus.filter(m => !foldersToDelete.includes(m.id));
 
-            // 清除重新定義的父子關聯
+            // 清除重新定義的父子關聯，並將被踢出群組的孤兒節點標回 isPoolItem
             let linkageToClear = [mObj.id, ...oldDescendants].map(x => window.cleanId(x));
             menus.forEach(m => {
                 if (linkageToClear.includes(window.cleanId(m.parentId))) m.parentId = null;
                 if (m.parentIds) m.parentIds = m.parentIds.filter(pid => !linkageToClear.includes(window.cleanId(pid)));
                 if (m.parentOrders) linkageToClear.forEach(pid => delete m.parentOrders[pid]);
+                // 若該節點已無任何父節點且非 folder，視為池中項目，回到「看板網頁管理」表格
+                if (!m.parentId && (!m.parentIds || m.parentIds.length === 0)
+                    && (m.menuMode || '').toLowerCase() !== 'folder') {
+                    m.isPoolItem = true;
+                }
             });
 
             treeNodes.forEach(node => {
@@ -940,6 +968,7 @@ function saveMenuNodeItem(e) {
 
         window.appState.menus = menus;
 
+        // 異動立即靜默同步到 DB（一般操作不需手動觸發）
         if (typeof syncDataToDB === 'function') syncDataToDB();
 
         hideModalSafely('menuNodeModal');
@@ -975,7 +1004,8 @@ function deleteMenuNodeItem(id) {
             menus = menus.filter(m => window.cleanId(m.id) !== window.cleanId(id) && !oldDescendants.includes(m.id));
             window.appState.menus = menus;
 
-            if (typeof syncDataToDB === 'function') syncDataToDB();
+            // 異動立即靜默同步到 DB（一般操作不需手動觸發）
+        if (typeof syncDataToDB === 'function') syncDataToDB();
 
             if (typeof renderMenuConfigTable === 'function') renderMenuConfigTable();
             if (typeof renderSidebarMenus === 'function') renderSidebarMenus();
@@ -990,6 +1020,7 @@ window.toggleMenuEnable = function (id, isEnabled) {
     if (m) {
         m.enabled = isEnabled;
         window.appState.menus = menus;
+        // 異動立即靜默同步到 DB（一般操作不需手動觸發）
         if (typeof syncDataToDB === 'function') syncDataToDB();
         if (typeof renderSidebarMenus === 'function') renderSidebarMenus();
     }
@@ -1050,6 +1081,7 @@ function reorderSystemMenu(srcId, targetId, parentId) {
             }
         });
 
+        // 異動立即靜默同步到 DB（一般操作不需手動觸發）
         if (typeof syncDataToDB === 'function') syncDataToDB();
 
         if (typeof renderMenuConfigTable === 'function') renderMenuConfigTable();
@@ -1058,31 +1090,48 @@ function reorderSystemMenu(srcId, targetId, parentId) {
 }
 
 function reorderPersonalMenu(srcId, targetId, parentId) {
-    const pId = (!parentId || parentId === 'null') ? null : parentId;
+    const pId = (!parentId || parentId === 'null' || parentId === '') ? null : parentId;
     let pSets = getPersonalSettings(currentUser.id);
     let menus = getCustomMenus();
-    let siblings = menus.filter(m => window.cleanId(m.parentId) === window.cleanId(pId) || (m.parentIds && m.parentIds.some(pid => window.cleanId(pid) === window.cleanId(pId))));
 
-    siblings.forEach(s => { s.tempOrder = pSets[s.id]?.order ?? s.order ?? 999; });
+    // 個人模式拖曳：當 pId 為 null 時抓「無父節點且非池中項目」的 root（與上方導覽列一致）
+    let siblings;
+    if (pId === null) {
+        siblings = menus.filter(m =>
+            String(m.isPoolItem || m.IsPoolItem).toLowerCase() !== 'true' &&
+            !m.parentId &&
+            (!m.parentIds || m.parentIds.length === 0)
+        );
+    } else {
+        siblings = menus.filter(m =>
+            window.cleanId(m.parentId) === window.cleanId(pId) ||
+            (m.parentIds && m.parentIds.some(pid => window.cleanId(pid) === window.cleanId(pId)))
+        );
+    }
+
+    siblings.forEach(s => {
+        const personalOrder = pSets[s.id] && pSets[s.id].order;
+        s.tempOrder = (personalOrder != null) ? personalOrder : (s.order || 999);
+    });
     siblings.sort((a, b) => a.tempOrder - b.tempOrder);
 
     const srcIdx = siblings.findIndex(m => window.cleanId(m.id) === window.cleanId(srcId));
     const targetIdx = siblings.findIndex(m => window.cleanId(m.id) === window.cleanId(targetId));
+    if (srcIdx === -1 || targetIdx === -1) return;
 
-    if (srcIdx > -1 && targetIdx > -1) {
-        const [movedItem] = siblings.splice(srcIdx, 1);
-        siblings.splice(targetIdx, 0, movedItem);
-        siblings.forEach((m, idx) => {
-            if (!pSets[m.id]) pSets[m.id] = {};
-            pSets[m.id].order = idx * 10;
-        });
-        savePersonalSettings(currentUser.id, pSets);
+    const [movedItem] = siblings.splice(srcIdx, 1);
+    siblings.splice(targetIdx, 0, movedItem);
+    siblings.forEach((m, idx) => {
+        if (!pSets[m.id]) pSets[m.id] = {};
+        pSets[m.id].order = idx * 10;
+    });
+    savePersonalSettings(currentUser.id, pSets);
 
-        if (typeof syncDataToDB === 'function') syncDataToDB();
+    // 自動同步至 DB
+    if (typeof syncDataToDB === 'function') syncDataToDB();
 
-        if (typeof renderPersonalMenuManage === 'function') renderPersonalMenuManage();
-        if (typeof renderSidebarMenus === 'function') renderSidebarMenus();
-    }
+    if (typeof renderPersonalMenuManage === 'function') renderPersonalMenuManage();
+    if (typeof renderSidebarMenus === 'function') renderSidebarMenus();
 }
 
 function reorderWebpageMenu(srcId, targetId) {
@@ -1094,6 +1143,7 @@ function reorderWebpageMenu(srcId, targetId) {
         menus.splice(targetIdx, 0, movedItem);
         menus.forEach((m, idx) => m.order = idx * 10);
 
+        // 異動立即靜默同步到 DB（一般操作不需手動觸發）
         if (typeof syncDataToDB === 'function') syncDataToDB();
 
         if (typeof renderWebpageTable === 'function') renderWebpageTable();
@@ -1177,6 +1227,7 @@ function saveAppItem(e) {
             apps.push({ id: 'app_' + Date.now(), menuId: currentAppGridMenuId, name: name, url: url, target: target, iconBase64: finalIcon });
         }
 
+        // 異動立即靜默同步到 DB（一般操作不需手動觸發）
         if (typeof syncDataToDB === 'function') syncDataToDB();
 
         hideModalSafely('appGridModal');
@@ -1193,7 +1244,8 @@ function deleteAppItem(id) {
             let apps = getAppItems().filter(a => window.cleanId(a.id) !== window.cleanId(id));
             window.appState.apps = apps;
 
-            if (typeof syncDataToDB === 'function') syncDataToDB();
+            // 異動立即靜默同步到 DB（一般操作不需手動觸發）
+        if (typeof syncDataToDB === 'function') syncDataToDB();
 
             if (currentAppGridMenuId && typeof renderAppGrid === 'function') renderAppGrid('app-grid-container', apps.filter(a => window.cleanId(a.menuId) === window.cleanId(currentAppGridMenuId)));
         });
@@ -1269,6 +1321,7 @@ function submitApplyItem(e) {
             });
         }
 
+        // 異動立即靜默同步到 DB（一般操作不需手動觸發）
         if (typeof syncDataToDB === 'function') syncDataToDB();
 
         hideModalSafely('applyModal');
@@ -1278,6 +1331,17 @@ function submitApplyItem(e) {
     } catch (error) { console.error("[submitApplyItem] 錯誤:", error); }
     return false;
 }
+
+// 對齊 TEST_20260429.html 申請紀錄刪除：撤回後可由使用者手動清除該筆
+window.deleteApplyItem = function (id) {
+    if (typeof customConfirm !== 'function') return;
+    customConfirm('確定要刪除此申請紀錄嗎？', () => {
+        let reqs = getRequests().filter(r => window.cleanId(r.id || r.RequestId) !== window.cleanId(id));
+        window.appState.requests = reqs;
+        if (typeof syncDataToDB === 'function') syncDataToDB();
+        if (typeof renderApplyTable === 'function') renderApplyTable();
+    });
+};
 
 function withdrawApply(id) {
     try {
@@ -1298,6 +1362,7 @@ function submitWithdrawItem(e) {
         reqs = reqs.filter(r => window.cleanId(r.id) !== window.cleanId(id));
         window.appState.requests = reqs;
 
+        // 異動立即靜默同步到 DB（一般操作不需手動觸發）
         if (typeof syncDataToDB === 'function') syncDataToDB();
 
         hideModalSafely('withdrawModal');
@@ -1346,7 +1411,8 @@ function saveAuditItem(e) {
         if (idx > -1) {
             reqs[idx].status = status; reqs[idx].reply = reply;
 
-            if (typeof syncDataToDB === 'function') syncDataToDB();
+            // 異動立即靜默同步到 DB（一般操作不需手動觸發）
+        if (typeof syncDataToDB === 'function') syncDataToDB();
         }
 
         hideModalSafely('auditModal');
@@ -1358,6 +1424,94 @@ function saveAuditItem(e) {
     return false;
 
 }
+
+// === Excel 匯出備份（對齊 TEST_20260429.html:2186-2259）===
+function createWorkbookData() {
+    if (typeof XLSX === 'undefined') { customAlert('SheetJS 套件未載入'); return null; }
+    const wb = XLSX.utils.book_new();
+
+    const appendSafeData = (data, sheetName) => {
+        if (!data || data.length === 0) {
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{}]), sheetName);
+            return;
+        }
+        const safeData = data.map(item => {
+            let processed = {};
+            for (let key in item) {
+                let val = item[key];
+                let finalStr = (typeof val === 'object' && val !== null) ? JSON.stringify(val) : (val !== undefined ? String(val) : '');
+                if (finalStr.length > 32700) {
+                    processed[key] = finalStr.startsWith('data:image') ? '' : (finalStr.substring(0, 32700) + '...');
+                } else {
+                    processed[key] = finalStr;
+                }
+            }
+            return processed;
+        });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(safeData), sheetName);
+    };
+
+    const menus = getCustomMenus();
+    const fabs = getFabs();
+    const roles = getRoles();
+    const accs = getAccounts();
+    const apps = getAppItems();
+    const reqs = getRequests();
+
+    appendSafeData(menus.map(m => ({ MenuId: m.id, SysName: m.name, DisplayName: m.displayName, MenuMode: m.menuMode, Url: m.url || '', TargetPage: m.targetPage || '', OpenTarget: m.target || '', Icon: m.icon || '', CreatedBy: m.createdBy || 'admin', IsEnabled: m.enabled !== false, IsPoolItem: m.isPoolItem === true, IsEdited: m.isEdited === true, GlobalOrder: m.order || 0 })), "Menus");
+    appendSafeData(fabs.map(f => ({ FabId: f.id, FabName: f.fabName, DisplayName: f.displayName, DefaultLang: f.defaultLang || 'zh' })), "Fabs");
+    appendSafeData(roles.map(r => ({ RoleId: r.id, GroupName: r.groupName })), "Roles");
+    appendSafeData(accs.map(a => ({ EmpId: a.empId, Name: a.name, Department: a.department || '', RoleLevel: a.roleLevel || 'user', CanEditOthers: a.canEditOthers === true })), "Accounts");
+    appendSafeData(apps.map(a => ({ AppId: a.id, MenuId: a.menuId, AppName: a.name, Url: a.url || '', IconBase64: a.iconBase64 || '', Target: a.target || '_blank' })), "Apps");
+    appendSafeData(reqs.map(r => ({ RequestId: r.id, EmpId: r.empId, EmpName: r.empName, Reason: r.reason, Timestamp: r.timestamp, Status: r.status, WithdrawReason: r.withdrawReason || '', Reply: r.reply || '' })), "Requests");
+
+    let mapFabRole = []; fabs.forEach(f => { if (f.assignedRoles) f.assignedRoles.forEach(rId => mapFabRole.push({ FabId: f.id, RoleId: rId })); });
+    appendSafeData(mapFabRole.length ? mapFabRole : [{ FabId: '', RoleId: '' }], "Map_Fab_Role");
+
+    let mapAccRole = []; accs.forEach(a => { if (a.assignedRoles) a.assignedRoles.forEach(rId => mapAccRole.push({ EmpId: a.empId, RoleId: rId })); });
+    appendSafeData(mapAccRole.length ? mapAccRole : [{ EmpId: '', RoleId: '' }], "Map_Account_Role");
+
+    let mapAccMenu = []; accs.forEach(a => { if (a.manageableMenus) a.manageableMenus.forEach(mId => mapAccMenu.push({ EmpId: a.empId, MenuId: mId })); });
+    appendSafeData(mapAccMenu.length ? mapAccMenu : [{ EmpId: '', MenuId: '' }], "Map_Account_ManageMenu");
+
+    let mapRoleMenu = []; roles.forEach(r => { if (r.allowedMenuIds) r.allowedMenuIds.forEach((mId, idx) => mapRoleMenu.push({ RoleId: r.id, MenuId: mId, SortOrder: idx * 10 })); });
+    appendSafeData(mapRoleMenu.length ? mapRoleMenu : [{ RoleId: '', MenuId: '', SortOrder: '' }], "Map_Role_Menu");
+
+    let mapMenuStruct = []; menus.forEach(m => {
+        if (m.parentIds && m.parentIds.length > 0) {
+            m.parentIds.forEach(pId => mapMenuStruct.push({ ParentMenuId: pId, ChildMenuId: m.id, SortOrder: m.parentOrders ? (m.parentOrders[pId] || 0) : 0 }));
+        } else if (m.parentId) {
+            mapMenuStruct.push({ ParentMenuId: m.parentId, ChildMenuId: m.id, SortOrder: m.order || 0 });
+        }
+    });
+    appendSafeData(mapMenuStruct.length ? mapMenuStruct : [{ ParentMenuId: '', ChildMenuId: '', SortOrder: '' }], "Map_Menu_Structure");
+
+    let mapAccDefPage = []; accs.forEach(a => { if (a.defaultPages) { for (let fab in a.defaultPages) { mapAccDefPage.push({ EmpId: a.empId, FabId: fab, MenuId: a.defaultPages[fab] }); } } });
+    appendSafeData(mapAccDefPage.length ? mapAccDefPage : [{ EmpId: '', FabId: '', MenuId: '' }], "Map_Account_DefaultPage");
+
+    let pSettings = []; accs.forEach(a => {
+        let pSet = getPersonalSettings(a.empId);
+        if (pSet) for (let mId in pSet) {
+            pSettings.push({ EmpId: a.empId, MenuId: mId, IsHidden: pSet[mId].hidden === true, OpenTarget: pSet[mId].target || '', Icon: pSet[mId].icon || '', SortOrder: pSet[mId].order !== undefined ? pSet[mId].order : '' });
+        }
+    });
+    appendSafeData(pSettings.length ? pSettings : [{ EmpId: '', MenuId: '', IsHidden: '', OpenTarget: '', Icon: '', SortOrder: '' }], "PersonalSettings");
+
+    return wb;
+}
+
+function exportConfig() {
+    try {
+        const wb = createWorkbookData();
+        if (!wb) return;
+        XLSX.writeFile(wb, "EQDashboard_Setting.xlsx");
+    } catch (e) {
+        console.error("[exportConfig] 錯誤:", e);
+        if (typeof customAlert === 'function') customAlert("匯出 Excel 失敗：" + e.message);
+    }
+}
+window.exportConfig = exportConfig;
+window.createWorkbookData = createWorkbookData;
 
 // === Icon Helpers ===
 function handleIconSelectChange(prefix) {
@@ -1530,7 +1684,7 @@ async function processAndSaveWorkbook(workbook, isManualImport = false) {
         if (typeof updateSyncButtonUI === 'function') updateSyncButtonUI();
 
         if (typeof syncDataToDB === 'function') {
-            await syncDataToDB();
+            await syncDataToDB(true); // Excel 匯入時要顯示 loading 與完成訊息
             if (typeof initDashboardUI === 'function') initDashboardUI();
         }
     } else {

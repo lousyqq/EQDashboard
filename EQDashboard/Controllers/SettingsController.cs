@@ -12,8 +12,14 @@ namespace EQDashboard.Controllers
 {
     public class SettingsController : Controller
     {
-        // 確保連線字串正確
-        private readonly string connStr = "Data Source=Sariel;Initial Catalog=EQDashboard;User ID=testuser;Password=test;TrustServerCertificate=True;";
+        // 從 appsettings.json 的 ConnectionStrings:EQDashboard 取得連線字串
+        private readonly string connStr;
+
+        public SettingsController(IConfiguration config)
+        {
+            connStr = config.GetConnectionString("EQDashboard")
+                ?? "Data Source=Sariel;Initial Catalog=EQDashboard;User ID=testuser;Password=test;TrustServerCertificate=True;";
+        }
 
         private readonly string[] tableNames = new string[]
         {
@@ -128,6 +134,28 @@ namespace EQDashboard.Controllers
                                     {
                                         checkCmd.Parameters.AddWithValue("@tb", tableName);
                                         if ((int)checkCmd.ExecuteScalar() == 0) continue;
+                                    }
+
+                                    // ⭐️ M17 寫入防呆：比對「舊筆數」vs「新筆數」，若 new < 0.2 * old 且 old >= 5 拒絕覆寫
+                                    int oldCount = 0;
+                                    try
+                                    {
+                                        using (SqlCommand countCmd = new SqlCommand($"SELECT COUNT(*) FROM [{tableName}]", conn, trans))
+                                        {
+                                            oldCount = Convert.ToInt32(countCmd.ExecuteScalar());
+                                        }
+                                    }
+                                    catch { /* 取得舊筆數失敗時，視為 0，不做防呆 */ }
+
+                                    int newCount = tableData.Count(row => row != null && row.Any(p =>
+                                        p.Value.ValueKind != JsonValueKind.Null &&
+                                        p.Value.ValueKind != JsonValueKind.Undefined &&
+                                        !string.IsNullOrWhiteSpace(p.Value.ToString())));
+
+                                    if (oldCount >= 5 && newCount < oldCount * 0.2)
+                                    {
+                                        errorLogs.Add($"[{tableName}] 拒絕覆寫：原 {oldCount} 筆，新資料僅 {newCount} 筆（縮減超過 80%），疑似前端 payload 異常，本表略過。");
+                                        continue;
                                     }
 
                                     // 1. 確定表存在，且有新資料要匯入時，才清空舊資料
@@ -352,6 +380,78 @@ namespace EQDashboard.Controllers
             catch (Exception ex)
             {
                 return Json(new { success = false, message = "伺服器寫入發生嚴重錯誤: " + ex.Message });
+            }
+        }
+
+        // 登入後紀錄：LoginCount + 1、LastLoginTime = GETDATE()，並回傳更新後的數值
+        public class LoginStatsRequest
+        {
+            public string? EmpId { get; set; }
+        }
+
+        [HttpPost]
+        public async Task<JsonResult> UpdateLoginStats()
+        {
+            try
+            {
+                string empId = "";
+                using (StreamReader reader = new StreamReader(Request.Body))
+                {
+                    string json = await reader.ReadToEndAsync();
+                    if (!string.IsNullOrWhiteSpace(json))
+                    {
+                        var req = JsonSerializer.Deserialize<LoginStatsRequest>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                        empId = req?.EmpId ?? "";
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(empId))
+                    return Json(new { success = false, message = "EmpId 為必填欄位" });
+
+                using (SqlConnection conn = new SqlConnection(connStr))
+                {
+                    conn.Open();
+
+                    // 確認欄位存在，缺則自動新增（避免使用者忘了跑 ALTER）
+                    using (SqlCommand alterCmd = new SqlCommand(@"
+                        IF COL_LENGTH('Accounts','LoginCount') IS NULL
+                            ALTER TABLE Accounts ADD LoginCount INT NULL;
+                        IF COL_LENGTH('Accounts','LastLoginTime') IS NULL
+                            ALTER TABLE Accounts ADD LastLoginTime DATETIME NULL;", conn))
+                    {
+                        alterCmd.ExecuteNonQuery();
+                    }
+
+                    // 累計 + 1，更新本次登入時間
+                    using (SqlCommand cmd = new SqlCommand(@"
+                        UPDATE Accounts
+                        SET LoginCount = ISNULL(LoginCount, 0) + 1,
+                            LastLoginTime = GETDATE()
+                        WHERE EmpId = @EmpId;
+                        SELECT LoginCount, LastLoginTime FROM Accounts WHERE EmpId = @EmpId;", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@EmpId", empId);
+                        using (SqlDataReader r = cmd.ExecuteReader())
+                        {
+                            if (r.Read())
+                            {
+                                int loginCount = r.IsDBNull(0) ? 0 : Convert.ToInt32(r.GetValue(0));
+                                DateTime? lastLogin = r.IsDBNull(1) ? (DateTime?)null : Convert.ToDateTime(r.GetValue(1));
+                                return Json(new
+                                {
+                                    success = true,
+                                    loginCount = loginCount,
+                                    lastLoginTime = lastLogin.HasValue ? lastLogin.Value.ToString("yyyy-MM-dd HH:mm:ss") : null
+                                });
+                            }
+                        }
+                    }
+                }
+                return Json(new { success = false, message = "找不到帳號 " + empId });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "更新登入紀錄失敗: " + ex.Message });
             }
         }
     }

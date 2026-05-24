@@ -3,19 +3,21 @@
 function initDashboardUI() {
     if (!currentUser) return;
 
-    // ⭐️ 關鍵自癒機制：修復 let 宣告變數無法透過 window. 存取的致命 Bug
+    // 校正 currentFab 一律為 fabName，並套用該廠區的預設語言
     if (typeof getFabs === 'function') {
         const fabs = getFabs();
         if (fabs.length > 0) {
             let currentFabVal = typeof currentFab !== 'undefined' ? currentFab : '';
-            const exists = fabs.find(f => String(f.id).toLowerCase() === String(currentFabVal).toLowerCase() || String(f.fabName).toLowerCase() === String(currentFabVal).toLowerCase());
+            const exists = fabs.find(f =>
+                String(f.id || '').toLowerCase() === String(currentFabVal).toLowerCase() ||
+                String(f.fabName || '').toLowerCase() === String(currentFabVal).toLowerCase()
+            );
+            currentFab = exists ? exists.fabName : fabs[0].fabName;
 
-            if (exists) {
-                currentFab = exists.fabName;
-            } else {
-                currentFab = fabs[0].fabName;
+            const fabObj = exists || fabs[0];
+            if (fabObj && fabObj.defaultLang && typeof changeLanguage === 'function') {
+                changeLanguage(fabObj.defaultLang);
             }
-            console.log("已自動校正預設廠區為:", currentFab);
         }
     }
 
@@ -73,7 +75,7 @@ window.addEventListener('error', function (event) {
 }, true);
 
 document.addEventListener("DOMContentLoaded", async () => {
-    console.log("正在從資料庫載入資料...");
+    // console.log("正在從資料庫載入資料...");
     const loadingOverlay = document.createElement('div');
     loadingOverlay.id = 'db-loading-overlay';
     loadingOverlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; color:white; font-family:sans-serif;';

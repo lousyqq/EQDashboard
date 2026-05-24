@@ -1,12 +1,16 @@
-// ====== DataTable 與畫面動態產生渲染引擎 ======
-
-
-// ⭐️ 終極 ID 洗淨器 (防止 null、undefined、空字串、"null" 以及「空白鍵」造成的比對災難)
+// ====== render.js 最上方的修復 ======
 window.cleanId = function (id) {
+    // 檢查是否為空值 (null, undefined, NaN)
     if (id == null) return '';
-    // 加入 \s 徹底去除所有的全形/半形空白與換行字元，完美防禦 Excel 輸入誤差！
-    let s = String(id).replace(/[\s\[\]"']/g, '').toLowerCase();
-    return s === 'null' ? '' : s;
+
+    // 如果是數字，強制轉為字串
+    let s = String(id);
+
+    // 徹底防禦：如果轉完還是空的，直接回傳
+    if (!s || s === 'undefined' || s === 'null') return '';
+
+    // 執行洗淨
+    return s.replace(/[\s\[\]"']/g, '').toLowerCase();
 };
 
 window.isParentMatch = function (childPId, parentNode) {
@@ -33,13 +37,6 @@ window.localIsMenuDescendant = function (folderId, targetId, allMenus) {
     return false;
 };
 
-// ⭐️ 終極靜默器群組 (隱藏控制台惱人報錯)
-const originalConsoleError = console.error;
-console.error = function (...args) {
-    const msg = args.join(' ');
-    if (msg.includes('toLowerCase') || msg.includes('browserLink') || msg.includes('isDataTable')) return;
-    originalConsoleError.apply(console, args);
-};
 
 const originalConsoleWarn = console.warn;
 console.warn = function (...args) {
@@ -56,6 +53,75 @@ window.addEventListener('unhandledrejection', function (event) {
     const msg = event.reason ? (event.reason.message || event.reason.toString()) : '';
     if (msg.includes('toLowerCase') || msg.includes('browserLink')) event.preventDefault();
 }, true);
+
+// === 對齊 TEST_20260429.html:2525 的階層展開工具 ===
+window.getAllowedIdsWithHierarchy = function (menus, initialIds) {
+    let ids = new Set(initialIds);
+    let size = 0;
+    while (ids.size > size) {
+        size = ids.size;
+        menus.forEach(m => {
+            if (m.parentId && ids.has(m.parentId)) ids.add(m.id);
+            if (m.parentIds) m.parentIds.forEach(p => { if (ids.has(p)) ids.add(m.id); });
+        });
+    }
+    return ids;
+};
+
+// === 對齊 TEST_20260429.html:2565 的權限判定（admin 全開；user 視 createdBy / manageableMenus / 委派祖先） ===
+window.getMenuPermissions = function (nodeId, nodeCreatedBy) {
+    let perms = { canView: false, canEdit: false, canDelete: false, canAddChild: false, canManageStructure: false };
+    if (!currentUser) return perms;
+    if (currentUser.roleLevel === 'admin') return { canView: true, canEdit: true, canDelete: true, canAddChild: true, canManageStructure: true };
+
+    const isMyOwn = (nodeCreatedBy && window.cleanId(nodeCreatedBy) === window.cleanId(currentUser.id));
+    const manage = currentUser.manageableMenus || [];
+    const isDelegatedNode = manage.some(m => window.cleanId(m) === window.cleanId(nodeId));
+
+    const menus = getCustomMenus();
+    function isUnderDelegated(nId) {
+        if (!manage || manage.length === 0) return false;
+        let queue = [nId]; let visited = new Set();
+        while (queue.length > 0) {
+            let curr = queue.shift();
+            if (manage.some(m => window.cleanId(m) === window.cleanId(curr))) return true;
+            visited.add(window.cleanId(curr));
+            let m = menus.find(x => window.cleanId(x.id) === window.cleanId(curr));
+            if (m) {
+                if (m.parentId && !visited.has(window.cleanId(m.parentId))) queue.push(m.parentId);
+                if (m.parentIds) m.parentIds.forEach(p => { if (!visited.has(window.cleanId(p))) queue.push(p); });
+            }
+        }
+        return false;
+    }
+
+    const canTouch = isMyOwn || isDelegatedNode || isUnderDelegated(nodeId);
+    return {
+        canView: true,
+        canEdit: canTouch,
+        canDelete: canTouch,
+        canAddChild: canTouch,
+        canManageStructure: canTouch
+    };
+};
+
+// === 對齊 TEST_20260429.html 的 toggleSubMenu，自製 collapse 開合（取代 Bootstrap data-bs-toggle 觸發器）===
+window.toggleSubMenu = function (e, targetId, element) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    const target = document.getElementById(targetId);
+    if (!target || !element) return;
+    if (target.classList.contains('show')) {
+        target.classList.remove('show');
+        target.style.display = 'none';
+        element.classList.add('collapsed');
+        element.setAttribute('aria-expanded', 'false');
+    } else {
+        target.classList.add('show');
+        target.style.display = 'block';
+        element.classList.remove('collapsed');
+        element.setAttribute('aria-expanded', 'true');
+    }
+};
 
 // 防呆小幫手：安全摧毀 DataTable
 function safeDestroyDataTable(tableId) {
@@ -91,7 +157,7 @@ function renderSidebarMenus() {
         if (!Array.isArray(rawMenus)) rawMenus = [];
         let menus = JSON.parse(JSON.stringify(rawMenus)).filter(m => m && window.cleanId(m.id) !== '');
         let pSets = currentLayoutMode === 'personal' ? getPersonalSettings(currentUser.id) : {};
-        const cCurrentFab = window.cleanId(currentFab);
+        const cCurrentFab = window.cleanId(window.currentFab || currentFab);
         const fabsList = getFabs();
         const currentFabObj = fabsList.find(f => window.cleanId(f.fabName || f.FabName || f.id || f.fabId || f.FabId) === cCurrentFab);
 
@@ -147,18 +213,27 @@ function renderSidebarMenus() {
             });
         }
 
+        const inPersonalMode = (currentLayoutMode === 'personal');
         let validMenus = menus.filter(m => {
             let cId = window.cleanId(m.id);
             if (!cId || !allowedSet.has(cId)) return false;
-            if (currentUser.roleLevel !== 'admin' && m.enabled === false) return false;
+            // 系統模式下 admin 可看全部；自訂模式下 admin 也要遵守自己設定的隱藏（個人視角）
+            if (m.enabled === false) {
+                if (currentUser.roleLevel === 'admin' && !inPersonalMode) {
+                    // admin 在系統模式：保留 disabled 項目顯示
+                } else {
+                    return false;
+                }
+            }
             return true;
         });
 
-        if (validMenus.length === 0 && menus.length > 0 && currentUser.roleLevel === 'admin') validMenus = menus.filter(m => m && window.cleanId(m.id) !== '');
+        if (validMenus.length === 0 && menus.length > 0 && currentUser.roleLevel === 'admin' && !inPersonalMode) {
+            validMenus = menus.filter(m => m && window.cleanId(m.id) !== '');
+        }
         menus = validMenus;
 
         // ⭐️ 核心修復：強制將「群組權限」決定的看板組合順序，覆寫回全域的看板順序中！
-        // 這樣不僅導覽列會即時反映變化，當觸發 syncDataToDB 儲存至資料庫時，順序也會永久鎖定，不會再跳回原本的組合。
         if (currentLayoutMode === 'system') {
             let orderCounter = 10;
             // 去除重複的看板 ID，確保唯一性
@@ -268,11 +343,10 @@ function renderSidebarMenus() {
         const sidebarContainer = document.getElementById('dynamic-sidebar-menus');
         if (sidebarContainer) sidebarContainer.innerHTML = html;
 
-    } catch (err) { }
+    } catch (err) { console.error("renderSidebarMenus error", err); }
 }
 
-
-function generateSidebarMenuItem(menu, allMenus, level, forceExpand = true) { // ⭐️ 修正：預設值強制為 true，所有目錄預設全開！
+function generateSidebarMenuItem(menu, allMenus, level, forceExpand = true) {
     if (!menu || !menu.id) return '';
     const subMenus = allMenus.filter(m => m.id !== menu.id && (window.isParentMatch(m.parentId, menu) || (m.parentIds || []).some(pid => window.isParentMatch(pid, menu))));
     subMenus.sort((a, b) => (a.parentOrders?.[menu.id] ?? a.order ?? 0) - (b.parentOrders?.[menu.id] ?? b.order ?? 0));
@@ -326,224 +400,277 @@ function generateSidebarMenuItem(menu, allMenus, level, forceExpand = true) { //
     }
 }
 
-
-// ⭐️ 新增：物理展開/收合控制器 (保證 100% 絕對能開能關，不受外部套件干擾)
-window.toggleSubMenu = function (e, targetId, element) {
-    e.preventDefault();
-    e.stopPropagation();
-    const targetEl = document.getElementById(targetId);
-    if (!targetEl) return;
-
-    // 不依賴 Bootstrap，直接暴力操作 DOM
-    const isShowing = targetEl.classList.contains('show');
-    if (isShowing) {
-        // 執行手動收合
-        targetEl.classList.remove('show');
-        targetEl.style.display = 'none';
-        element.classList.add('collapsed');
-        element.setAttribute('aria-expanded', 'false');
-    } else {
-        // 執行手動展開
-        targetEl.classList.add('show');
-        targetEl.style.display = 'block';
-        element.classList.remove('collapsed');
-        element.setAttribute('aria-expanded', 'true');
-    }
-};
-
-function renderHomeDashboard() {
+// ⭐️ 補回遺失的首頁儀表板渲染邏輯
+window.renderHomeDashboard = function () {
     try {
         if (!currentUser) return;
-        const nameEl = document.getElementById('user-name'); if (nameEl) nameEl.innerText = currentUser.id;
-        const roleEl = document.getElementById('user-role');
-        const loginCount = currentUser.loginCount || 1;
-        if (roleEl) roleEl.innerHTML = `這是您第 <span style="color: #38bdf8; font-weight: 800; font-size: 0.75rem;">${loginCount}</span> 次登入`;
-
-        const dropName = document.getElementById('dropdown-user-name'); if (dropName) dropName.innerText = `${currentUser.name} (${currentUser.id})`;
-        const dropDept = document.getElementById('dropdown-user-dept'); if (dropDept) dropDept.innerText = currentUser.department || '未設定部門';
-        const dropCount = document.getElementById('dropdown-user-login-count'); if (dropCount) dropCount.innerText = `${currentUser.loginCount || 1} 次`;
-        const dropTime = document.getElementById('dropdown-user-login-time'); if (dropTime) dropTime.innerText = currentUser.currentLoginTime || '00:00 AM';
-
-        let displayDName = currentFab;
-        const fabsList = getFabs();
-        const currentFabObj = fabsList.find(f => window.cleanId(f.fabName || f.FabName || f.id || f.fabId || f.FabId) === window.cleanId(currentFab));
-        if (currentFabObj) displayDName = currentFabObj.displayName || currentFabObj.DisplayName || currentFabObj.fabName || currentFabObj.FabName || currentFab;
-
-        const currentFabEl = document.getElementById('current-fab-name'); if (currentFabEl) currentFabEl.innerText = displayDName || '未選擇';
-        const homeRole = document.getElementById('home-role-title'); const homeRoleLvl = document.getElementById('home-role-level');
+        const homeRole = document.getElementById('home-role-title');
+        const homeRoleLvl = document.getElementById('home-role-level');
         if (homeRole) homeRole.innerText = currentUser.roleLevel === 'admin' ? '系統管理員' : '一般使用者';
         if (homeRoleLvl) homeRoleLvl.innerText = currentUser.roleLevel === 'admin' ? '(Admin)' : '(User)';
-        const homeFab = document.getElementById('home-fab-display'); if (homeFab) homeFab.innerText = displayDName;
-    } catch (e) { }
-}
 
-function renderFabSwitcher() {
-    try {
-        const fabs = getFabs(); const container = document.getElementById('fab-dropdown-menu');
-        if (container) {
-            container.innerHTML = fabs.map(f => {
-                const fName = f.fabName || f.FabName || f.id || f.fabId || f.FabId || '未命名廠區';
-                const dName = f.displayName || f.DisplayName || fName;
-                const isActive = window.cleanId(currentFab) === window.cleanId(fName);
-                return `<li><a class="dropdown-item py-1 fw-bold cursor-pointer d-flex justify-content-between align-items-center ${isActive ? 'active bg-light text-primary' : ''}" onclick="switchFab('${fName}')">${dName} ${isActive ? '<i class="fas fa-check"></i>' : ''}</a></li>`;
-            }).join('');
+        const fabs = getFabs();
+        let currentFabObj = fabs.find(f => window.cleanId(f.fabName || f.FabName || f.id || f.fabId || f.FabId) === window.cleanId(window.currentFab));
+        let displayDName = currentFabObj ? (currentFabObj.displayName || currentFabObj.DisplayName || currentFabObj.fabName || currentFabObj.FabName) : window.currentFab;
+
+        const homeFab = document.getElementById('home-fab-display');
+        if (homeFab) homeFab.innerText = displayDName;
+
+        // 同步右上角頭像下拉的使用者資訊（對齊 TEST_20260429.html:2917-2930）
+        if (typeof window.renderUserDropdown === 'function') window.renderUserDropdown();
+    } catch (e) { console.error("renderHomeDashboard error", e); }
+};
+
+// 右上角使用者下拉資訊（姓名、部門、累積登入次數、本次登入時間）
+window.renderUserDropdown = function () {
+    if (!currentUser) return;
+    const setText = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
+    const setHtml = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+
+    setText('user-name', currentUser.id || '');
+    const loginCount = currentUser.loginCount || 1;
+    setHtml('user-role',
+        '這是您第 <span style="color:#38bdf8; font-weight:800; font-size:0.75rem;">' + loginCount + '</span> 次登入');
+
+    setText('dropdown-user-name', (currentUser.name || '') + ' (' + (currentUser.id || '') + ')');
+    setText('dropdown-user-dept', currentUser.department || '未設定部門');
+    setText('dropdown-user-login-count', loginCount + ' 次');
+    setText('dropdown-user-login-time', currentUser.currentLoginTime || '00:00 AM');
+};
+// =========================================================================
+// ⭐️ 無敵雙重容錯版：自動相容各種 HTML ID 命名，且直接讀取底層記憶體！
+// =========================================================================
+window.renderFabSwitcher = function () {
+    // ⭐️ 核心修正 1：雙重 ID 尋找機制！不論您 HTML 裡面叫 dropdown 還是 switcher 都能抓到
+    const fabMenu = document.getElementById('fab-dropdown-menu') || document.getElementById('fab-switcher-menu');
+    const fabNameDisplay = document.getElementById('current-fab-name') || document.getElementById('current-fab-display');
+    const homeFabDisplay = document.getElementById('home-fab-display');
+
+    if (!fabMenu) {
+        console.error("🚨 找不到廠區下拉容器，請確認 index.html 裡面有 id='fab-dropdown-menu'");
+        return;
+    }
+
+    // ⭐️ 核心修正 2：不呼叫函式，直接深入系統全域變數讀出資料 (防堵 is not a function 錯誤)
+    const fabs = (window.appState && window.appState.fabs) ? window.appState.fabs : [];
+
+    fabMenu.innerHTML = '';
+
+    if (fabs.length === 0) {
+        fabMenu.innerHTML = '<li><span class="dropdown-item text-muted px-3 py-2"><i class="fas fa-exclamation-circle me-1"></i>無可用廠區資料</span></li>';
+        return;
+    }
+
+    // 初始化預設廠區
+    if (!window.currentFab) {
+        const first = fabs[0];
+        window.currentFab = first.fabName || first.FabName || first.id || first.fabId || first.FabId;
+    }
+
+    // 尋找目前的廠區物件以取得顯示名稱
+    const currentFabObj = fabs.find(f =>
+        window.cleanId(f.fabName || f.FabName || f.id || f.fabId || f.FabId) === window.cleanId(window.currentFab)
+    );
+    const displayDName = currentFabObj
+        ? (currentFabObj.displayName || currentFabObj.DisplayName || currentFabObj.fabName || currentFabObj.FabName)
+        : window.currentFab;
+
+    if (fabNameDisplay) fabNameDisplay.innerText = displayDName;
+    if (homeFabDisplay) homeFabDisplay.innerText = displayDName;
+
+    // 動態產生選單項目
+    fabs.forEach(f => {
+        const fName = f.fabName || f.FabName || f.id || f.fabId || f.FabId;
+        const dName = f.displayName || f.DisplayName || fName;
+        const isCurrent = window.cleanId(fName) === window.cleanId(window.currentFab);
+
+        fabMenu.innerHTML += `
+          <li>
+            <a class="dropdown-item py-2 fw-bold d-flex justify-content-between align-items-center ${isCurrent ? 'bg-primary text-white' : ''}"
+               href="#"
+               data-fab="${String(fName).replace(/"/g, '&quot;')}">
+              <span><i class="fas fa-industry me-2 small ${isCurrent ? 'text-white' : 'text-secondary'}"></i>${dName}</span>
+              ${isCurrent ? '<i class="fas fa-check ms-2"></i>' : ''}
+            </a>
+          </li>
+        `;
+    });
+
+    // 綁定點擊事件 (精準攔截 a 標籤內的所有點擊)
+    if (!fabMenu.hasAttribute('data-fab-bound')) {
+        fabMenu.setAttribute('data-fab-bound', '1');
+        fabMenu.addEventListener('click', function (e) {
+            const a = e.target.closest('a[data-fab]');
+            if (!a) return;
+ 
+            e.preventDefault();
+            // ✅ 不要 stopPropagation，讓 Bootstrap 的自動收合機制可以運作
+            // e.stopPropagation();
+ 
+            const selectedFab = a.getAttribute('data-fab');
+            window.switchFab(selectedFab);
+ 
+            // ✅ 手動保險收合（就算別的地方擋掉，也一定會關）
+            const dropdownBtn = fabMenu.closest('.dropdown')?.querySelector('button[data-bs-toggle="dropdown"]');
+            if (dropdownBtn && window.bootstrap?.Dropdown) {
+                bootstrap.Dropdown.getOrCreateInstance(dropdownBtn).hide();
+            }
+        });
+ 
+    }
+};
+ 
+// ⭐️ 廠區切換引擎
+window.switchFab = function (fabName) {
+    if (!fabName) return;
+    if (window.cleanId(window.currentFab) === window.cleanId(fabName)) return;
+ 
+    window.currentFab = fabName;
+    try { currentFab = fabName; } catch (e) { }   // ✅ 關鍵：舊程式仍用 currentFab
+    // (removed verbose console.log)
+ 
+    // 同樣直接抓底層記憶體，迴避所有潛在讀取錯誤
+    const fabs = (window.appState && window.appState.fabs) ? window.appState.fabs : [];
+
+    const fabObj = fabs.find(f => window.cleanId(f.fabName || f.FabName || f.id || f.fabId || f.FabId) === window.cleanId(fabName));
+    if (fabObj) {
+        const dLang = fabObj.defaultLang || fabObj.DefaultLang;
+        if (dLang && typeof changeLanguage === 'function') {
+            changeLanguage(dLang);
         }
-        const currentFabObj = fabs.find(f => window.cleanId(f.fabName || f.FabName || f.id || f.fabId || f.FabId) === window.cleanId(currentFab));
-        let displayDName = currentFab;
-        if (currentFabObj) displayDName = currentFabObj.displayName || currentFabObj.DisplayName || currentFabObj.fabName || currentFabObj.FabName || currentFab;
+    }
 
-        const displayEl = document.getElementById('current-fab-display');
-        if (displayEl) displayEl.innerText = displayDName;
-        if (container && container.previousElementSibling && container.previousElementSibling.classList.contains('dropdown-toggle')) {
-            const toggleSpan = container.previousElementSibling.querySelector('span');
-            if (toggleSpan && toggleSpan !== displayEl) toggleSpan.innerText = displayDName;
-        }
-    } catch (e) { console.error("renderFabSwitcher 錯誤:", e); }
-}
-
-function switchFab(fabName) {
-    currentFab = fabName;
-    const fabObj = getFabs().find(f => window.cleanId(f.fabName || f.FabName || f.id || f.fabId || f.FabId) === window.cleanId(fabName));
-    if (fabObj) { const dLang = fabObj.defaultLang || fabObj.DefaultLang; if (dLang) changeLanguage(dLang); }
-    if (typeof renderSidebarMenus === 'function') renderSidebarMenus();
-    if (typeof renderHomeDashboard === 'function') renderHomeDashboard();
     if (typeof renderFabSwitcher === 'function') renderFabSwitcher();
-    goDefaultHome();
-}
+    if (typeof renderHomeDashboard === 'function') renderHomeDashboard();
+    if (typeof renderSidebarMenus === 'function') renderSidebarMenus();
 
-function renderPersonalMenuManage() {
-    const container = document.getElementById('personalMenuManageContainer'); if (!container) return;
-    if (!currentUser) { container.innerHTML = '<div class="alert alert-warning">請先登入</div>'; return; }
-
-    const fabs = getFabs(); const roles = getRoles(); const menus = getCustomMenus();
-    const userRoles = currentUser.assignedRoles || currentUser.AssignedRoles || [];
-
-    window.tempDefaultPages = window.tempDefaultPages || Object.assign({}, currentUser.defaultPages || {});
-    window.tempHiddenRoles = window.tempHiddenRoles || [];
-
-    let html = `<h5 class="fw-bold"><i class="fas fa-industry text-primary me-2"></i>第一步：選擇預設顯示廠區</h5><div class="card mb-4 border-0 shadow-sm"><div class="card-body"><div class="d-flex flex-wrap gap-4">`;
-    let globalDefaultFab = window.tempDefaultPages['global'] || currentUser.defaultPage || (fabs.length > 0 ? window.cleanId(fabs[0].id || fabs[0].FabId || fabs[0].fabId) : '');
-
-    fabs.forEach(fab => {
-        let fId = window.cleanId(fab.id || fab.FabId || fab.fabId);
-        let fName = fab.displayName || fab.DisplayName || fab.fabName || fab.FabName;
-        let isChecked = (globalDefaultFab === fId) ? 'checked' : '';
-        html += `<div class="form-check"><input class="form-check-input" type="radio" name="global_def_fab" id="g_def_fab_${fId}" value="${fId}" ${isChecked} onchange="window.tempDefaultPages['global'] = this.value;"><label class="form-check-label fw-bold" style="cursor:pointer;" for="g_def_fab_${fId}">${fName}</label></div>`;
-    });
-    html += `</div></div></div>`;
-
-    html += `<h5 class="mt-4 fw-bold"><i class="fas fa-layer-group text-primary me-2"></i>第二步：選擇可視的群組版面</h5><div class="card mb-4 border-0 shadow-sm"><div class="card-body"><div class="d-flex flex-wrap gap-4">`;
-    userRoles.forEach(roleId => {
-        let rId = window.cleanId(roleId);
-        let roleObj = roles.find(r => window.cleanId(r.id || r.RoleId || r.roleId) === rId);
-        let rName = roleObj ? (roleObj.groupName || roleObj.GroupName || roleObj.name) : roleId;
-        let isChecked = !window.tempHiddenRoles.includes(rId) ? 'checked' : '';
-        html += `<div class="form-check form-switch fs-6"><input class="form-check-input role-visibility-cb" type="checkbox" id="vis_role_${rId}" value="${rId}" ${isChecked} onchange="toggleRoleVisibility('${rId}')"><label class="form-check-label fw-bold" style="cursor:pointer;" for="vis_role_${rId}">${rName}</label></div>`;
-    });
-    html += `</div></div></div>`;
-
-    html += `<h5 class="mt-4 fw-bold"><i class="fas fa-list-check text-primary me-2"></i>第三步：設定各廠區預設首頁與選單顯示 (可拖曳排序)</h5><div class="card border-0 shadow-sm"><div class="card-body"><ul class="nav nav-tabs mb-3" id="personalFabTabs" role="tablist">`;
-    let firstFab = true;
-    fabs.forEach(fab => {
-        let fId = window.cleanId(fab.id || fab.FabId || fab.fabId);
-        let fName = fab.displayName || fab.DisplayName || fab.fabName || fab.FabName;
-        html += `<li class="nav-item" role="presentation"><button class="nav-link ${firstFab ? 'active' : ''} fw-bold" id="tab-${fId}" data-bs-toggle="tab" data-bs-target="#pane-${fId}" type="button" role="tab">${fName}</button></li>`;
-        firstFab = false;
-    });
-    html += `</ul><div class="tab-content" id="personalFabTabsContent">`;
-    firstFab = true;
-
-    fabs.forEach(fab => {
-        let fId = window.cleanId(fab.id || fab.FabId || fab.fabId);
-        html += `<div class="tab-pane fade ${firstFab ? 'show active' : ''}" id="pane-${fId}" role="tabpanel"><div class="list-group sortable-personal-menu-list" data-fab="${fId}">`;
-
-        let allowedMenuIds = new Set();
-        userRoles.forEach(roleId => {
-            let rId = window.cleanId(roleId);
-            if (window.tempHiddenRoles.includes(rId)) return;
-            let roleObj = roles.find(r => window.cleanId(r.id || r.RoleId || r.roleId) === rId);
-            if (roleObj) {
-                let mList = roleObj.menus || roleObj.Menus || roleObj.allowedMenuIds || [];
-                mList.forEach(m => allowedMenuIds.add(window.cleanId(m)));
-            }
-        });
-
-        let personalHidden = currentUser.hiddenMenus || currentUser.HiddenMenus || [];
-        if (typeof personalHidden === 'string') personalHidden = personalHidden.split(',');
-        personalHidden = personalHidden.map(window.cleanId);
-
-        let personalSort = currentUser.menuSortOrder || currentUser.MenuSortOrder || {};
-        let currentFabSort = personalSort[fId] || [];
-
-        let fabMenus = menus.filter(m => {
-            let mId = window.cleanId(m.id || m.MenuId || m.menuId);
-            let mode = (m.menuMode || m.MenuMode || '').toLowerCase();
-            return allowedMenuIds.has(mId) && mode !== 'folder';
-        });
-
-        fabMenus.sort((a, b) => {
-            let aId = window.cleanId(a.id || a.MenuId || a.menuId);
-            let bId = window.cleanId(b.id || b.MenuId || b.menuId);
-            let idxA = currentFabSort.indexOf(aId); let idxB = currentFabSort.indexOf(bId);
-            if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-            if (idxA !== -1) return -1; if (idxB !== -1) return 1; return 0;
-        });
-
-        if (fabMenus.length === 0) {
-            html += `<div class="text-muted p-3 text-center"><i class="fas fa-info-circle me-2"></i>此廠區/群組下無可顯示的選單</div>`;
-        } else {
-            let defPage = window.tempDefaultPages[fId] || '';
-            if (!defPage && fabMenus.length > 0) {
-                let firstVisible = fabMenus.find(m => !personalHidden.includes(window.cleanId(m.id || m.MenuId || m.menuId)));
-                defPage = firstVisible ? window.cleanId(firstVisible.id || firstVisible.MenuId || firstVisible.menuId) : '';
-            }
-
-            fabMenus.forEach(m => {
-                let mId = window.cleanId(m.id || m.MenuId || m.menuId);
-                let mName = m.displayName || m.DisplayName || m.sysName || m.SysName;
-                let isHidden = personalHidden.includes(mId);
-                let isChecked = !isHidden ? 'checked' : '';
-                let isDefault = (defPage === mId) ? 'checked' : '';
-
-                html += `
-                    <div class="list-group-item d-flex align-items-center justify-content-between personal-menu-item" data-id="${mId}">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-grip-vertical text-muted me-3 drag-handle" style="cursor: grab; font-size: 1.2rem;"></i>
-                            <span class="fw-bold text-dark">${mName}</span>
-                        </div>
-                        <div class="d-flex align-items-center gap-4">
-                            <div class="form-check mb-0">
-                                <input class="form-check-input def-page-radio" type="radio" name="def_page_${fId}" id="def_${fId}_${mId}" value="${mId}" ${isDefault} onchange="window.tempDefaultPages['${fId}'] = this.value;">
-                                <label class="form-check-label text-secondary" style="cursor:pointer;" for="def_${fId}_${mId}">預設首頁</label>
-                            </div>
-                            <div class="form-check form-switch mb-0">
-                                <input class="form-check-input vis-switch" type="checkbox" id="vis_${fId}_${mId}" ${isChecked}>
-                                <label class="form-check-label text-secondary" style="cursor:pointer;" for="vis_${fId}_${mId}">顯示</label>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
+    const isSystemSettings = window.currentActiveTopMenuId === 'system_settings';
+    if (window.currentLayoutMode === 'system' && !isSystemSettings) {
+        if (typeof goDefaultHome === 'function') {
+            goDefaultHome();
         }
-        html += `</div></div>`;
-        firstFab = false;
-    });
+    }
+};
+// === 對齊 TEST_20260429.html:3675 個人頁面管理（樹狀展開 + 顯示開關 + 拖曳） ===
+function renderPersonalMenuManage() {
+    try {
+        if (typeof $ !== 'undefined' && $.fn && $.fn.DataTable && $.fn.DataTable.isDataTable('#dtPersonalMenu')) {
+            $('#dtPersonalMenu').DataTable().destroy();
+        }
 
-    html += `</div></div></div>`;
-    container.innerHTML = html;
+        const tbody = document.getElementById('personalMenuTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        if (!currentUser) return;
 
-    if (typeof Sortable !== 'undefined') {
-        document.querySelectorAll('.sortable-personal-menu-list').forEach(el => {
-            new Sortable(el, { handle: '.drag-handle', animation: 150, ghostClass: 'bg-light' });
+        const fabs = getFabs();
+        const currentFabObj = fabs.find(f => window.cleanId(f.fabName || f.FabName) === window.cleanId(currentFab));
+        if (!currentFabObj) return;
+
+        const roles = getRoles();
+        const menusData = getCustomMenus();
+        const fabRoleIds = currentFabObj.assignedRoles || currentFabObj.AssignedRoles || [];
+        const userRoleIds = currentUser.assignedRoles || currentUser.AssignedRoles || [];
+        const activeRoleIds = (currentUser.roleLevel === 'admin')
+            ? fabRoleIds
+            : fabRoleIds.filter(id => userRoleIds.some(uId => window.cleanId(uId) === window.cleanId(id)));
+
+        let initialMenuIds = [];
+        activeRoleIds.forEach(roleId => {
+            const role = roles.find(r => window.cleanId(r.id || r.RoleId) === window.cleanId(roleId));
+            if (role && (role.allowedMenuIds || role.AllowedMenuIds)) {
+                initialMenuIds.push(...(role.allowedMenuIds || role.AllowedMenuIds));
+            }
         });
+
+        let allowedIds = window.getAllowedIdsWithHierarchy(menusData, initialMenuIds);
+        let menus = JSON.parse(JSON.stringify(menusData)).filter(m => allowedIds.has(m.id));
+        let pSets = getPersonalSettings(currentUser.id);
+        menus.forEach(m => { m.order = (pSets[m.id] && pSets[m.id].order != null) ? pSets[m.id].order : (m.order || 999); });
+        menus.sort((a, b) => a.order - b.order);
+
+        const noDrag = `onmouseenter="this.closest('tr').setAttribute('draggable', false)" onmouseleave="this.closest('tr').setAttribute('draggable', true)"`;
+
+        const renderRow = (menu, level, parentId, grandParentId) => {
+            const pSet = pSets[menu.id] || {};
+            const isHidden = pSet.hidden === true;
+            const currentTarget = pSet.target || menu.target || 'iframe';
+            const pad = level === 1 ? 'ps-4' : (level === 2 ? 'ps-5 ms-3' : 'ps-3');
+            const children = menus.filter(m => m.parentId === menu.id || (m.parentIds && m.parentIds.includes(menu.id)));
+            const isExpanded = expandedPerMenuIds.has(menu.id);
+
+            const toggleIcon = children.length > 0
+                ? `<span ${noDrag}><button type="button" onclick="togglePerMenuRow('${menu.id}')" class="chevron-btn text-secondary me-2 border-0 bg-transparent"><i class="fas fa-chevron-${isExpanded ? 'down' : 'right'}"></i></button></span>`
+                : `<span class="chevron-btn text-muted me-2" style="cursor: default; opacity:0.3; padding: 0 10px;"><i class="fas fa-minus"></i></span>`;
+
+            let isVisible = true;
+            if (level === 1 && !expandedPerMenuIds.has(parentId)) isVisible = false;
+            if (level === 2 && (!expandedPerMenuIds.has(parentId) || !expandedPerMenuIds.has(grandParentId))) isVisible = false;
+
+            const iconHtml = generateIconHtml(menu.icon, isHidden ? 'text-muted' : 'text-primary', 'me-2 fs-6', menu.menuMode === 'folder');
+            const toggle = `<div class="form-check form-switch m-0 d-flex justify-content-center" ${noDrag}><input class="form-check-input cursor-pointer" type="checkbox" onchange="togglePersonalProp('${menu.id}', 'hidden', !this.checked)" ${!isHidden ? 'checked' : ''} title="顯示/隱藏"></div>`;
+            const configMap = {
+                'iframe': '<span class="text-primary fw-bold small">畫面內嵌</span>',
+                'blank': '<span class="text-info fw-bold small">另開新分頁</span>',
+                'fullscreen': '<span class="text-success fw-bold small">全螢幕</span>'
+            };
+            const configHtml = children.length > 0 ? '<span class="text-muted">-</span>' : (configMap[currentTarget] || configMap['iframe']);
+
+            const trAttr = `draggable="true" ondragstart="handleDragStart(event, '${menu.id}', '${parentId || ''}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '${menu.id}', '${parentId || ''}', 'personal')"`;
+            const levelMap = { 0: '主選單', 1: '子選單', 2: '次子選單' };
+
+            let dName = menu.displayName || menu.name || '未命名選單';
+            if (typeof i18n !== 'undefined' && i18n[currentLang] && i18n[currentLang]['dyn_' + menu.id] && !menu.isEdited) {
+                dName = i18n[currentLang]['dyn_' + menu.id];
+            }
+
+            const col1Html = `
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-grip-vertical text-muted me-2" style="cursor: grab;" title="拖曳排序"></i>
+                    ${toggleIcon}
+                    <div style="width:24px; text-align:center;">${iconHtml}</div>
+                    <div class="ms-2 text-start lh-sm">
+                        <div class="fw-bold text-dark ${isHidden ? 'text-decoration-line-through text-muted' : ''}">${dName}</div>
+                    </div>
+                </div>
+            `;
+
+            tbody.innerHTML += `<tr style="${isVisible ? '' : 'display: none;'}" ${trAttr} class="draggable-row ${isHidden ? 'opacity-50' : ''}">
+                <td class="text-start ${pad} align-middle">${col1Html}</td>
+                <td class="align-middle"><span class="badge badge-pill-outline px-3 text-secondary">${levelMap[level]}</span></td>
+                <td class="align-middle">${toggle}</td>
+                <td class="text-start align-middle">${configHtml}</td>
+                <td class="text-center align-middle" ${noDrag}><button class="action-btn edit btn btn-sm btn-outline-primary" onclick="editPersonalMenu('${menu.id}')"><i class="fas fa-edit"></i></button></td>
+            </tr>`;
+
+            children.forEach(child => renderRow(child, level + 1, menu.id, parentId));
+        };
+
+        menus.filter(m => m.isPoolItem === false && !m.parentId && (!m.parentIds || m.parentIds.length === 0))
+            .forEach(root => renderRow(root, 0, '', ''));
+
+        initDataTable('dtPersonalMenu', false);
+    } catch (err) {
+        console.error("renderPersonalMenuManage error", err);
     }
 }
 
-window.toggleRoleVisibility = function (roleId) {
-    window.tempHiddenRoles = window.tempHiddenRoles || [];
-    const cb = document.getElementById(`vis_role_${roleId}`);
-    if (cb && !cb.checked) { if (!window.tempHiddenRoles.includes(roleId)) window.tempHiddenRoles.push(roleId); }
-    else { window.tempHiddenRoles = window.tempHiddenRoles.filter(id => id !== roleId); }
+// 顯示/隱藏：寫 LocalStorage + 自動同步至 DB
+window.togglePersonalProp = function (menuId, prop, value) {
+    let pSets = getPersonalSettings(currentUser.id);
+    if (!pSets[menuId]) pSets[menuId] = {};
+    pSets[menuId][prop] = value;
+    savePersonalSettings(currentUser.id, pSets);
+    if (typeof syncDataToDB === 'function') syncDataToDB();
+    if (typeof renderPersonalMenuManage === 'function') renderPersonalMenuManage();
+    if (typeof renderSidebarMenus === 'function') renderSidebarMenus();
+};
+
+// 列展開/收合（對齊舊版 togglePerMenuRow）
+window.togglePerMenuRow = function (menuId) {
+    if (expandedPerMenuIds.has(menuId)) expandedPerMenuIds.delete(menuId);
+    else expandedPerMenuIds.add(menuId);
+    isPerAllExpanded = false;
     if (typeof renderPersonalMenuManage === 'function') renderPersonalMenuManage();
 };
 
@@ -614,24 +741,53 @@ function renderAccountTable() {
 
 function renderWebpageTable() {
     safeDestroyDataTable('dtWebpage'); const tbody = document.getElementById('webpageTableBody'); if (!tbody) return; tbody.innerHTML = '';
-    const menus = getCustomMenus().filter(m => String(m.menuMode || m.MenuMode).toLowerCase() !== 'folder' && String(m.isPoolItem || m.IsPoolItem).toLowerCase() !== 'true');
+    // 對齊 TEST_20260429.html:3800 — 只列出「池中項目 (isPoolItem === true)」，依 order 排序
+    const menus = getCustomMenus()
+        .filter(m => String(m.isPoolItem || m.IsPoolItem).toLowerCase() === 'true')
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
     menus.forEach(m => {
+        const perms = window.getMenuPermissions(m.id || m.MenuId, m.createdBy || m.CreatedBy);
+        if (!perms.canView) return;
         const mEnabled = m.enabled !== undefined ? m.enabled : (m.IsEnabled !== undefined ? m.IsEnabled : true);
         const mMode = m.menuMode || m.MenuMode; const mTarget = m.target || m.OpenTarget;
-        const mUrl = m.url || m.Url || m.targetPage || m.TargetPage || '#';
+        const mUrl = m.url || m.Url || m.targetPage || m.TargetPage || '';
         const mIcon = m.icon || m.Icon; const mId = m.id || m.MenuId;
         const mDName = m.displayName || m.DisplayName; const mSysName = m.name || m.SysName;
 
         let statusBadge = mEnabled ? '<span class="badge bg-success">啟用</span>' : '<span class="badge bg-secondary">停用</span>';
-        let typeBadge = mMode === 'app_grid' ? '<span class="badge bg-info text-dark border"><i class="fas fa-th-large"></i> 應用集合</span>' : '<span class="badge bg-light text-dark border"><i class="fas fa-link"></i> 網頁連結</span>';
-        let targetTxt = mTarget === 'iframe' ? '嵌入網頁' : (mTarget === 'fullscreen' ? '全螢幕' : '另開分頁');
-        let linkTxt = mMode === 'app_grid' ? '<span class="text-muted small">內部元件</span>' : `<a href="${mUrl}" target="_blank" class="small text-truncate d-inline-block" style="max-width:200px;">${mUrl}</a>`;
+        let typeBadge = mMode === 'app_grid'
+            ? '<span class="badge bg-info text-dark border"><i class="fas fa-th-large"></i> 應用集合</span>'
+            : '<span class="badge bg-light text-dark border"><i class="fas fa-link"></i> 網頁連結</span>';
+
+        // 開啟模式（第一行）
+        const targetMap = {
+            'iframe': '<span class="text-secondary fw-bold small"><i class="fas fa-columns me-1"></i> 畫面內嵌</span>',
+            'blank': '<span class="text-primary fw-bold small"><i class="fas fa-external-link-alt me-1"></i> 另開新分頁</span>',
+            'fullscreen': '<span class="text-success fw-bold small"><i class="fas fa-expand me-1"></i> 全螢幕</span>'
+        };
+        const targetHtml = mMode === 'app_grid' ? '<span class="text-muted small">-</span>' : (targetMap[mTarget] || targetMap['iframe']);
+
+        // 網址（第二行，完整顯示、會自動換行；word-break 避免長網址撐破版面）
+        const urlHtml = mMode === 'app_grid'
+            ? '<span class="text-success fw-bold small">內部應用集合區</span>'
+            : (mUrl
+                ? `<a href="${mUrl}" target="_blank" class="small text-decoration-none" style="word-break:break-all;"><i class="fas fa-info-circle text-secondary me-1"></i>${mUrl}</a>`
+                : '<span class="text-muted small">無設定路徑</span>');
+
+        const pathCellHtml = `
+            <div class="d-flex flex-column align-items-start gap-1">
+                <div>${targetHtml}</div>
+                <div class="text-start" style="word-break:break-all;">${urlHtml}</div>
+            </div>
+        `;
+
         let iconHtml = typeof generateIconHtml === 'function' ? generateIconHtml(mIcon, 'text-primary', 'me-2') : '';
 
         let actionBtns = `<div class="d-flex flex-nowrap justify-content-center gap-2"><button type="button" class="btn btn-sm btn-outline-primary" style="width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" onclick="event.stopPropagation(); openAddWebpageModal('${mId}');" title="編輯"><i class="fas fa-edit"></i></button><button type="button" class="btn btn-sm btn-outline-danger" style="width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" onclick="event.stopPropagation(); deleteWebpageItem('${mId}')" title="刪除"><i class="fas fa-trash-alt"></i></button></div>`;
-        tbody.innerHTML += `<tr class="draggable-row" draggable="true" ondragstart="handleDragStart(event, '${mId}', null)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '${mId}', null, 'webpage')"><td class="text-start ps-3 fw-bold text-dark align-middle"><i class="fas fa-grip-vertical text-muted me-2 opacity-50"></i>${iconHtml} ${mDName} <br><small class="text-muted fw-normal ms-4">${mSysName}</small></td><td class="align-middle">${typeBadge}</td><td class="align-middle">${statusBadge}</td><td class="text-start align-middle"><span class="badge bg-secondary me-1">${targetTxt}</span> ${linkTxt}</td><td class="text-center align-middle" style="white-space: nowrap; width: 1%;">${actionBtns}</td></tr>`;
+
+        tbody.innerHTML += `<tr class="draggable-row" draggable="true" ondragstart="handleDragStart(event, '${mId}', null)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '${mId}', null, 'webpage')"><td class="text-start ps-3 fw-bold text-dark align-middle"><i class="fas fa-grip-vertical text-muted me-2 opacity-50"></i>${iconHtml} ${mDName} <br><small class="text-muted fw-normal ms-4">${mSysName}</small></td><td class="align-middle">${typeBadge}</td><td class="align-middle">${statusBadge}</td><td class="text-start align-middle">${pathCellHtml}</td><td class="text-center align-middle" style="white-space: nowrap; width: 1%; vertical-align: middle;">${actionBtns}</td></tr>`;
     });
-    initDataTable('dtWebpage', false);
+    initDataTable('dtWebpage', true);
 }
 
 function renderMenuConfigTable() {
@@ -644,25 +800,13 @@ function renderMenuConfigTable() {
     });
     roots.sort((a, b) => (a.order || a.GlobalOrder || a.SortOrder || 0) - (b.order || b.GlobalOrder || b.SortOrder || 0));
 
-    function getDescendantBadges(parentId, allMenus) {
-        let badges = '';
-        let children = allMenus.filter(x => x.id !== parentId && (window.isParentMatch(x.parentId || x.ParentMenuId, { id: parentId }) || (x.parentIds || []).some(pid => window.isParentMatch(pid, { id: parentId }))));
-        children.sort((a, b) => (a.parentOrders?.[parentId] ?? a.order ?? a.GlobalOrder ?? 0) - (b.parentOrders?.[parentId] ?? b.order ?? b.GlobalOrder ?? 0));
-        children.forEach(child => {
-            let isFolder = (child.menuMode || child.MenuMode) === 'folder';
-            let icon = isFolder ? '<i class="fas fa-folder text-warning me-1"></i>' : '';
-            badges += `<span class="badge border border-secondary text-dark bg-white shadow-sm me-1 mb-1 fw-normal px-2 py-1">${icon}${child.displayName || child.DisplayName}</span>`;
-            if (isFolder) badges += getDescendantBadges(child.id || child.MenuId, allMenus);
-        });
-        return badges;
-    }
-
     // ⭐️ 遞迴取得所有子孫節點的膠囊 UI (加入 visited 防止無窮迴圈崩潰！)
     function getDescendantBadges(parentId, allMenus, visited = new Set()) {
         if (visited.has(parentId)) return '';
         visited.add(parentId);
 
         let badges = '';
+        // ⭐️ 修正處：將最後面的 { id parentId } 補上冒號變成 { id: parentId }
         let children = allMenus.filter(x => x.id !== parentId && (window.isParentMatch(x.parentId, { id: parentId }) || (x.parentIds || []).some(pid => window.isParentMatch(pid, { id: parentId }))));
         children.sort((a, b) => (a.parentOrders?.[parentId] ?? a.order ?? 0) - (b.parentOrders?.[parentId] ?? b.order ?? 0));
 
@@ -699,21 +843,28 @@ function renderMenuConfigTable() {
         }
         let actionBtns = `<div class="d-flex flex-nowrap justify-content-center gap-2">${actionBtnsHtml}</div>`;
 
-        let sysNameHtml = `<div class="fw-bold text-dark fs-6">${m.displayName}</div><div class="text-muted small">${m.name}</div>`;
+        const trAttr = `draggable="true" ondragstart="handleDragStart(event, '${m.id}', null)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '${m.id}', null, 'system')"`;
+
+        let sysNameHtml = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-grip-vertical text-muted me-2 opacity-50" style="cursor:grab;"></i>
+                <div>
+                    <div class="fw-bold text-dark fs-6">${m.displayName}</div>
+                    <div class="text-muted small">${m.name}</div>
+                </div>
+            </div>`;
 
         tbody.innerHTML += `
-        <tr>
-            <td class="text-start ps-3 align-middle">${sysNameHtml}</td>
-            <td class="align-middle">${typeBadge}</td>
-            <td class="align-middle">${statusSwitch}</td>
-            <td class="text-start align-middle" style="max-width: 400px; white-space: normal;">${contentTxt}</td>
-            <td class="text-center align-middle" style="white-space: nowrap; width: 1%;">
-                ${actionBtns}
-            </td>
-        </tr>`;
+            <tr class="draggable-row" ${trAttr}>
+                <td class="text-start ps-3 align-middle">${sysNameHtml}</td>
+                <td class="align-middle">${typeBadge}</td>
+                <td class="align-middle">${statusSwitch}</td>
+                <td class="text-start align-middle" style="max-width: 400px; white-space: normal;">${contentTxt}</td>
+                <td class="text-center align-middle" style="white-space: nowrap; width: 1%;">${actionBtns}</td>
+            </tr>`;
     });
     // 初始化 DataTables
-    initDataTable('dtMenuConfig', false);
+    initDataTable('dtMenuConfig', true);
 }
 
 function renderApplyTable() {
@@ -833,6 +984,7 @@ function renderAccManageMenuCheckboxes(selectedIds) {
 function renderAccDefaultPagesUI() {
     const container = document.getElementById('accDefaultPagesContainer'); if (!container) return;
     const fabs = getFabs(); const menus = getCustomMenus(); let html = '';
+    const escAttr = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
     fabs.forEach(f => {
         const fName = f.fabName || f.FabName || f.id || f.fabId || f.FabId || '';
@@ -841,16 +993,32 @@ function renderAccDefaultPagesUI() {
         let displayTxt = defMenuObj ? getFullMenuPathStr(defMenuId, menus) : '系統自動抓取第一個可視看板';
         let txtColor = defMenuObj ? 'text-success fw-bold' : 'text-muted';
 
+        // 使用 data-fab + addEventListener 取代 inline onclick，避免名稱含引號時注入
         html += `
             <div class="d-flex align-items-center mb-2 border-bottom pb-2">
                 <span class="badge bg-secondary me-2" style="width: 45px;">${fName}</span>
-                <span class="flex-grow-1 text-truncate small ${txtColor}" id="def_text_${fName}">預設：${displayTxt}</span>
-                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-3 fw-bold rounded-pill shadow-sm" onclick="openMenuSelector('${fName}')">指定</button>
-                <button type="button" class="btn btn-sm btn-outline-danger border-0 py-0 px-2 ms-1" onclick="clearDefaultMenu('${fName}')" title="清除設定"><i class="fas fa-times"></i></button>
+                <span class="flex-grow-1 text-truncate small ${txtColor}" id="def_text_${escAttr(fName)}">預設：${displayTxt}</span>
+                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-3 fw-bold rounded-pill shadow-sm js-pick-default" data-fab="${escAttr(fName)}">指定</button>
+                <button type="button" class="btn btn-sm btn-outline-danger border-0 py-0 px-2 ms-1 js-clear-default" data-fab="${escAttr(fName)}" title="清除設定"><i class="fas fa-times"></i></button>
             </div>
         `;
     });
     container.innerHTML = html;
+
+    if (!container.hasAttribute('data-bound')) {
+        container.setAttribute('data-bound', '1');
+        container.addEventListener('click', function (e) {
+            const pickBtn = e.target.closest('.js-pick-default');
+            const clearBtn = e.target.closest('.js-clear-default');
+            if (pickBtn) {
+                const fab = pickBtn.getAttribute('data-fab');
+                if (typeof openMenuSelector === 'function') openMenuSelector(fab);
+            } else if (clearBtn) {
+                const fab = clearBtn.getAttribute('data-fab');
+                if (typeof clearDefaultMenu === 'function') clearDefaultMenu(fab);
+            }
+        });
+    }
 }
 
 // ⭐️ 物理強制關閉抽屜 (解掉 blocked aria-hidden focus 的錯誤)
@@ -1143,7 +1311,7 @@ window.saveRoleItem = function (e) {
             roles.push({ id: 'role_' + Date.now(), groupName: name, allowedMenuIds: allowed });
         }
 
-        // 同步回 AppState，確保 syncDataToDB 抓到的是包含最新 GlobalOrder 的選單！
+        // 同步回 AppState 並自動寫入 DB
         if (window.appState && window.appState.menus) window.appState.menus = menus;
         if (window.appState && window.appState.roles) window.appState.roles = roles;
 

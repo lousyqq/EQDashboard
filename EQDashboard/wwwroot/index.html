@@ -65,14 +65,13 @@
             </div>
 
             <div class="utility-cluster">
-                <button id="btn-sync-excel" class="util-item text-warning d-none" onclick="syncToDB()" style="animation: pulse 2s infinite;" title="儲存變更至資料庫">
-                    <i class="fas fa-database me-1"></i> <span>同步至 DB</span>
-                </button>
-                <div class="util-divider" id="divider-sync" style="display: none;"></div>
-
                 <div class="dropdown">
-                    <button class="util-item" data-bs-toggle="dropdown">廠區:<span class="text-white ms-1" id="current-fab-name">12A</span></button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" id="fab-dropdown-menu"></ul>
+                    <button class="util-item dropdown-toggle" id="fabDropdownToggle" type="button" data-bs-toggle="dropdown"
+                                                       aria-expanded="false">
+                        廠區:<span class="text-white ms-1" id="current-fab-name">12A</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" id="fab-dropdown-menu"
+                                               aria-labelledby="fabDropdownToggle"></ul>
                 </div>
                 <div class="util-divider"></div>
 
@@ -84,14 +83,27 @@
                 <div class="util-divider"></div>
 
                 <div class="dropdown">
-                    <button class="util-item" data-bs-toggle="dropdown" id="current-lang-code">ZH</button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1">
-                        <li><a class="dropdown-item py-1 fw-bold cursor-pointer" onclick="changeLanguage('zh')">繁體中文</a></li>
-                        <li><a class="dropdown-item py-1 fw-bold cursor-pointer" onclick="changeLanguage('en')">English</a></li>
-                        <li><a class="dropdown-item py-1 fw-bold cursor-pointer" onclick="changeLanguage('ja')">日本語</a></li>
+                    <button class="btn btn-sm text-white border-0 dropdown-toggle fw-bold" type="button" id="langDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="padding-left: 4px; padding-right: 4px; font-size: 0.8rem;">
+                        <i class="fas fa-globe me-1" style="font-size: 0.7rem; opacity: 0.9;"></i><span id="current-lang-display">繁中</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="langDropdown" style="min-width: 130px;">
+                        <li>
+                            <a class="dropdown-item py-2 fw-bold d-flex justify-content-between align-items-center" href="#" onclick="event.preventDefault(); updateLangUI('zh', '繁中');">
+                                <span>繁體中文</span><i class="fas fa-check ms-2 text-primary lang-check" id="check-zh"></i>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item py-2 fw-bold d-flex justify-content-between align-items-center" href="#" onclick="event.preventDefault(); updateLangUI('ja', '日本語');">
+                                <span>日本語</span><i class="fas fa-check ms-2 text-primary d-none lang-check" id="check-ja"></i>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item py-2 fw-bold d-flex justify-content-between align-items-center" href="#" onclick="event.preventDefault(); updateLangUI('en', 'EN');">
+                                <span>English</span><i class="fas fa-check ms-2 text-primary d-none lang-check" id="check-en"></i>
+                            </a>
+                        </li>
                     </ul>
                 </div>
-                <div class="util-divider"></div>
 
                 <button id="btn-pin" class="util-item text-danger" style="font-size: 0.85rem;" onclick="togglePin()" title="切換自動隱藏/固定版面">
                     <i class="fas fa-thumbtack"></i>
@@ -117,6 +129,7 @@
 
         <div class="navbar-row-bottom">
             <div class="top-menus" id="top-dynamic-menus"></div>
+            <!-- TODO: 將下方 your-feedback-url.com 換成實際的意見回饋網址 -->
             <a href="https://your-feedback-url.com" target="_blank" class="feedback-link" title="提供您的寶貴意見"><i class="fas fa-envelope-open-text me-1"></i>意見箱</a>
         </div>
     </div>
@@ -296,7 +309,7 @@
                             <div class="card p-4 h-100 border-0 shadow-sm text-center d-flex flex-column justify-content-center">
                                 <i class="fas fa-database text-primary mb-3" style="font-size: 3rem;"></i>
                                 <h5 class="fw-bold">強制同步至資料庫</h5>
-                                <button id="btn-sync-excel" class="btn btn-primary fw-bold mx-auto" style="width: fit-content;" onclick="syncDataToDB()"><i class="fas fa-save me-1"></i> 儲存變更至資料庫</button>
+                                <button id="btn-sync-db-page" class="btn btn-primary fw-bold mx-auto" style="width: fit-content;" onclick="syncDataToDB(true)"><i class="fas fa-save me-1"></i> 強制全量寫入資料庫</button>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -305,6 +318,14 @@
                                 <h5 class="fw-bold">從舊版 Excel 匯入</h5>
                                 <input type="file" id="configFile" class="form-control form-control-sm mb-3 w-75 mx-auto" accept=".xlsx, .xls">
                                 <button class="btn btn-success fw-bold mx-auto" style="width: fit-content;" onclick="importConfig()"><i class="fas fa-upload me-1"></i> 匯入並覆蓋</button>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="card p-4 border-0 shadow-sm text-center d-flex flex-column justify-content-center">
+                                <i class="fas fa-file-export text-warning mb-3" style="font-size: 2.5rem;"></i>
+                                <h5 class="fw-bold">匯出 Excel 備份</h5>
+                                <div class="text-muted small mb-3">將目前資料庫內容匯出為 EQDashboard_Setting.xlsx，供離線備份或在舊版單檔 HTML 中使用</div>
+                                <button class="btn btn-warning fw-bold mx-auto" style="width: fit-content;" onclick="exportConfig()"><i class="fas fa-download me-1"></i> 匯出 Excel</button>
                             </div>
                         </div>
                     </div>
@@ -444,36 +465,74 @@
         </div>
     </div>
 
-    <!-- 4. 看板網頁 Modal -->
     <div class="modal fade" id="webpageModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-light border-bottom"><h5 class="modal-title fw-bold">看板網頁編輯</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-                <div class="modal-body py-4">
+                <div class="modal-header bg-light border-bottom">
+                    <h6 class="modal-title fw-bold text-dark"><i class="fas fa-file-code text-primary me-2"></i>看板網頁內容配置</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3">
                     <form id="wpForm" onsubmit="saveWebpageItem(event)">
                         <input type="hidden" id="editWpId">
-                        <div class="mb-3 d-flex gap-3">
-                            <div class="form-check"><input class="form-check-input" type="radio" name="wpMode" id="wpModeLink" onchange="toggleWebpageMode()" checked><label class="form-check-label fw-bold" for="wpModeLink">網頁連結</label></div>
-                            <div class="form-check"><input class="form-check-input" type="radio" name="wpMode" id="wpModeAppGrid" onchange="toggleWebpageMode()"><label class="form-check-label fw-bold" for="wpModeAppGrid">應用集合 (App Grid)</label></div>
-                        </div>
-                        <div class="mb-3"><label class="form-label fw-bold small">系統名稱 (唯一識別)</label><input type="text" id="wpSysName" class="form-control" required></div>
-                        <div class="mb-3"><label class="form-label fw-bold small">顯示名稱 (介面顯示)</label><input type="text" id="wpDisplayName" class="form-control" required></div>
-                        <div class="mb-3" id="wpUrlGroup"><label class="form-label fw-bold small">連結網址</label><input type="text" id="wpUrl" class="form-control"></div>
-                        <div class="mb-3" id="wpTargetGroup"><label class="form-label fw-bold small">開啟方式</label><select id="wpTarget" class="form-select"><option value="iframe">內部嵌入 (Iframe)</option><option value="blank">另開新分頁 (_blank)</option><option value="fullscreen">全螢幕開啟</option></select></div>
+                        <div class="row g-2">
+                            <div class="col-md-12 mb-2 pb-2 border-bottom">
+                                <label class="form-label fw-bold fs-7 text-muted me-3 mb-0">看板類型 <span class="text-danger">*</span></label>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input cursor-pointer" type="radio" name="wpMode" id="wpModeLink" value="link" checked onchange="toggleWebpageMode()">
+                                    <label class="form-check-label fw-bold text-primary cursor-pointer small" for="wpModeLink"><i class="fas fa-link"></i> 網頁連結</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input cursor-pointer" type="radio" name="wpMode" id="wpModeAppGrid" value="app_grid" onchange="toggleWebpageMode()">
+                                    <label class="form-check-label fw-bold text-success cursor-pointer small" for="wpModeAppGrid"><i class="fas fa-th-large"></i> 應用集合</label>
+                                </div>
+                            </div>
 
-                        <div class="mb-4">
-                            <label class="form-label fw-bold small">圖示設定</label>
-                            <select id="wpIcon" class="form-select mb-2" onchange="handleIconSelectChange('wp')">
-                                <option value="">無圖示</option>
-                                <option value="fas fa-chart-bar">預設圖表 (fa-chart-bar)</option>
-                                <option value="fas fa-link">預設連結 (fa-link)</option>
-                                <option value="fas fa-table">資料表 (fa-table)</option>
-                                <option value="custom">自訂上傳圖示...</option>
-                            </select>
-                            <input type="file" id="wpIconFile" class="form-control form-control-sm" accept="image/*" style="display:none;" onchange="compressImageFile(this.files[0], base64 => document.getElementById('wpCustomIconBase64').value = base64)">
-                            <input type="hidden" id="wpCustomIconBase64">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-muted small mb-1">系統名稱 <span class="text-danger">*</span></label>
+                                <input type="text" id="wpSysName" class="form-control form-control-sm" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-muted small mb-1">顯示名稱 <span class="text-danger">*</span></label>
+                                <input type="text" id="wpDisplayName" class="form-control form-control-sm" required>
+                            </div>
+
+                            <div class="col-md-12">
+                                <label class="form-label fw-bold text-muted small mb-1">圖示 (Icon)</label>
+                                <div class="d-flex gap-2">
+                                    <select id="wpIcon" class="form-select form-select-sm w-auto" onchange="handleIconSelectChange('wp')">
+                                        <option value="">無</option>
+                                        <option value="fas fa-desktop">🖥️ 電腦</option>
+                                        <option value="fas fa-chart-line">📈 趨勢圖</option>
+                                        <option value="fas fa-table">📋 表格</option>
+                                        <option value="fas fa-shield-alt">🛡️ 防禦</option>
+                                        <option value="fas fa-th-large">🔠 應用集合塊</option>
+                                        <option value="custom" class="fw-bold text-primary">📁 上傳自訂圖示...</option>
+                                    </select>
+                                    <input type="file" id="wpIconFile" class="form-control form-control-sm w-50" style="display:none;" accept="image/*" onchange="compressImageFile(this.files[0], base64 => document.getElementById('wpCustomIconBase64').value = base64)">
+                                    <input type="hidden" id="wpCustomIconBase64">
+                                </div>
+                            </div>
+
+                            <div class="col-md-12" id="wpUrlGroup">
+                                <label class="form-label fw-bold text-muted small mb-1">網址 / 路由</label>
+                                <input type="text" id="wpUrl" class="form-control form-control-sm" placeholder="輸入網址 (如 www.google.com) 或 內部路由 (如 page-eas-main)">
+                            </div>
+
+                            <div class="col-md-12" id="wpTargetGroup">
+                                <label class="form-label fw-bold text-muted small mb-1">開啟方式</label>
+                                <select id="wpTarget" class="form-select form-select-sm">
+                                    <option value="iframe">嵌入網頁 (Iframe)</option>
+                                    <option value="blank">新分頁 (Blank)</option>
+                                    <option value="fullscreen" class="text-primary fw-bold">全螢幕</option>
+                                </select>
+                            </div>
+
+                            <div class="col-12 d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
+                                <button type="button" class="btn btn-sm btn-light border fw-bold" data-bs-dismiss="modal">取消</button>
+                                <button type="submit" class="btn btn-sm btn-primary fw-bold"><i class="fas fa-save me-1"></i> 儲存</button>
+                            </div>
                         </div>
-                        <div class="text-end"><button type="submit" class="btn btn-primary fw-bold px-4">儲存</button></div>
                     </form>
                 </div>
             </div>
@@ -541,10 +600,9 @@
                                 </div>
                             </div>
                         </div>
-
-                        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
-                            <button type="button" class="btn btn-light border fw-bold px-4" data-bs-dismiss="modal">取消</button>
-                            <button type="submit" class="btn btn-primary fw-bold px-4"><i class="fas fa-save me-2"></i>儲存選單結構</button>
+                        <div class="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
+                            <button type="button" class="btn btn-sm btn-light border fw-bold" data-bs-dismiss="modal">取消</button>
+                            <button type="submit" class="btn btn-sm btn-primary fw-bold"><i class="fas fa-save me-1"></i> 儲存選單結構</button>
                         </div>
                     </form>
                 </div>

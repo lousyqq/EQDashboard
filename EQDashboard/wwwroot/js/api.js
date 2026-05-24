@@ -138,7 +138,10 @@ async function fetchInitialDataFromDB() {
                 canEditOthers: String(getVal(a, 'CanEditOthers') || getVal(a, 'canEditOthers')).toLowerCase() === 'true',
                 manageableMenus: parsedManageable,
                 assignedRoles: parsedAssigned,
-                defaultPages: parsedDefPages
+                defaultPages: parsedDefPages,
+                // 登入統計
+                loginCount: parseInt(getVal(a, 'LoginCount') || getVal(a, 'loginCount') || 0) || 0,
+                lastLoginTime: getVal(a, 'LastLoginTime') || getVal(a, 'lastLoginTime') || null
             };
         });
 
@@ -256,7 +259,7 @@ async function fetchInitialDataFromDB() {
             localStorage.setItem('umc_personal_menus_' + empId, JSON.stringify(psByEmp[empId]));
         });
 
-        console.log("資料庫載入與轉換完成:", window.appState);
+        // console.log("資料庫載入與轉換完成:", window.appState);
 
         // ⭐️ 終極霸道覆寫：在資料確實抵達記憶體後，強行覆寫系統中所有的讀取函式！
         // 這能確保無論 config.js 怎麼寫，最終都會被這段程式碼攔截，強制讀取 DB 資料。
@@ -347,7 +350,10 @@ function getDatabasePayload() {
         return {
             EmpId: safeStr(a.empId, 50), Name: safeStr(a.name, 100), Department: safeStr(a.department, 100),
             RoleLevel: safeStr(a.roleLevel, 20) || 'user', CanEditOthers: a.canEditOthers === true,
-            AssignedRoles: assignedStr, ManageableMenus: manStr, DefaultPages: defStr
+            AssignedRoles: assignedStr, ManageableMenus: manStr, DefaultPages: defStr,
+            // 保留登入統計欄位，避免全量覆寫時被洗掉
+            LoginCount: (typeof a.loginCount === 'number' ? a.loginCount : (parseInt(a.loginCount) || 0)),
+            LastLoginTime: a.lastLoginTime || null
         };
     });
 
@@ -393,13 +399,18 @@ function getDatabasePayload() {
 }
 
 // 將前端資料同步寫入後端 DB 的核心功能
-async function syncDataToDB() {
+// showFeedback=true 時會顯示 loading 遮罩與成功訊息（手動觸發匯入時用）；
+// 一般 CRUD 操作走 showFeedback=false（靜默同步，避免干擾使用者）。
+async function syncDataToDB(showFeedback) {
     const payload = getDatabasePayload();
 
-    const loadingOverlay = document.createElement('div');
-    loadingOverlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; color:white; font-family:sans-serif;';
-    loadingOverlay.innerHTML = '<div class="spinner-border text-info mb-3" style="width: 3rem; height: 3rem;"></div><h2>正在同步資料庫...</h2><p class="text-secondary">請勿關閉網頁</p>';
-    document.body.appendChild(loadingOverlay);
+    let loadingOverlay = null;
+    if (showFeedback === true) {
+        loadingOverlay = document.createElement('div');
+        loadingOverlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; color:white; font-family:sans-serif;';
+        loadingOverlay.innerHTML = '<div class="spinner-border text-info mb-3" style="width: 3rem; height: 3rem;"></div><h2>正在同步資料庫...</h2><p class="text-secondary">請勿關閉網頁</p>';
+        document.body.appendChild(loadingOverlay);
+    }
 
     try {
         const response = await fetch('/Settings/SaveData', {
@@ -409,27 +420,26 @@ async function syncDataToDB() {
         });
         const result = await response.json();
 
-        loadingOverlay.remove();
+        if (loadingOverlay) loadingOverlay.remove();
 
         if (result.success) {
             hasUnsavedChanges = false;
-            if (typeof updateSyncButtonUI === 'function') updateSyncButtonUI();
-
-            // 同步寫入後，立刻從資料庫重新撈取最新資料，確保記憶體 100% 一致！
-            await fetchInitialDataFromDB();
-
-            if (typeof customAlert === 'function') {
+            if (showFeedback === true && typeof customAlert === 'function') {
                 customAlert(result.message || "資料已成功同步至資料庫！");
-            } else {
-                alert(result.message || "資料已成功同步至資料庫！");
             }
         } else {
             if (typeof customAlert === 'function') customAlert("寫入失敗: " + result.message);
             else alert("寫入失敗: " + result.message);
         }
     } catch (error) {
-        loadingOverlay.remove();
+        if (loadingOverlay) loadingOverlay.remove();
         console.error("同步失敗:", error);
-        if (typeof customAlert === 'function') customAlert("網路錯誤或伺服器無回應，請確認 C# 後端是否正常運作。");
+        if (showFeedback === true && typeof customAlert === 'function') {
+            customAlert("網路錯誤或伺服器無回應，請確認 C# 後端是否正常運作。");
+        }
     }
 }
+
+// 已移除頂部「同步至 DB」按鈕；CRUD 與匯入仍透過下列名稱對齊
+window.syncToDB = syncDataToDB;
+window.syncDataToDB = syncDataToDB;
