@@ -307,24 +307,17 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <div class="card p-4 h-100 border-0 shadow-sm text-center d-flex flex-column justify-content-center">
-                                <i class="fas fa-database text-primary mb-3" style="font-size: 3rem;"></i>
-                                <h5 class="fw-bold">強制同步至資料庫</h5>
-                                <button id="btn-sync-db-page" class="btn btn-primary fw-bold mx-auto" style="width: fit-content;" onclick="syncDataToDB(true)"><i class="fas fa-save me-1"></i> 強制全量寫入資料庫</button>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card p-4 h-100 border-0 shadow-sm text-center d-flex flex-column justify-content-center">
                                 <i class="fas fa-file-upload text-success mb-3" style="font-size: 3rem;"></i>
-                                <h5 class="fw-bold">從舊版 Excel 匯入</h5>
+                                <h5 class="fw-bold">從 Excel 匯入</h5>
                                 <input type="file" id="configFile" class="form-control form-control-sm mb-3 w-75 mx-auto" accept=".xlsx, .xls">
                                 <button class="btn btn-success fw-bold mx-auto" style="width: fit-content;" onclick="importConfig()"><i class="fas fa-upload me-1"></i> 匯入並覆蓋</button>
                             </div>
                         </div>
-                        <div class="col-md-12">
-                            <div class="card p-4 border-0 shadow-sm text-center d-flex flex-column justify-content-center">
-                                <i class="fas fa-file-export text-warning mb-3" style="font-size: 2.5rem;"></i>
+                        <div class="col-md-6">
+                            <div class="card p-4 h-100 border-0 shadow-sm text-center d-flex flex-column justify-content-center">
+                                <i class="fas fa-file-export text-warning mb-3" style="font-size: 3rem;"></i>
                                 <h5 class="fw-bold">匯出 Excel 備份</h5>
-                                <div class="text-muted small mb-3">將目前資料庫內容匯出為 EQDashboard_Setting.xlsx，供離線備份或在舊版單檔 HTML 中使用</div>
+                                <div class="text-muted small mb-3">將目前資料庫內容匯出為 EQDashboard_Setting.xlsx，供離線備份</div>
                                 <button class="btn btn-warning fw-bold mx-auto" style="width: fit-content;" onclick="exportConfig()"><i class="fas fa-download me-1"></i> 匯出 Excel</button>
                             </div>
                         </div>
@@ -351,7 +344,10 @@
                         <div class="mb-3"><label class="form-label fw-bold small">顯示名稱</label><input type="text" id="fabDisplayNameInput" class="form-control" required></div>
                         <div class="mb-3"><label class="form-label fw-bold small">預設語言</label><select id="fabLangSelect" class="form-select"><option value="zh">繁體中文</option><option value="en">English</option><option value="ja">日本語</option></select></div>
                         <div class="mb-4"><label class="form-label fw-bold small">套用權限群組</label><div id="fabRoleCheckboxes" class="d-flex flex-wrap gap-2"></div></div>
-                        <div class="text-end"><button type="submit" class="btn btn-primary fw-bold px-4">儲存</button></div>
+                        <div class="text-end">
+                            <button type="button" class="btn btn-outline-secondary fw-bold px-4 me-2" data-bs-dismiss="modal">取消</button>
+                            <button type="submit" class="btn btn-primary fw-bold px-4">儲存</button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -368,7 +364,10 @@
                         <input type="hidden" id="editRoleId">
                         <div class="mb-4"><label class="form-label fw-bold small">群組名稱</label><input type="text" id="roleName" class="form-control" required></div>
                         <div class="mb-4"><label class="form-label fw-bold small">允許存取的看板 (拖曳可排序)</label><div id="roleMenuCheckboxes" class="d-flex flex-wrap gap-2"></div></div>
-                        <div class="text-end"><button type="submit" class="btn btn-primary fw-bold px-4">儲存</button></div>
+                        <div class="text-end">
+                            <button type="button" class="btn btn-outline-secondary fw-bold px-4 me-2" data-bs-dismiss="modal">取消</button>
+                            <button type="submit" class="btn btn-primary fw-bold px-4">儲存</button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -702,27 +701,44 @@
         </div>
     </div>
 
-    <!-- 10. 審核管理 Modal -->
+    <!-- 10. 審核管理 Modal (對齊 TEST_20260429.html:1158) -->
     <div class="modal fade" id="auditModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-light border-bottom"><h5 class="modal-title fw-bold">需求申請審核</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-                <div class="modal-body py-4">
+                <div class="modal-header bg-primary text-white border-bottom">
+                    <h6 class="modal-title fw-bold"><i class="fas fa-clipboard-check me-2"></i>回覆申請單</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3">
                     <form onsubmit="saveAuditItem(event)">
                         <input type="hidden" id="auditReqId">
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-3"><label class="form-label fw-bold small text-muted">申請人</label><input type="text" id="auditApplicant" class="form-control form-control-sm bg-light" readonly></div>
-                            <div class="col-md-3"><label class="form-label fw-bold small text-muted">申請時間</label><input type="text" id="auditTime" class="form-control form-control-sm bg-light" readonly></div>
-                            <div class="col-md-3"><label class="form-label fw-bold small text-muted">類別</label><input type="text" id="auditType" class="form-control form-control-sm bg-light" readonly></div>
-                            <div class="col-md-3"><label class="form-label fw-bold small text-muted">廠區</label><input type="text" id="auditFab" class="form-control form-control-sm bg-light" readonly></div>
+                        <div class="row g-2 mb-3 bg-light p-2 rounded border">
+                            <div class="col-md-3"><label class="form-label fw-bold text-muted small mb-0">申請人</label><input type="text" id="auditApplicant" class="form-control form-control-sm border-0 bg-transparent fw-bold text-dark" readonly></div>
+                            <div class="col-md-3"><label class="form-label fw-bold text-muted small mb-0">申請時間</label><input type="text" id="auditTime" class="form-control form-control-sm border-0 bg-transparent fw-bold text-dark" readonly></div>
+                            <div class="col-md-3"><label class="form-label fw-bold text-muted small mb-0">申請類別</label><input type="text" id="auditType" class="form-control form-control-sm border-0 bg-transparent fw-bold text-primary" readonly></div>
+                            <div class="col-md-3"><label class="form-label fw-bold text-muted small mb-0">關聯廠區</label><input type="text" id="auditFab" class="form-control form-control-sm border-0 bg-transparent fw-bold text-dark" readonly></div>
+                            <div class="col-12 mt-2">
+                                <label class="form-label fw-bold text-muted small mb-0">申請內容</label>
+                                <div class="p-2 border rounded bg-white mt-1 small" id="auditReasonDisplay" style="white-space: pre-wrap; min-height: 60px;"></div>
+                            </div>
                         </div>
-                        <div class="mb-4"><label class="form-label fw-bold small text-muted">申請原因</label><div id="auditReasonDisplay" class="p-3 bg-light border rounded" style="white-space: pre-wrap; font-size: 0.9rem;"></div></div>
-                        <hr>
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-4"><label class="form-label fw-bold small">處理狀態</label><select id="auditStatus" class="form-select"><option value="pending">待審核</option><option value="processing">處理中</option><option value="resolved">已完成</option><option value="rejected">已駁回</option></select></div>
-                            <div class="col-md-8"><label class="form-label fw-bold small">處理進度與回覆 (會同步給使用者)</label><textarea id="auditReply" class="form-control" rows="3" placeholder="回覆內容..."></textarea></div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted small mb-1">處理狀態 <span class="text-danger">*</span></label>
+                            <select id="auditStatus" class="form-select form-select-sm border-primary fw-bold" required>
+                                <option value="pending" class="text-secondary">待審核 (Pending)</option>
+                                <option value="processing" class="text-primary">處理中 (Processing)</option>
+                                <option value="resolved" class="text-success">已完成 (Resolved)</option>
+                                <option value="rejected" class="text-danger">已駁回 (Rejected)</option>
+                            </select>
                         </div>
-                        <div class="text-end"><button type="submit" class="btn btn-primary fw-bold px-4">儲存回覆與狀態</button></div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted small mb-1">回覆意見 / 處理進度</label>
+                            <textarea id="auditReply" class="form-control form-control-sm border-primary" rows="3" placeholder="請輸入回覆給使用者的意見或目前處理進度..."></textarea>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
+                            <button type="button" class="btn btn-sm btn-light border fw-bold" data-bs-dismiss="modal">取消</button>
+                            <button type="submit" class="btn btn-sm btn-primary fw-bold"><i class="fas fa-save me-1"></i> 儲存並通知使用者</button>
+                        </div>
                     </form>
                 </div>
             </div>

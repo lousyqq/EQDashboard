@@ -422,20 +422,34 @@ namespace EQDashboard.Controllers
                         alterCmd.ExecuteNonQuery();
                     }
 
-                    // 累計 + 1，更新本次登入時間
-                    using (SqlCommand cmd = new SqlCommand(@"
+                    // 1) 先 UPDATE 累計 +1（用獨立 Command 避免 NOCOUNT 影響）
+                    int affected = 0;
+                    using (SqlCommand updateCmd = new SqlCommand(@"
                         UPDATE Accounts
                         SET LoginCount = ISNULL(LoginCount, 0) + 1,
                             LastLoginTime = GETDATE()
-                        WHERE EmpId = @EmpId;
-                        SELECT LoginCount, LastLoginTime FROM Accounts WHERE EmpId = @EmpId;", conn))
+                        WHERE EmpId = @EmpId;", conn))
                     {
-                        cmd.Parameters.AddWithValue("@EmpId", empId);
-                        using (SqlDataReader r = cmd.ExecuteReader())
+                        updateCmd.Parameters.AddWithValue("@EmpId", empId);
+                        affected = updateCmd.ExecuteNonQuery();
+                    }
+
+                    if (affected == 0)
+                    {
+                        return Json(new { success = false, message = "找不到帳號 " + empId });
+                    }
+
+                    // 2) 再 SELECT 取回最新值
+                    using (SqlCommand selectCmd = new SqlCommand(@"
+                        SELECT ISNULL(LoginCount, 0), LastLoginTime
+                        FROM Accounts WHERE EmpId = @EmpId;", conn))
+                    {
+                        selectCmd.Parameters.AddWithValue("@EmpId", empId);
+                        using (SqlDataReader r = selectCmd.ExecuteReader())
                         {
                             if (r.Read())
                             {
-                                int loginCount = r.IsDBNull(0) ? 0 : Convert.ToInt32(r.GetValue(0));
+                                int loginCount = Convert.ToInt32(r.GetValue(0));
                                 DateTime? lastLogin = r.IsDBNull(1) ? (DateTime?)null : Convert.ToDateTime(r.GetValue(1));
                                 return Json(new
                                 {

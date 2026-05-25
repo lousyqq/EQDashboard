@@ -403,6 +403,9 @@ function editAccount(empId) {
         document.getElementById('accEmpId').value = acc.empId; document.getElementById('accEmpId').disabled = true;
         document.getElementById('accName').value = acc.name || ''; document.getElementById('accDept').value = acc.department || '';
         document.getElementById('accRoleLevel').value = acc.roleLevel || 'user';
+        // 編輯系統預設 admin 時不允許降級
+        const isSystemAdmin = window.cleanId(acc.empId) === 'admin';
+        document.getElementById('accRoleLevel').disabled = isSystemAdmin;
         document.getElementById('accEnableDelegation').checked = (acc.manageableMenus && acc.manageableMenus.length > 0);
         document.getElementById('accCanEditOthers').checked = acc.canEditOthers || false;
 
@@ -462,6 +465,10 @@ function saveAccountItem(e) {
             currentUser.assignedRoles = assigned; currentUser.manageableMenus = manageable;
             currentUser.canEditOthers = canEditOthers; currentUser.defaultPages = JSON.parse(JSON.stringify(tempDefaultPages));
             localStorage.setItem('umc_current_user', JSON.stringify(currentUser));
+
+            // 修改到自己的可視群組版面時，立即刷新右上角廠區下拉與側邊欄
+            if (typeof renderFabSwitcher === 'function') renderFabSwitcher();
+            if (typeof renderSidebarMenus === 'function') renderSidebarMenus();
         }
     } catch (error) { console.error("[saveAccountItem] 錯誤:", error); }
     return false;
@@ -650,7 +657,20 @@ function saveWebpageItem(e) {
         const isAppGrid = document.getElementById('wpModeAppGrid').checked;
         let menus = getCustomMenus();
 
-        let mObj = id ? menus.find(x => window.cleanId(x.id) === window.cleanId(id)) : { id: 'm_' + Date.now(), isPoolItem: false, createdBy: currentUser.id, parentId: null, parentIds: [] };
+        // 對齊 TEST_20260429.html:3897 — 新建的看板網頁預設為池中項目 (isPoolItem: true)
+        let mObj;
+        if (id) {
+            mObj = menus.find(x => window.cleanId(x.id) === window.cleanId(id));
+        } else {
+            mObj = {
+                id: 'm_' + Date.now(),
+                isPoolItem: true,
+                createdBy: currentUser.id,
+                parentId: null,
+                parentIds: [],
+                parentOrders: {}
+            };
+        }
 
         mObj.name = document.getElementById('wpSysName').value.trim();
         mObj.displayName = document.getElementById('wpDisplayName').value.trim();
@@ -658,6 +678,8 @@ function saveWebpageItem(e) {
         mObj.icon = getSelectedIconVal('wp');
         mObj.enabled = true;
         mObj.isEdited = true;
+        // 編輯既有的池中項目時也維持 isPoolItem=true
+        if (id) mObj.isPoolItem = true;
 
         if (isAppGrid) {
             mObj.targetPage = 'page-app-grid'; mObj.url = ''; mObj.target = 'iframe';
@@ -668,9 +690,12 @@ function saveWebpageItem(e) {
             mObj.target = document.getElementById('wpTarget').value;
         }
 
-        if (!id) { mObj.order = menus.length * 10; menus.push(mObj); }
+        if (!id) {
+            mObj.order = menus.length * 10;
+            menus.push(mObj);
+            window.appState.menus = menus;
+        }
 
-        // 異動立即靜默同步到 DB（一般操作不需手動觸發）
         if (typeof syncDataToDB === 'function') syncDataToDB();
 
         hideModalSafely('webpageModal');
@@ -917,14 +942,16 @@ function saveMenuNodeItem(e) {
             else { mObj.url = inputUrl; mObj.targetPage = 'page-iframe'; }
             mObj.target = document.getElementById('nodeTarget').value;
 
-            // 將原本是群組現在變成連結的節點，解開舊有的關聯
-            let linkageToClear = [mObj.id, ...oldDescendants].map(x => window.cleanId(x));
+            // 對齊 TEST_20260429.html:4302 — 只清除「以 mObj.id 為父的子節點」的 parent 關聯，
+            // 不去動其他人的 isPoolItem 旗標（避免把根層的 link/folder 誤標成池中項目）
+            const myId = window.cleanId(mObj.id);
             menus.forEach(m => {
-                if (linkageToClear.includes(window.cleanId(m.parentId))) m.parentId = null;
-                if (m.parentIds) m.parentIds = m.parentIds.filter(pid => !linkageToClear.includes(window.cleanId(pid)));
-                if (m.parentOrders) linkageToClear.forEach(pid => delete m.parentOrders[pid]);
-                if (!m.parentId && (!m.parentIds || m.parentIds.length === 0)) m.isPoolItem = true;
+                if (window.cleanId(m.id) === myId) return; // 跳過自己
+                if (window.cleanId(m.parentId) === myId) m.parentId = null;
+                if (m.parentIds) m.parentIds = m.parentIds.filter(pid => window.cleanId(pid) !== myId);
+                if (m.parentOrders) delete m.parentOrders[mObj.id];
             });
+            // 從群組改為連結時，連同它原有的子群組也一起拿掉
             menus = menus.filter(m => !oldDescendants.includes(m.id));
         } else {
             mObj.url = ''; mObj.targetPage = '';
@@ -932,19 +959,19 @@ function saveMenuNodeItem(e) {
 
             let treeIds = treeNodes.map(t => t.id);
             let foldersToDelete = oldDescendants.filter(fid => !treeIds.includes(fid));
-
             menus = menus.filter(m => !foldersToDelete.includes(m.id));
 
-            // 清除重新定義的父子關聯，並將被踢出群組的孤兒節點標回 isPoolItem
-            let linkageToClear = [mObj.id, ...oldDescendants].map(x => window.cleanId(x));
+            // 對齊 TEST_20260429.html:4302 — 只清除「以 mObj.id 或舊子群組為父」的關聯，
+            // 不主動把其他人標為池中項目（mObj 本身是 root folder，會被誤標而消失）
+            const myIds = new Set([window.cleanId(mObj.id), ...oldDescendants.map(window.cleanId)]);
             menus.forEach(m => {
-                if (linkageToClear.includes(window.cleanId(m.parentId))) m.parentId = null;
-                if (m.parentIds) m.parentIds = m.parentIds.filter(pid => !linkageToClear.includes(window.cleanId(pid)));
-                if (m.parentOrders) linkageToClear.forEach(pid => delete m.parentOrders[pid]);
-                // 若該節點已無任何父節點且非 folder，視為池中項目，回到「看板網頁管理」表格
-                if (!m.parentId && (!m.parentIds || m.parentIds.length === 0)
-                    && (m.menuMode || '').toLowerCase() !== 'folder') {
-                    m.isPoolItem = true;
+                if (myIds.has(window.cleanId(m.id))) return; // 跳過自己與舊子群組
+                if (myIds.has(window.cleanId(m.parentId))) m.parentId = null;
+                if (m.parentIds) m.parentIds = m.parentIds.filter(pid => !myIds.has(window.cleanId(pid)));
+                if (m.parentOrders) {
+                    Object.keys(m.parentOrders).forEach(k => {
+                        if (myIds.has(window.cleanId(k))) delete m.parentOrders[k];
+                    });
                 }
             });
 
@@ -962,7 +989,7 @@ function saveMenuNodeItem(e) {
                 if (!m.parentIds.includes(node.parentId)) m.parentIds.push(node.parentId);
                 m.parentOrders[node.parentId] = node.order;
                 if (!m.parentId) m.parentId = node.parentId;
-                m.isPoolItem = false;
+                // 注意：webpage 加入群組後仍保留 isPoolItem=true（池中目錄維持完整列表）
             });
         }
 
@@ -983,6 +1010,7 @@ function deleteMenuNodeItem(id) {
         customConfirm('確定要刪除此選單配置嗎？(底下包含的子看板將會被釋放回池中，不會被刪除)', () => {
             let menus = getCustomMenus();
 
+            // 1) 找出所有要被一併刪除的子群組（folder 才連帶刪；網頁只解除關聯，不刪除）
             let oldDescendants = [];
             let visitedDesc = new Set();
             function getOldDesc(pId) {
@@ -993,21 +1021,42 @@ function deleteMenuNodeItem(id) {
             }
             getOldDesc(id);
 
-            let linkageToClear = [id, ...oldDescendants].map(x => window.cleanId(x));
+            // 2) 清除「以這些 id 為父」的關聯；只有「真的被影響到且現在變孤兒的非 folder」才回到池中。
+            //    不要對其他不相干的 root 動 isPoolItem，否則整張表會被清空。
+            const linkageToClear = [id, ...oldDescendants].map(x => window.cleanId(x));
             menus.forEach(x => {
-                if (linkageToClear.includes(window.cleanId(x.parentId))) x.parentId = null;
-                if (x.parentIds) x.parentIds = x.parentIds.filter(pid => !linkageToClear.includes(window.cleanId(pid)));
-                if (x.parentOrders) linkageToClear.forEach(pid => delete x.parentOrders[pid]);
-                if (!x.parentId && (!x.parentIds || x.parentIds.length === 0)) x.isPoolItem = true;
+                if (linkageToClear.includes(window.cleanId(x.id))) return; // 跳過待刪除節點本身
+                let wasAffected = false;
+                if (linkageToClear.includes(window.cleanId(x.parentId))) {
+                    x.parentId = null;
+                    wasAffected = true;
+                }
+                if (x.parentIds) {
+                    const before = x.parentIds.length;
+                    x.parentIds = x.parentIds.filter(pid => !linkageToClear.includes(window.cleanId(pid)));
+                    if (x.parentIds.length !== before) wasAffected = true;
+                }
+                if (x.parentOrders) {
+                    linkageToClear.forEach(pid => delete x.parentOrders[pid]);
+                }
+                if (wasAffected
+                    && !x.parentId
+                    && (!x.parentIds || x.parentIds.length === 0)
+                    && (x.menuMode || '').toLowerCase() !== 'folder') {
+                    x.isPoolItem = true;
+                }
             });
 
-            menus = menus.filter(m => window.cleanId(m.id) !== window.cleanId(id) && !oldDescendants.includes(m.id));
+            // 3) 實際刪除：本節點 + 所有子群組 folder
+            menus = menus.filter(m =>
+                window.cleanId(m.id) !== window.cleanId(id) &&
+                !oldDescendants.includes(m.id)
+            );
             window.appState.menus = menus;
 
-            // 異動立即靜默同步到 DB（一般操作不需手動觸發）
-        if (typeof syncDataToDB === 'function') syncDataToDB();
-
+            if (typeof syncDataToDB === 'function') syncDataToDB();
             if (typeof renderMenuConfigTable === 'function') renderMenuConfigTable();
+            if (typeof renderWebpageTable === 'function') renderWebpageTable();
             if (typeof renderSidebarMenus === 'function') renderSidebarMenus();
         });
     } catch (e) { console.error("[deleteMenuNodeItem] 錯誤:", e); }

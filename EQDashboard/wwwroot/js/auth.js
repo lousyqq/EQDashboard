@@ -24,10 +24,11 @@ async function doLogin() {
     }
 
     const accEmpId = acc.empId || acc.EmpId || '';
-    const pad = (n) => n < 10 ? '0' + n : n;
     const now = new Date();
-    let displayLoginCount = (acc.loginCount || acc.LoginCount || 0) + 1;
+    const oldLoginCount = parseInt(acc.loginCount || acc.LoginCount || 0) || 0;
+    let displayLoginCount = oldLoginCount + 1; // 樂觀預估，避免後端異常時顯示 0
     let displayLoginTime = formatLoginTime(now);
+    let backendSucceeded = false;
 
     // 1) 呼叫後端 /Settings/UpdateLoginStats 更新 DB 的 LoginCount / LastLoginTime
     try {
@@ -36,25 +37,40 @@ async function doLogin() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ empId: accEmpId })
         });
-        const result = await resp.json();
-        if (result && result.success) {
-            if (typeof result.loginCount === 'number') displayLoginCount = result.loginCount;
-            if (result.lastLoginTime) displayLoginTime = formatLoginTimeFromDb(result.lastLoginTime);
-
-            // 同步回 appState 與 LocalStorage，後續畫面顯示一致
-            if (window.appState && window.appState.accounts) {
-                const a = window.appState.accounts.find(x => String(x.empId).toLowerCase() === accEmpId.toLowerCase());
-                if (a) { a.loginCount = displayLoginCount; a.lastLoginTime = result.lastLoginTime; }
+        if (resp.ok) {
+            const result = await resp.json();
+            if (result && result.success) {
+                if (typeof result.loginCount === 'number' && result.loginCount > 0) {
+                    displayLoginCount = result.loginCount;
+                }
+                if (result.lastLoginTime) {
+                    displayLoginTime = formatLoginTimeFromDb(result.lastLoginTime);
+                }
+                backendSucceeded = true;
+            } else {
+                console.warn('UpdateLoginStats 回傳失敗:', result && result.message);
             }
+        } else {
+            console.warn('UpdateLoginStats HTTP 狀態異常:', resp.status);
         }
     } catch (e) {
-        // 後端不可用時走 LocalStorage 備援，畫面仍可顯示
-        console.warn('UpdateLoginStats 失敗，使用 LocalStorage 備援:', e);
-        const statsStr = localStorage.getItem('umc_user_stats_' + accEmpId);
-        const stats = statsStr ? JSON.parse(statsStr) : { count: 0 };
-        stats.count = (stats.count || 0) + 1;
-        localStorage.setItem('umc_user_stats_' + accEmpId, JSON.stringify(stats));
-        displayLoginCount = stats.count;
+        console.warn('UpdateLoginStats 連線失敗：', e);
+    }
+
+    // 不論後端成功與否，都同步回 appState，避免後續 SaveData 把舊值寫回去
+    if (window.appState && window.appState.accounts) {
+        const a = window.appState.accounts.find(x => String(x.empId).toLowerCase() === accEmpId.toLowerCase());
+        if (a) {
+            a.loginCount = displayLoginCount;
+            a.lastLoginTime = backendSucceeded ? (a.lastLoginTime || new Date().toISOString()) : a.lastLoginTime;
+        }
+    }
+
+    // LocalStorage 備援（離線/後端異常時仍可累計）
+    if (!backendSucceeded) {
+        try {
+            localStorage.setItem('umc_user_stats_' + accEmpId, JSON.stringify({ count: displayLoginCount, lastLogin: displayLoginTime }));
+        } catch (e) { }
     }
 
     currentUser = {

@@ -424,7 +424,16 @@ function activateMenu(menuId) {
         elList.forEach(el => { if (el.getAttribute('onclick') && el.getAttribute('onclick').includes(mId)) targetEl = el; });
 
         if (mMode === 'app_grid') openAppGridPage(mId, dName, targetEl);
-        else if (mUrl) openDynamicIframe(mUrl, dName, targetEl, mTarget === 'fullscreen');
+        else if (mUrl) {
+            // 依 OpenTarget 區分：blank=另開分頁 / fullscreen=全螢幕 / 其他=畫面內嵌
+            if (mTarget === 'blank') {
+                window.open(mUrl, '_blank');
+            } else if (mTarget === 'fullscreen') {
+                openDynamicIframe(mUrl, dName, targetEl, true);
+            } else {
+                openDynamicIframe(mUrl, dName, targetEl, false);
+            }
+        }
         else if (mTargetPage) {
             navTo(mTargetPage, targetEl, dName);
         } else {

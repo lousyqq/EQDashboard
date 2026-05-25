@@ -69,6 +69,12 @@ C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\rjsmcshtml.dswa.cache.js
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\scopedcss\bundle\EQDashboard.styles.css
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\ddd2x0i3yp-1vxfsoi3y6.gz
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\gxltzfjmpm-61n19gt1b8.gz
+C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\4crof2y8ql-r9tvo71ez5.gz
+C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\y2bxfk3l43-hy78dx7q5r.gz
+C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\36zrqy9lo1-wvzcszh3h0.gz
+C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\vo2980ng4o-smd3wx9flv.gz
+C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\ylyz6w7gxy-cka624lr44.gz
+C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\j9z67z4d9q-5x18cbil2o.gz
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\staticwebassets.build.json
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\staticwebassets.build.json.cache
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\staticwebassets.development.json
@@ -79,12 +85,5 @@ C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\refint\EQDashboard.dll
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\EQDashboard.pdb
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\EQDashboard.genruntimeconfig.cache
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\ref\EQDashboard.dll
-C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\vo2980ng4o-smd3wx9flv.gz
-C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\ylyz6w7gxy-cka624lr44.gz
-C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\j9z67z4d9q-syi9enqw1l.gz
-C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\staticwebassets.upToDateCheck.txt
-C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\4crof2y8ql-zksgbtvpx9.gz
-C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\he6f77jjj9-etl80e8jh7.gz
-C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\y2bxfk3l43-hy78dx7q5r.gz
-C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\36zrqy9lo1-0rw53ro7i6.gz
-C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\dnxv7xk5la-qwgbfrzn9g.gz
+C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\he6f77jjj9-ufcgd9187x.gz
+C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\dnxv7xk5la-nu5bcmeqhn.gz

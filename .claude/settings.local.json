@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(dotnet build *)",
-      "Bash(dotnet msbuild *)"
+      "Bash(dotnet msbuild *)",
+      "Bash(awk 'NR==547,NR==577 {print NR\": \"$0}' /c/EQDashboard/EQDashboard/EQDashboard/wwwroot/js/render.js)"
     ]
   }
 }
