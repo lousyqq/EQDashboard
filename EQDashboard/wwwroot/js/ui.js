@@ -311,7 +311,7 @@ function selectTopMenu(menuId) {
 
     if (menuId === 'system_settings') {
         setTimeout(() => {
-            const firstLeafEl = document.querySelector('#dynamic-sidebar-menus .menu-item:not([data-bs-toggle="collapse"])');
+            const firstLeafEl = document.querySelector('#dynamic-sidebar-menus .menu-item:not([aria-expanded])');
             if (firstLeafEl) firstLeafEl.click();
         }, 50);
         return;
@@ -320,7 +320,7 @@ function selectTopMenu(menuId) {
     setTimeout(() => {
         // 直接檢查側邊欄是否有成功畫出任何項目 (代表有子選單)
         const hasSidebarItems = document.querySelectorAll('#dynamic-sidebar-menus .menu-item').length > 0;
-        const firstLeafEl = document.querySelector('#dynamic-sidebar-menus .menu-item:not([data-bs-toggle="collapse"])');
+        const firstLeafEl = document.querySelector('#dynamic-sidebar-menus .menu-item:not([aria-expanded])');
 
         if (!hasSidebarItems) {
             // 側邊欄沒有東西，代表這是一個獨立的主選單網頁，直接執行開啟動作

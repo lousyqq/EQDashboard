@@ -268,10 +268,30 @@ function renderSidebarMenus() {
         });
         menus = validMenus;
 
-        // 排序：root 與子節點都以 m.order (GlobalOrder) 為準
-        //  - saveRoleItem 拖曳後會把 root 的 m.order 寫成 10/20/30...
-        //  - 個人模式下，個人設定的 order 已透過上面的迴圈套用至 m.order
-        menus.sort((a, b) => (a.order || 0) - (b.order || 0));
+        // 排序（對齊 TEST_20260429.html:3217）：
+        //  - 系統模式下，root 依「目前可看到的群組 allowedMenuIds 串接後的順序」排（dedupedInitIds）
+        //    → 在權限管理拖曳允許看板組合 → 直接決定上方導覽列順序
+        //  - 子節點與個人模式都改用 m.order
+        const dedupedInitIds = [];
+        initialMenuIds.forEach(mId => {
+            const cId = window.cleanId(mId);
+            if (cId && !dedupedInitIds.some(x => window.cleanId(x) === cId)) {
+                dedupedInitIds.push(cId);
+            }
+        });
+
+        menus.sort((a, b) => {
+            const aHasParent = menus.some(p => p.id !== a.id && (window.isParentMatch(a.parentId, p) || (a.parentIds || []).some(pid => window.isParentMatch(pid, p))));
+            const bHasParent = menus.some(p => p.id !== b.id && (window.isParentMatch(b.parentId, p) || (b.parentIds || []).some(pid => window.isParentMatch(pid, p))));
+
+            // 系統模式 + 雙方都是 root → 依 role.allowedMenuIds 的合成順序排
+            if (!inPersonalMode && !aHasParent && !bHasParent) {
+                const idxA = dedupedInitIds.indexOf(window.cleanId(a.id));
+                const idxB = dedupedInitIds.indexOf(window.cleanId(b.id));
+                return (idxA === -1 ? 9999 : idxA) - (idxB === -1 ? 9999 : idxB);
+            }
+            return (a.order || 0) - (b.order || 0);
+        });
 
         let rootMenus = menus.filter(m => {
             if (String(m.isPoolItem).toLowerCase() === 'true') return false;
@@ -648,14 +668,16 @@ function renderPersonalMenuManage() {
             const iconHtml = generateIconHtml(menu.icon, isHidden ? 'text-muted' : 'text-primary', 'me-2 fs-6', menu.menuMode === 'folder');
             const toggleHtml = `<div class="form-check form-switch m-0 d-flex justify-content-center" ${noDrag}><input class="form-check-input cursor-pointer" type="checkbox" onchange="togglePersonalProp('${menu.id}', 'hidden', !this.checked)" ${!isHidden ? 'checked' : ''} title="顯示/隱藏"></div>`;
 
-            // 開啟方式：folder/有子選單者不顯示；leaf 才顯示下拉，可直接變更個人偏好
+            // 開啟方式：folder/有子選單者顯示「-」；leaf 顯示彩色文字（與 TEST_20260429.html:3709 對齊）
+            // 實際變更走右側「編輯」按鈕 → 個人選單設定 Modal 內的「開啟偏好」下拉
+            const targetTextMap = {
+                'iframe': '<span class="text-primary fw-bold small">畫面內嵌</span>',
+                'blank': '<span class="text-info fw-bold small">另開新分頁</span>',
+                'fullscreen': '<span class="text-success fw-bold small">全螢幕</span>'
+            };
             const targetSelectHtml = hasChildren
                 ? '<span class="text-muted">-</span>'
-                : `<select class="form-select form-select-sm" ${noDrag} onchange="setPersonalTarget('${menu.id}', this.value)" style="max-width:140px; display:inline-block;">
-                       <option value="iframe" ${currentTarget === 'iframe' ? 'selected' : ''}>畫面內嵌</option>
-                       <option value="blank" ${currentTarget === 'blank' ? 'selected' : ''}>另開新分頁</option>
-                       <option value="fullscreen" ${currentTarget === 'fullscreen' ? 'selected' : ''}>全螢幕</option>
-                   </select>`;
+                : (targetTextMap[currentTarget] || targetTextMap['iframe']);
 
             const trAttr = `draggable="true" ondragstart="handleDragStart(event, '${menu.id}', '${parentId || ''}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '${menu.id}', '${parentId || ''}', 'personal')"`;
             const levelMap = { 0: '主選單', 1: '子選單', 2: '次子選單' };
@@ -851,7 +873,14 @@ function renderWebpageTable() {
         const mIcon = m.icon || m.Icon; const mId = m.id || m.MenuId;
         const mDName = m.displayName || m.DisplayName; const mSysName = m.name || m.SysName;
 
-        let statusBadge = mEnabled ? '<span class="badge bg-success">啟用</span>' : '<span class="badge bg-secondary">停用</span>';
+        // 狀態欄改為可即時切換的開關（同 選單配置管理）；啟用顯示在側邊欄/上方導覽，停用則隱藏
+        const canToggle = perms.canEdit; // 沒編輯權限者不能切換
+        let statusBadge = canToggle
+            ? `<div class="form-check form-switch d-flex justify-content-center m-0">
+                   <input class="form-check-input cursor-pointer" type="checkbox" ${mEnabled ? 'checked' : ''}
+                          onchange="window.toggleMenuEnable('${mId}', this.checked)" title="啟用 / 停用">
+               </div>`
+            : (mEnabled ? '<span class="badge bg-success">啟用</span>' : '<span class="badge bg-secondary">停用</span>');
         let typeBadge = mMode === 'app_grid'
             ? '<span class="badge bg-info text-dark border"><i class="fas fa-th-large"></i> 應用集合</span>'
             : '<span class="badge bg-light text-dark border"><i class="fas fa-link"></i> 網頁連結</span>';
@@ -961,11 +990,10 @@ function renderMenuConfigTable() {
         if (!actionBtnsHtml) actionBtnsHtml = '<span class="badge bg-light text-muted border">僅檢視</span>';
         let actionBtns = `<div class="d-flex flex-nowrap justify-content-center gap-2">${actionBtnsHtml}</div>`;
 
-        const trAttr = `draggable="true" ondragstart="handleDragStart(event, '${m.id}', null)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '${m.id}', null, 'system')"`;
-
+        // 此頁面的拖曳已停用：上方導覽列順序由「權限管理」拖曳允許看板組合決定，
+        //  選單配置管理不再透過拖曳改變全域順序（避免管理頁的暫時排序影響其他人）
         let sysNameHtml = `
             <div class="d-flex align-items-center">
-                <i class="fas fa-grip-vertical text-muted me-2 opacity-50" style="cursor:grab;"></i>
                 <div>
                     <div class="fw-bold text-dark fs-6">${m.displayName}</div>
                     <div class="text-muted small">${m.name}</div>
@@ -973,7 +1001,7 @@ function renderMenuConfigTable() {
             </div>`;
 
         tbody.innerHTML += `
-            <tr class="draggable-row" ${trAttr}>
+            <tr>
                 <td class="text-start ps-3 align-middle">${sysNameHtml}</td>
                 <td class="align-middle">${typeBadge}</td>
                 <td class="align-middle">${statusSwitch}</td>
@@ -1462,7 +1490,10 @@ window.renderRoleMenuCheckboxes = function (selectedIds) {
     });
 };
 
-// 2. 接管儲存：儲存群組時，順手將面板上拖曳的順序，永久寫入主選單的 GlobalOrder！
+// 儲存群組（對齊 TEST_20260429.html:1359）
+//  - 只保存 role.allowedMenuIds = 「目前勾選的看板，依拖曳順序」
+//  - 不去動每個主選單的 m.order（GlobalOrder），避免編輯 A 群組卻影響其他群組的順序
+//  - 上方導覽列的 root 排序改在 renderSidebarMenus 中用 initialMenuIds 順序處理
 window.saveRoleItem = function (e) {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
     try {
@@ -1470,18 +1501,9 @@ window.saveRoleItem = function (e) {
         const name = document.getElementById('roleName').value.trim();
 
         let allowed = [];
-        let menus = getCustomMenus();
-        let orderCounter = 10;
-
-        // ⭐️ 核心：掃描拖曳後的面板順序，將新的順序強制寫入每一個主選單的 menu.order (GlobalOrder)
         document.querySelectorAll('.role-menu-item').forEach(el => {
             const cb = el.querySelector('.role-menu-cb');
-            if (cb) {
-                if (cb.checked) allowed.push(cb.value);
-                let m = menus.find(x => window.cleanId(x.id || x.MenuId) === window.cleanId(cb.value));
-                if (m) m.order = orderCounter;
-                orderCounter += 10;
-            }
+            if (cb && cb.checked) allowed.push(cb.value);
         });
 
         let roles = getRoles();
@@ -1491,9 +1513,6 @@ window.saveRoleItem = function (e) {
         } else {
             roles.push({ id: 'role_' + Date.now(), groupName: name, allowedMenuIds: allowed });
         }
-
-        // 同步回 AppState 並自動寫入 DB
-        if (window.appState && window.appState.menus) window.appState.menus = menus;
         if (window.appState && window.appState.roles) window.appState.roles = roles;
 
         if (typeof syncDataToDB === 'function') syncDataToDB();
@@ -1501,7 +1520,6 @@ window.saveRoleItem = function (e) {
         if (typeof hideModalSafely === 'function') hideModalSafely('roleModal');
         if (typeof renderRoleTable === 'function') renderRoleTable();
         if (typeof renderSidebarMenus === 'function') renderSidebarMenus();
-        if (typeof renderMenuConfigTable === 'function') renderMenuConfigTable(); // 順便更新配置表的排序
     } catch (error) { console.error("[saveRoleItem] 錯誤:", error); }
     return false;
 };

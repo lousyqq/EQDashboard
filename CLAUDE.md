@@ -326,3 +326,20 @@ UPDATE Accounts SET LoginCount = 0 WHERE LoginCount IS NULL;
 | 補回的函式 | `toggleSubMenu`、`getAllowedIdsWithHierarchy`、`getMenuPermissions`、`renderUserDropdown`、`deleteApplyItem`、`exportConfig` / `createWorkbookData` |
 | Excel 匯出 | 在「設定檔管理」頁加上「匯出 Excel 備份」按鈕（呼叫 `exportConfig()`） |
 | 效能 | `enforceSystemModeUI` 的 `MutationObserver` 從監聽整個 `<body>` 改為只監聽 `#dynamic-sidebar-menus` |
+
+
+## 🔄 每輪對話自動覆盤協定 (Mandatory Per-Task Update)
+
+你（Claude）必須將「更新專案文件與記憶」視為每個任務不可分割的最後一步。在每一次回答完使用者問題、或執行完程式碼修改時，你**必須自動**執行以下檢查，不需等待使用者提醒：
+
+1. **更新 `CLAUDE.md`**：
+   - 檢查使用者剛剛的提問或你的修改中，是否涉及全新的「常用指令」、「程式碼規範」或「禁止事項」。
+   - 如果有，立刻使用 `write_file` 變更本檔案的對應區塊（總長度需保持在 150 行內）。
+
+2. **更新 `memory.md`**：
+   - **新增歷史日誌**：在 `## 🛤️ 3. 開發歷史與決策日誌` 中，依今日日期（格式：`YYYY-MM-DD`）追加一筆簡短記錄，說明你剛剛幫使用者解決了什麼問題或修改了什麼功能。
+   - **更新待辦狀態**：如果剛剛的對話完成了一個待辦事項，請去 `## 🛠️ 4. 進行中與待辦事項` 將其標記為 `[x]`，並移出當前優先任務。
+   - **沉澱技術細節**：如果使用者剛剛詢問了某個隱藏的系統邏輯、或你們剛修復了一個隱蔽的 Bug，請立刻將其總結並補充到 `## 🏗️ 1. 系統核心與隱藏邏輯` 或 `## 🐛 2. 踩坑與填坑紀錄` 中。
+
+3. **執行時機**：在向使用者發送「最終答覆文本」之前，請先完成上述檔案的寫入。你可以在最終答覆的末尾加上一行提示（例如：`*已自動更新 CLAUDE.md 與 memory.md*`）以利確認。
+

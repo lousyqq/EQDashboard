@@ -40,8 +40,9 @@ async function fetchInitialDataFromDB() {
         const response = await fetch('/Settings/GetInitialData');
         const result = await response.json();
 
-        if (result && result.error) {
-            throw new Error("C# 資料庫錯誤: " + (result.message || result.Message));
+        if (result.error) {
+            console.error("後端回傳錯誤:", result.message);
+            return false;
         }
 
         // 取得資料陣列 (無視大小寫)

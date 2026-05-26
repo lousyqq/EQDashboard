@@ -3,12 +3,20 @@
   "WorkspaceRootPath": "C:\\EQDashboard\\EQDashboard\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{28334818-4B6C-4582-A432-80BBDEC8EFB2}|EQDashboard\\EQDashboard.csproj|c:\\eqdashboard\\eqdashboard\\eqdashboard\\wwwroot\\index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{28334818-4B6C-4582-A432-80BBDEC8EFB2}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\wwwroot\\index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{28334818-4B6C-4582-A432-80BBDEC8EFB2}|EQDashboard\\EQDashboard.csproj|c:\\eqdashboard\\eqdashboard\\eqdashboard\\wwwroot\\js\\render.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
       "RelativeMoniker": "D:0:0:{28334818-4B6C-4582-A432-80BBDEC8EFB2}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\wwwroot\\js\\render.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{28334818-4B6C-4582-A432-80BBDEC8EFB2}|EQDashboard\\EQDashboard.csproj|c:\\eqdashboard\\eqdashboard\\eqdashboard\\wwwroot\\js\\auth.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
+      "RelativeMoniker": "D:0:0:{28334818-4B6C-4582-A432-80BBDEC8EFB2}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\wwwroot\\js\\auth.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{28334818-4B6C-4582-A432-80BBDEC8EFB2}|EQDashboard\\EQDashboard.csproj|c:\\eqdashboard\\eqdashboard\\eqdashboard\\wwwroot\\css\\style.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
+      "RelativeMoniker": "D:0:0:{28334818-4B6C-4582-A432-80BBDEC8EFB2}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\wwwroot\\css\\style.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{28334818-4B6C-4582-A432-80BBDEC8EFB2}|EQDashboard\\EQDashboard.csproj|c:\\eqdashboard\\eqdashboard\\eqdashboard\\wwwroot\\index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{28334818-4B6C-4582-A432-80BBDEC8EFB2}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\wwwroot\\index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{28334818-4B6C-4582-A432-80BBDEC8EFB2}|EQDashboard\\EQDashboard.csproj|c:\\eqdashboard\\eqdashboard\\eqdashboard\\wwwroot\\js\\admin.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
@@ -17,18 +25,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{28334818-4B6C-4582-A432-80BBDEC8EFB2}|EQDashboard\\EQDashboard.csproj|c:\\eqdashboard\\eqdashboard\\eqdashboard\\wwwroot\\js\\ui.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
       "RelativeMoniker": "D:0:0:{28334818-4B6C-4582-A432-80BBDEC8EFB2}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\wwwroot\\js\\ui.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{28334818-4B6C-4582-A432-80BBDEC8EFB2}|EQDashboard\\EQDashboard.csproj|c:\\eqdashboard\\eqdashboard\\eqdashboard\\wwwroot\\css\\style.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
-      "RelativeMoniker": "D:0:0:{28334818-4B6C-4582-A432-80BBDEC8EFB2}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\wwwroot\\css\\style.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{28334818-4B6C-4582-A432-80BBDEC8EFB2}|EQDashboard\\EQDashboard.csproj|c:\\eqdashboard\\eqdashboard\\eqdashboard\\wwwroot\\js\\auth.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
-      "RelativeMoniker": "D:0:0:{28334818-4B6C-4582-A432-80BBDEC8EFB2}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\wwwroot\\js\\auth.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{28334818-4B6C-4582-A432-80BBDEC8EFB2}|EQDashboard\\EQDashboard.csproj|c:\\eqdashboard\\eqdashboard\\eqdashboard\\wwwroot\\js\\config.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
-      "RelativeMoniker": "D:0:0:{28334818-4B6C-4582-A432-80BBDEC8EFB2}|EQDashboard\\EQDashboard.csproj|solutionrelative:eqdashboard\\wwwroot\\js\\config.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
     }
   ],
   "DocumentGroupContainers": [
@@ -38,15 +34,11 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 5,
+          "SelectedChildIndex": 6,
           "Children": [
             {
-              "$type": "Bookmark",
-              "Name": "ST:128:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
-            },
-            {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 1,
               "Title": "auth.js",
               "DocumentMoniker": "C:\\EQDashboard\\EQDashboard\\EQDashboard\\wwwroot\\js\\auth.js",
               "RelativeDocumentMoniker": "EQDashboard\\wwwroot\\js\\auth.js",
@@ -55,11 +47,12 @@
               "ViewState": "AgIAACMAAAAAAAAAAAAcwCgAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
               "WhenOpened": "2026-05-12T15:33:21.016Z",
-              "IsPinned": true
+              "IsPinned": true,
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 5,
               "Title": "ui.js",
               "DocumentMoniker": "C:\\EQDashboard\\EQDashboard\\EQDashboard\\wwwroot\\js\\ui.js",
               "RelativeDocumentMoniker": "EQDashboard\\wwwroot\\js\\ui.js",
@@ -71,8 +64,12 @@
               "IsPinned": true
             },
             {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
+            {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 4,
               "Title": "admin.js",
               "DocumentMoniker": "C:\\EQDashboard\\EQDashboard\\EQDashboard\\wwwroot\\js\\admin.js",
               "RelativeDocumentMoniker": "EQDashboard\\wwwroot\\js\\admin.js",
@@ -84,7 +81,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 2,
               "Title": "style.css",
               "DocumentMoniker": "C:\\EQDashboard\\EQDashboard\\EQDashboard\\wwwroot\\css\\style.css",
               "RelativeDocumentMoniker": "EQDashboard\\wwwroot\\css\\style.css",
@@ -96,40 +93,28 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 3,
               "Title": "index.html",
               "DocumentMoniker": "C:\\EQDashboard\\EQDashboard\\EQDashboard\\wwwroot\\index.html",
               "RelativeDocumentMoniker": "EQDashboard\\wwwroot\\index.html",
               "ToolTip": "C:\\EQDashboard\\EQDashboard\\EQDashboard\\wwwroot\\index.html",
               "RelativeToolTip": "EQDashboard\\wwwroot\\index.html",
-              "ViewState": "AgIAAPUBAAAAAAAAAAAUwPwBAABkAAAAAAAAAA==",
+              "ViewState": "AgIAADUDAAAAAAAAAAAAAGUCAAA4AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
-              "WhenOpened": "2026-05-19T16:17:55.615Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-05-19T16:17:55.615Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "config.js",
-              "DocumentMoniker": "C:\\EQDashboard\\EQDashboard\\EQDashboard\\wwwroot\\js\\config.js",
-              "RelativeDocumentMoniker": "EQDashboard\\wwwroot\\js\\config.js",
-              "ToolTip": "C:\\EQDashboard\\EQDashboard\\EQDashboard\\wwwroot\\js\\config.js",
-              "RelativeToolTip": "EQDashboard\\wwwroot\\js\\config.js",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAACMAAAA1AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
-              "WhenOpened": "2026-05-14T17:28:40.387Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "render.js",
               "DocumentMoniker": "C:\\EQDashboard\\EQDashboard\\EQDashboard\\wwwroot\\js\\render.js",
               "RelativeDocumentMoniker": "EQDashboard\\wwwroot\\js\\render.js",
               "ToolTip": "C:\\EQDashboard\\EQDashboard\\EQDashboard\\wwwroot\\js\\render.js",
               "RelativeToolTip": "EQDashboard\\wwwroot\\js\\render.js",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAACAAAAAAAAAA==",
+              "ViewState": "AgIAANYFAAAAAAAAAAAAANsFAAA/AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
-              "WhenOpened": "2026-05-14T13:28:20.76Z"
+              "WhenOpened": "2026-05-14T13:28:20.76Z",
+              "EditorCaption": ""
             }
           ]
         }

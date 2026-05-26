@@ -377,6 +377,10 @@ function openAddAccountModal() {
         document.getElementById('accRoleLevel').disabled = false;
         document.getElementById('accEnableDelegation').checked = false;
 
+        // 新增情境：把「管理層級」、「委派管理」兩個區段重新顯示（清除上次編輯 admin 留下的隱藏狀態）
+        const lvlGroup = document.getElementById('accRoleLevelGroup');
+        if (lvlGroup) lvlGroup.style.display = '';
+
         // ⭐️ 修復 2：移除這行舊版的 HTML 覆寫，它會因為找不到舊容器而導致程式報錯中斷！
         // document.getElementById('accRoleCheckboxesContainer').innerHTML = '<div id="accRoleCheckboxes" class="d-flex flex-wrap gap-1 mt-1"></div>';
 
@@ -403,9 +407,15 @@ function editAccount(empId) {
         document.getElementById('accEmpId').value = acc.empId; document.getElementById('accEmpId').disabled = true;
         document.getElementById('accName').value = acc.name || ''; document.getElementById('accDept').value = acc.department || '';
         document.getElementById('accRoleLevel').value = acc.roleLevel || 'user';
-        // 編輯系統預設 admin 時不允許降級
-        const isSystemAdmin = window.cleanId(acc.empId) === 'admin';
-        document.getElementById('accRoleLevel').disabled = isSystemAdmin;
+
+        // 編輯 admin 帳號 → 隱藏「管理層級」與「委派管理」整個區段（admin 是全域管理者，不需要這些選項）
+        const isAdminAccount = (acc.roleLevel === 'admin') || window.cleanId(acc.empId) === 'admin';
+        const lvlGroup = document.getElementById('accRoleLevelGroup');
+        const delegationGroup = document.getElementById('accDelegationGroup');
+        if (lvlGroup) lvlGroup.style.display = isAdminAccount ? 'none' : '';
+        if (isAdminAccount && delegationGroup) delegationGroup.style.display = 'none';
+        document.getElementById('accRoleLevel').disabled = isAdminAccount;
+
         document.getElementById('accEnableDelegation').checked = (acc.manageableMenus && acc.manageableMenus.length > 0);
         document.getElementById('accCanEditOthers').checked = acc.canEditOthers || false;
 
@@ -676,7 +686,8 @@ function saveWebpageItem(e) {
         mObj.displayName = document.getElementById('wpDisplayName').value.trim();
         mObj.menuMode = isAppGrid ? 'app_grid' : 'link';
         mObj.icon = getSelectedIconVal('wp');
-        mObj.enabled = true;
+        // 只在「新增」時預設 enabled=true；編輯既有看板時不覆寫使用者已經在表格 toggle 過的狀態
+        if (!id) mObj.enabled = true;
         mObj.isEdited = true;
         // 編輯既有的池中項目時也維持 isPoolItem=true
         if (id) mObj.isPoolItem = true;
@@ -691,8 +702,13 @@ function saveWebpageItem(e) {
         }
 
         if (!id) {
-            mObj.order = menus.length * 10;
+            // 對齊 TEST_20260429.html:3902：新增的看板網頁先以 order=-1 插入，再對「池中項目」整體 resort
+            //  → 新項目自然出現在第一列；其他池中項目保持相對順序
+            mObj.order = -1;
             menus.push(mObj);
+            const poolMenus = menus.filter(x => x.isPoolItem === true);
+            poolMenus.sort((a, b) => (a.order || 0) - (b.order || 0));
+            poolMenus.forEach((p, idx) => { p.order = idx * 10; });
             window.appState.menus = menus;
         }
 
@@ -741,35 +757,61 @@ function getLinkOptionsHtml(selectedId) {
     return html;
 }
 
-window.tbAddLink = function (container, menuId = null) {
+// 樹狀建構器：當前 user 是否可自由拖曳/編輯既有列（admin 永遠可；user 需 canEditOthers）
+window.tbCanReorder = function () {
+    if (!currentUser) return false;
+    if (currentUser.roleLevel === 'admin') return true;
+    return !!currentUser.canEditOthers;
+};
+
+window.tbAddLink = function (container, menuId = null, opts) {
+    opts = opts || {};
+    const draggable = opts.draggable !== undefined ? opts.draggable : window.tbCanReorder();
+    const removable = opts.removable !== undefined ? opts.removable : true;
     let div = document.createElement('div');
     div.className = 'd-flex align-items-center mb-2 bg-white border rounded p-2 shadow-sm tb-item tb-link';
     div.setAttribute('data-type', 'link');
-    div.setAttribute('draggable', 'true');
+    if (draggable) div.setAttribute('draggable', 'true');
+    const handleHtml = draggable
+        ? '<i class="fas fa-grip-vertical text-muted me-3 cursor-move tb-drag-handle" style="cursor: grab;"></i>'
+        : '<i class="fas fa-lock text-muted me-3" style="opacity:0.3;" title="您沒有變更他人內容的權限"></i>';
+    const removeBtnHtml = removable
+        ? '<button type="button" class="btn btn-sm text-danger border-0 ms-2" onclick="this.closest(\'.tb-item\').remove()"><i class="fas fa-times"></i></button>'
+        : '';
     div.innerHTML = `
-        <i class="fas fa-grip-vertical text-muted me-3 cursor-move tb-drag-handle" style="cursor: grab;"></i>
+        ${handleHtml}
         <i class="fas fa-link text-primary me-2"></i>
-        <select class="form-select form-select-sm flex-grow-1 border-primary bg-primary bg-opacity-10 text-primary fw-bold tb-link-select">
+        <select class="form-select form-select-sm flex-grow-1 border-primary bg-primary bg-opacity-10 text-primary fw-bold tb-link-select" ${removable ? '' : 'disabled'}>
             ${getLinkOptionsHtml(menuId)}
         </select>
-        <button type="button" class="btn btn-sm text-danger border-0 ms-2" onclick="this.closest('.tb-item').remove()"><i class="fas fa-times"></i></button>
+        ${removeBtnHtml}
     `;
     if (container) container.appendChild(div);
     return div;
 };
 
-window.tbAddFolder = function (container, folderName = '', folderId = '') {
+window.tbAddFolder = function (container, folderName = '', folderId = '', opts) {
+    opts = opts || {};
+    const draggable = opts.draggable !== undefined ? opts.draggable : window.tbCanReorder();
+    const removable = opts.removable !== undefined ? opts.removable : true;
+    const nameEditable = opts.nameEditable !== undefined ? opts.nameEditable : true;
     let div = document.createElement('div');
     div.className = 'mb-2 bg-white border border-warning rounded p-2 shadow-sm tb-item tb-folder';
     div.setAttribute('data-type', 'folder');
     div.setAttribute('data-id', folderId);
-    div.setAttribute('draggable', 'true');
+    if (draggable) div.setAttribute('draggable', 'true');
+    const handleHtml = draggable
+        ? '<i class="fas fa-grip-vertical text-muted me-3 cursor-move tb-drag-handle" style="cursor: grab;"></i>'
+        : '<i class="fas fa-lock text-muted me-3" style="opacity:0.3;" title="您沒有變更他人內容的權限"></i>';
+    const removeBtnHtml = removable
+        ? '<button type="button" class="btn btn-sm btn-outline-danger border-0 ms-2" onclick="this.closest(\'.tb-item\').remove()"><i class="fas fa-trash-alt me-1"></i>移除群組</button>'
+        : '';
     div.innerHTML = `
         <div class="d-flex align-items-center mb-2">
-            <i class="fas fa-grip-vertical text-muted me-3 cursor-move tb-drag-handle" style="cursor: grab;"></i>
+            ${handleHtml}
             <i class="fas fa-folder text-warning me-2 fs-5"></i>
-            <input type="text" class="form-control form-control-sm flex-grow-1 border-warning fw-bold text-dark tb-folder-name" value="${folderName}" placeholder="群組名稱">
-            <button type="button" class="btn btn-sm btn-outline-danger border-0 ms-2" onclick="this.closest('.tb-item').remove()"><i class="fas fa-trash-alt me-1"></i>移除群組</button>
+            <input type="text" class="form-control form-control-sm flex-grow-1 border-warning fw-bold text-dark tb-folder-name" value="${folderName}" placeholder="群組名稱" ${nameEditable ? '' : 'readonly'}>
+            ${removeBtnHtml}
         </div>
         <div class="tb-children ps-4 ms-2 border-start border-warning border-2 pb-1 pt-1" style="min-height: 30px;"></div>
         <div class="ps-4 ms-2 mt-1">
@@ -785,12 +827,21 @@ function buildTreeUI(container, parentId) {
     let children = menus.filter(m => m.id !== parentId && (window.isParentMatch(m.parentId, { id: parentId }) || (m.parentIds || []).some(pid => window.isParentMatch(pid, { id: parentId }))));
     children.sort((a, b) => (a.parentOrders?.[parentId] ?? a.order ?? 0) - (b.parentOrders?.[parentId] ?? b.order ?? 0));
 
+    // 既有的列：是否可拖曳依「該帳號可變更他人內容」；可否移除/編輯名稱依 getMenuPermissions 對該節點的權限
+    const canReorder = window.tbCanReorder();
     children.forEach(c => {
+        const perms = window.getMenuPermissions(c.id, c.createdBy);
+        const removable = perms.canDelete === true;
+        const nameEditable = perms.canEdit === true;
         if (c.menuMode === 'folder') {
-            let folderDiv = window.tbAddFolder(container, c.displayName, c.id);
+            let folderDiv = window.tbAddFolder(container, c.displayName, c.id, {
+                draggable: canReorder, removable, nameEditable
+            });
             buildTreeUI(folderDiv.querySelector('.tb-children'), c.id);
         } else {
-            window.tbAddLink(container, c.id);
+            window.tbAddLink(container, c.id, {
+                draggable: canReorder, removable
+            });
         }
     });
 }
@@ -811,6 +862,7 @@ function initTreeDragAndDrop() {
     });
     section.addEventListener('dragover', function (e) {
         e.preventDefault();
+        if (!dragged) return; // 拖曳被權限阻擋時不做任何處理
         const target = e.target.closest('.tb-item');
         if (target && target !== dragged && !dragged.contains(target)) {
             const rect = target.getBoundingClientRect();
@@ -1069,9 +1121,10 @@ window.toggleMenuEnable = function (id, isEnabled) {
     if (m) {
         m.enabled = isEnabled;
         window.appState.menus = menus;
-        // 異動立即靜默同步到 DB（一般操作不需手動觸發）
         if (typeof syncDataToDB === 'function') syncDataToDB();
         if (typeof renderSidebarMenus === 'function') renderSidebarMenus();
+        if (typeof renderWebpageTable === 'function') renderWebpageTable();
+        if (typeof renderMenuConfigTable === 'function') renderMenuConfigTable();
     }
 };
 
