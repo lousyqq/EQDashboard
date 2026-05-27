@@ -1067,7 +1067,8 @@ body.iframe-mode #page-iframe iframe {
     display: flex;
     border-radius: 50px;
     padding: 2px;
-    width: 85px;
+    min-width: 85px;
+    width: auto;
     height: 26px;
     cursor: pointer;
     margin: 0 4px;
@@ -1104,6 +1105,8 @@ body.iframe-mode #page-iframe iframe {
     transition: color 0.3s;
     pointer-events: none;
     color: rgba(255, 255, 255, 0.4);
+    white-space: nowrap;
+    padding: 0 6px;
 }
 
     .pill-btn-text.active {

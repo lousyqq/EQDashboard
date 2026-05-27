@@ -67,14 +67,10 @@ C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\rjimswa.dswa.cache.json
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\rjsmrazor.dswa.cache.json
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\rjsmcshtml.dswa.cache.json
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\scopedcss\bundle\EQDashboard.styles.css
-C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\ddd2x0i3yp-1vxfsoi3y6.gz
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\gxltzfjmpm-61n19gt1b8.gz
-C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\4crof2y8ql-di89hprj7n.gz
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\he6f77jjj9-ek8ud6defl.gz
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\36zrqy9lo1-wvzcszh3h0.gz
-C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\vo2980ng4o-smd3wx9flv.gz
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\ylyz6w7gxy-cka624lr44.gz
-C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\j9z67z4d9q-lg3u15i1tf.gz
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\staticwebassets.build.json
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\staticwebassets.build.json.cache
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\staticwebassets.development.json
@@ -85,7 +81,6 @@ C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\refint\EQDashboard.dll
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\EQDashboard.pdb
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\EQDashboard.genruntimeconfig.cache
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\ref\EQDashboard.dll
-C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\dnxv7xk5la-ct35g7ey1x.gz
 C:\EQDashboard\EQDashboard\EQDashboard\bin\Debug\net9.0\Humanizer.dll
 C:\EQDashboard\EQDashboard\EQDashboard\bin\Debug\net9.0\Microsoft.Bcl.AsyncInterfaces.dll
 C:\EQDashboard\EQDashboard\EQDashboard\bin\Debug\net9.0\Microsoft.Build.Locator.dll
@@ -174,4 +169,9 @@ C:\EQDashboard\EQDashboard\EQDashboard\bin\Debug\net9.0\tr\Microsoft.CodeAnalysi
 C:\EQDashboard\EQDashboard\EQDashboard\bin\Debug\net9.0\zh-Hans\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\EQDashboard\EQDashboard\EQDashboard\bin\Debug\net9.0\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\y2bxfk3l43-t6flnnemoy.gz
+C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\ddd2x0i3yp-33ba8kvpny.gz
+C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\dnxv7xk5la-jyax3yzig0.gz
+C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\4crof2y8ql-b7s0futyh1.gz
+C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\vo2980ng4o-a13ph1mpkx.gz
+C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\compressed\j9z67z4d9q-myood6pycl.gz
 C:\EQDashboard\EQDashboard\EQDashboard\obj\Debug\net9.0\staticwebassets.upToDateCheck.txt

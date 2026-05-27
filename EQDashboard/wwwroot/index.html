@@ -30,20 +30,20 @@
     <!-- 登入框 -->
     <div id="login-overlay" style="display:none;">
         <div class="login-box">
-            <h4 class="text-center mb-4 fw-bold" style="color: #0b1120;"><i class="fas fa-microchip me-2"></i>EQ Dashboard</h4>
+            <h4 class="text-center mb-4 fw-bold" style="color: #0b1120;"><i class="fas fa-microchip me-2"></i><span data-i18n="login_title">EQ Dashboard</h4>
             <div class="alert alert-light border py-2 mb-4 text-center" style="font-size: 0.8rem;">
                 <i class="fas fa-info-circle me-1 text-primary"></i> 測試帳號：<br><b>admin</b> (管理員) / <b>user</b> (一般使用者)
             </div>
             <form onsubmit="doLogin(); return false;">
                 <div class="mb-3">
-                    <label class="form-label text-muted small fw-bold mb-1">工號 (Emp ID)</label>
+                    <label class="form-label text-muted small fw-bold mb-1" data-i18n="login_emp_id">工號 (Emp ID)</label>
                     <input type="text" id="empId" class="form-control form-control-sm" placeholder="admin / user">
                 </div>
                 <div class="mb-4">
-                    <label class="form-label text-muted small fw-bold mb-1">密碼 (Password)</label>
+                    <label class="form-label text-muted small fw-bold mb-1" data-i18n="login_pwd">密碼 (Password)</label>
                     <input type="password" id="empPwd" class="form-control form-control-sm" value="123456">
                 </div>
-                <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold py-2"><i class="fas fa-sign-in-alt me-1"></i> 登入</button>
+                <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold py-2"><i class="fas fa-sign-in-alt me-1"></i><span data-i18n="login_btn"> 登入</span></button>
             </form>
         </div>
     </div>
@@ -60,7 +60,7 @@
                 <h1 class="nav-logo-text" onclick="goDefaultHome()" title="回預設首頁"><span class="text-info">UMC</span> EQ Dashboard</h1>
                 <div class="nav-breadcrumb-inline" id="top-breadcrumb">
                     <i class="fas fa-satellite-dish me-1"></i>
-                    <span id="bc-path" style="display:none;"></span><span class="current" id="bc-name">首頁總覽</span>
+                    <span id="bc-path" style="display:none;"></span><span class="current" id="bc-name" data-i18n="nav_breadcrumb_home">首頁總覽</span>
                 </div>
             </div>
 
@@ -68,7 +68,7 @@
                 <div class="dropdown">
                     <button class="util-item dropdown-toggle" id="fabDropdownToggle" type="button" data-bs-toggle="dropdown"
                                                        aria-expanded="false">
-                        廠區:<span class="text-white ms-1" id="current-fab-name">12A</span>
+                        <span data-i18n="nav_fab">廠區:</span><span class="text-white ms-1" id="current-fab-name">12A</span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1" id="fab-dropdown-menu"
                                                aria-labelledby="fabDropdownToggle"></ul>
@@ -77,8 +77,8 @@
 
                 <div class="layout-toggle-wrapper" id="layout-toggle-wrapper" onclick="switchLayoutMode(currentLayoutMode === 'system' ? 'personal' : 'system')" title="切換版面配置">
                     <div class="layout-toggle-slider"></div>
-                    <div class="pill-btn-text active" id="btn-layout-system">系統</div>
-                    <div class="pill-btn-text" id="btn-layout-personal">自訂</div>
+                    <div class="pill-btn-text active" id="btn-layout-system" data-i18n="nav_sys">系統</div>
+                    <div class="pill-btn-text" id="btn-layout-personal" data-i18n="nav_personal">自訂</div>
                 </div>
                 <div class="util-divider"></div>
 
@@ -88,18 +88,18 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="langDropdown" style="min-width: 130px;">
                         <li>
-                            <a class="dropdown-item py-2 fw-bold d-flex justify-content-between align-items-center" href="#" onclick="event.preventDefault(); updateLangUI('zh', '繁中');">
-                                <span>繁體中文</span><i class="fas fa-check ms-2 text-primary lang-check" id="check-zh"></i>
+                            <a class="dropdown-item py-2 fw-bold d-flex justify-content-between align-items-center" href="#" onclick="event.preventDefault(); updateLangUI('zh');">
+                                <span data-i18n="lang_zh">繁體中文</span><i class="fas fa-check ms-2 text-primary lang-check" id="check-zh"></i>
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item py-2 fw-bold d-flex justify-content-between align-items-center" href="#" onclick="event.preventDefault(); updateLangUI('ja', '日本語');">
-                                <span>日本語</span><i class="fas fa-check ms-2 text-primary d-none lang-check" id="check-ja"></i>
+                            <a class="dropdown-item py-2 fw-bold d-flex justify-content-between align-items-center" href="#" onclick="event.preventDefault(); updateLangUI('ja');">
+                                <span data-i18n="lang_ja">日本語</span><i class="fas fa-check ms-2 text-primary d-none lang-check" id="check-ja"></i>
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item py-2 fw-bold d-flex justify-content-between align-items-center" href="#" onclick="event.preventDefault(); updateLangUI('en', 'EN');">
-                                <span>English</span><i class="fas fa-check ms-2 text-primary d-none lang-check" id="check-en"></i>
+                            <a class="dropdown-item py-2 fw-bold d-flex justify-content-between align-items-center" href="#" onclick="event.preventDefault(); updateLangUI('en');">
+                                <span data-i18n="lang_en">English</span><i class="fas fa-check ms-2 text-primary d-none lang-check" id="check-en"></i>
                             </a>
                         </li>
                     </ul>
@@ -120,8 +120,8 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2 p-0" style="width: 280px; border-radius: 8px; overflow: hidden;">
                         <div class="p-3 bg-light border-bottom d-flex align-items-center"><div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 45px; height: 45px; font-size: 1.5rem; flex-shrink: 0;"><i class="fas fa-user"></i></div><div class="ms-3 overflow-hidden"><div class="fw-bold text-dark fs-6 text-truncate" id="dropdown-user-name">系統管理員 (admin)</div><div class="text-muted small text-truncate mt-1"><i class="fas fa-sitemap me-1"></i> <span id="dropdown-user-dept">資訊處</span></div></div></div>
-                        <div class="p-3 bg-white"><div class="d-flex justify-content-between align-items-center mb-3"><div class="text-secondary fw-bold"><i class="fas fa-chart-line me-2 text-success"></i>累積登入次數</div><div class="badge bg-success bg-opacity-10 text-success px-2 py-1 border border-success border-opacity-25" id="dropdown-user-login-count">0 次</div></div><div class="d-flex justify-content-between align-items-center"><div class="text-secondary fw-bold"><i class="fas fa-clock me-2 text-primary"></i>本次登入時間</div><div class="fw-bold text-dark" id="dropdown-user-login-time">00:00 AM</div></div></div>
-                        <div class="border-top"><a class="dropdown-item py-3 fw-bold cursor-pointer bg-light d-flex align-items-center" onclick="logout()"><i class="fas fa-sign-out-alt text-danger me-2 fs-5"></i> <span class="text-danger">登出系統</span></a></div>
+                        <div class="p-3 bg-white"><div class="d-flex justify-content-between align-items-center mb-3"><div class="text-secondary fw-bold"><i class="fas fa-chart-line me-2 text-success"></i><span data-i18n="nav_login_count">累積登入次數</div><div class="badge bg-success bg-opacity-10 text-success px-2 py-1 border border-success border-opacity-25" id="dropdown-user-login-count">0 次</div></div><div class="d-flex justify-content-between align-items-center"><div class="text-secondary fw-bold"><i class="fas fa-clock me-2 text-primary"></i><span data-i18n="nav_login_time">本次登入時間</div><div class="fw-bold text-dark" id="dropdown-user-login-time">00:00 AM</div></div></div>
+                        <div class="border-top"><a class="dropdown-item py-3 fw-bold cursor-pointer bg-light d-flex align-items-center" onclick="logout()"><i class="fas fa-sign-out-alt text-danger me-2 fs-5"></i> <span class="text-danger" data-i18n="nav_logout">登出系統</span></a></div>
                     </ul>
                 </div>
             </div>
@@ -130,13 +130,13 @@
         <div class="navbar-row-bottom">
             <div class="top-menus" id="top-dynamic-menus"></div>
             <!-- TODO: 將下方 your-feedback-url.com 換成實際的意見回饋網址 -->
-            <a href="https://your-feedback-url.com" target="_blank" class="feedback-link" title="提供您的寶貴意見"><i class="fas fa-envelope-open-text me-1"></i>意見箱</a>
+            <a href="https://your-feedback-url.com" target="_blank" class="feedback-link" title="提供您的寶貴意見"><i class="fas fa-envelope-open-text me-1"></i><span data-i18n="nav_feedback"> 意見箱</span></a>
         </div>
     </div>
 
     <div id="wrapper">
         <div id="sidebar" class="sidebar">
-            <div class="sidebar-module-header"><i class="fas fa-layer-group"></i> <div class="module-title-text" id="sidebar-module-title">模組目錄</div></div>
+            <div class="sidebar-module-header"><i class="fas fa-layer-group"></i> <div class="module-title-text" id="sidebar-module-title" data-i18n="sidebar_module">模組目錄</div></div>
             <div class="flex-grow-1 overflow-auto py-1" id="dynamic-sidebar-menus"></div>
         </div>
 
@@ -148,7 +148,7 @@
                         <div class="home-welcome-icon"><i class="fas fa-check"></i></div>
                         <div>
                             <h5 class="mb-1 fw-bold" style="color: #065f46;" data-i18n="welcome_title">歡迎登入</h5>
-                            <p class="mb-0" style="color: #047857; font-size: 0.9rem;" id="layout-status-desc">目前為 <strong>預設系統版面</strong>。請從上方或左側選單進入各項報表或設定。</p>
+                            <p class="mb-0" style="color: #047857; font-size: 0.9rem;" id="layout-status-desc" data-i18n="home_desc">目前為 <strong>預設系統版面</strong>。請從上方或左側選單進入各項報表或設定。</p>
                         </div>
                     </div>
 
@@ -157,8 +157,8 @@
                             <div class="home-card home-card-top-red">
                                 <div class="home-icon-bg shield"><i class="fas fa-shield-alt"></i></div>
                                 <div class="home-card-content">
-                                    <p class="text-muted fw-bold mb-2 small"><i class="fas fa-key me-1"></i> 我的系統權限層級</p>
-                                    <h2 class="mb-3 mt-3 fw-bold" style="color: #dc3545;"><span id="home-role-title">系統管理員</span> <small class="text-danger fs-5 fw-normal opacity-75" id="home-role-level">(Admin)</small></h2>
+                                    <p class="text-muted fw-bold mb-2 small"><i class="fas fa-key me-1"></i><span data-i18n="home_role_title"> 我的系統權限層級</p>
+                                    <h2 class="mb-3 mt-3 fw-bold" style="color: #dc3545;"><span id="home-role-title" data-i18n="home_role_admin">系統管理員</span> <small class="text-danger fs-5 fw-normal opacity-75" id="home-role-level">(Admin)</small></h2>
                                     <p class="text-muted small mb-0"><i class="fas fa-info-circle me-1"></i> 系統根據您的職務自動派發</p>
                                 </div>
                             </div>
@@ -167,7 +167,7 @@
                             <div class="home-card home-card-top-blue">
                                 <div class="home-icon-bg building"><i class="fas fa-building"></i></div>
                                 <div class="home-card-content">
-                                    <div class="d-flex justify-content-between align-items-start"><p class="text-muted fw-bold mb-2 small"><i class="fas fa-map-marker-alt me-1"></i> 目前選擇廠區</p><span class="badge border text-muted bg-light fw-normal py-1 px-2 shadow-sm" style="font-size: 0.75rem;">可於右上方切換</span></div>
+                                    <div class="d-flex justify-content-between align-items-start"><p class="text-muted fw-bold mb-2 small"><i class="fas fa-map-marker-alt me-1"></i><span data-i18n="home_fab_title"> 目前選擇廠區</p><span class="badge border text-muted bg-light fw-normal py-1 px-2 shadow-sm" style="font-size: 0.75rem;">可於右上方切換</span></div>
                                     <h2 class="mb-3 mt-3 fw-bold" style="color: #0284c7;" id="home-fab-display">12A</h2>
                                     <p class="text-muted small mb-0">目前顯示該廠區之全域配置</p>
                                 </div>
@@ -178,10 +178,10 @@
 
                 <div id="page-personal-manage" class="page-section">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0 fw-bold text-primary"><i class="fas fa-user-cog me-2"></i> 個人頁面管理 <span class="fs-6 text-muted fw-normal ms-2">(自訂專屬版面)</span></h5>
+                        <h5 class="mb-0 fw-bold text-primary"><i class="fas fa-user-cog me-2"></i><span data-i18n="menu_personal_manage"> 個人頁面管理 <span class="fs-6 text-muted fw-normal ms-2">(自訂專屬版面)</span></h5>
                         <div class="d-flex align-items-center gap-2">
-                            <button class="btn btn-sm btn-outline-danger fw-bold shadow-sm" onclick="restoreDefaultPersonalMenu()"><i class="fas fa-trash-restore me-1"></i> 還原預設版面</button>
-                            <button class="btn btn-sm btn-outline-secondary fw-bold shadow-sm" id="btn-per-toggle-all" onclick="togglePerAllMenus()"><i class="fas fa-expand-arrows-alt me-1"></i> 全部展開</button>
+                            <button class="btn btn-sm btn-outline-danger fw-bold shadow-sm" onclick="restoreDefaultPersonalMenu()"><i class="fas fa-trash-restore me-1"></i><span data-i18n="btn_restore_default"> 還原預設版面</span></button>
+                            <button class="btn btn-sm btn-outline-secondary fw-bold shadow-sm" id="btn-per-toggle-all" onclick="togglePerAllMenus()"><i class="fas fa-expand-arrows-alt me-1"></i><span data-i18n="btn_expand_all"> 全部展開</span></button>
                         </div>
                     </div>
                     <div class="manage-alert shadow-sm">
@@ -194,11 +194,11 @@
                         <div class="card-body p-3 table-responsive">
                             <table id="dtPersonalMenu" class="table table-custom align-middle text-center w-100">
                                 <thead><tr>
-                                    <th class="text-start ps-4" style="width: 280px;">顯示名稱 <span class="fw-normal small text-muted">(按住可拖曳)</span></th>
-                                    <th style="width: 100px;">層級</th>
-                                    <th style="width: 80px;">狀態</th>
-                                    <th class="text-start">開啟方式偏好</th>
-                                    <th class="text-center" style="width: 90px;">操作</th>
+                                    <th class="text-start ps-4" style="width: 280px;" data-i18n="th_display_name">顯示名稱 <span class="fw-normal small text-muted">(按住可拖曳)</span></th>
+                                    <th style="width: 100px;" data-i18n="th_level">層級</th>
+                                    <th style="width: 80px;" data-i18n="th_status">狀態</th>
+                                    <th class="text-start" data-i18n="th_open_pref">開啟方式偏好</th>
+                                    <th class="text-center" style="width: 90px;" data-i18n="th_actions">操作</th>
                                 </tr></thead>
                                 <tbody id="personalMenuTableBody"></tbody>
                             </table>
@@ -208,13 +208,13 @@
 
                 <div id="page-webpage-manage" class="page-section">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0 fw-bold">看板網頁管理</h5>
-                        <button class="btn btn-sm btn-primary fw-bold" onclick="openAddWebpageModal()"><i class="fas fa-plus me-1"></i> 新增網頁</button>
+                        <h5 class="mb-0 fw-bold" data-i18n="menu_webpage_manage">看板網頁管理</h5>
+                        <button class="btn btn-sm btn-primary fw-bold" onclick="openAddWebpageModal()"><i class="fas fa-plus me-1"></i><span data-i18n="btn_add_webpage"> 新增網頁</span></button>
                     </div>
                     <div class="card border-0 overflow-hidden shadow-sm">
                         <div class="card-body p-3 table-responsive">
                             <table id="dtWebpage" class="table table-custom align-middle text-center w-100">
-                                <thead><tr><th class="text-start ps-3" style="width: 280px;">顯示名稱</th><th style="width: 110px;">類型</th><th style="width: 80px;">狀態</th><th class="text-start">開啟配置 / 路徑</th><th class="text-center" style="width: 90px;">操作</th></tr></thead>
+                                <thead><tr><th class="text-start ps-3" style="width: 280px;" data-i18n="th_display_name">顯示名稱</th><th style="width: 110px;" data-i18n="th_type">類型</th><th style="width: 80px;" data-i18n="th_status">狀態</th><th class="text-start" data-i18n="th_open_config">開啟配置 / 路徑</th><th class="text-center" style="width: 90px;" data-i18n="th_actions">操作</th></tr></thead>
                                 <tbody id="webpageTableBody"></tbody>
                             </table>
                         </div>
@@ -223,9 +223,9 @@
 
                 <div id="page-menu-manage" class="page-section">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0 fw-bold">選單配置管理</h5>
+                        <h5 class="mb-0 fw-bold" data-i18n="menu_menu_manage">選單配置管理</h5>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-primary fw-bold" id="btn-add-main-menu" onclick="openAddMenuNodeModal()"><i class="fas fa-plus me-1"></i> 新增主選單配置</button>
+                            <button class="btn btn-sm btn-primary fw-bold" id="btn-add-main-menu" onclick="openAddMenuNodeModal()"><i class="fas fa-plus me-1"></i><span data-i18n="btn_add_main_menu"> 新增主選單配置</span></button>
                         </div>
                     </div>
                     <div class="alert alert-primary bg-primary bg-opacity-10 border-0 mb-3 d-flex align-items-center">
@@ -235,7 +235,7 @@
                     <div class="card border-0 overflow-hidden shadow-sm">
                         <div class="card-body p-3 table-responsive">
                             <table id="dtMenuConfig" class="table table-custom align-middle text-center w-100">
-                                <thead><tr><th class="text-start ps-3" style="width: 250px;">顯示名稱 (系統名稱)</th><th style="width: 120px;">類型</th><th style="width: 80px;">狀態</th><th class="text-start">內容配置 (子選單 / 網址)</th><th class="text-center" style="width: 90px;">操作</th></tr></thead>
+                                <thead><tr><th class="text-start ps-3" style="width: 250px;" data-i18n="th_display_name">顯示名稱 (系統名稱)</th><th style="width: 120px;" data-i18n="th_type">類型</th><th style="width: 80px;" data-i18n="th_status">狀態</th><th class="text-start" data-i18n="th_content_config">內容配置 (子選單 / 網址)</th><th class="text-center" style="width: 90px;" data-i18n="th_actions">操作</th></tr></thead>
                                 <tbody id="menuConfigTableBody"></tbody>
                             </table>
                         </div>
@@ -244,13 +244,13 @@
 
                 <div id="page-fab-manage" class="page-section">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0 fw-bold">廠區管理</h5>
-                        <button class="btn btn-sm btn-primary fw-bold admin-only-btn" onclick="openAddFabModal()"><i class="fas fa-plus me-1"></i> 新增廠區</button>
+                        <h5 class="mb-0 fw-bold" data-i18n="menu_fab_manage">廠區管理</h5>
+                        <button class="btn btn-sm btn-primary fw-bold admin-only-btn" onclick="openAddFabModal()"><i class="fas fa-plus me-1"></i><span data-i18n="btn_add_fab"> 新增廠區</span></button>
                     </div>
                     <div class="card border-0 shadow-sm">
                         <div class="card-body p-3 table-responsive">
                             <table id="dtFab" class="table table-custom text-center align-middle w-100">
-                                <thead><tr><th class="text-start ps-3">廠區(ID)</th><th>顯示名稱</th><th>預設語言</th><th class="text-start">套用的權限群組</th><th class="admin-only-col text-center" style="width: 90px;">操作</th></tr></thead>
+                                <thead><tr><th class="text-start ps-3" data-i18n="th_fab_id">廠區(ID)</th><th data-i18n="th_display_name">顯示名稱</th><th data-i18n="th_default_lang">預設語言</th><th class="text-start" data-i18n="th_applied_roles">套用的權限群組</th><th class="admin-only-col text-center" style="width: 90px;" data-i18n="th_actions">操作</th></tr></thead>
                                 <tbody id="fabTableBody"></tbody>
                             </table>
                         </div>
@@ -259,13 +259,13 @@
 
                 <div id="page-role-manage" class="page-section">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0 fw-bold">權限群組管理</h5>
-                        <button class="btn btn-sm btn-primary fw-bold admin-only-btn" onclick="openAddRoleModal()"><i class="fas fa-plus me-1"></i> 新增群組</button>
+                        <h5 class="mb-0 fw-bold" data-i18n="menu_role_manage">權限群組管理</h5>
+                        <button class="btn btn-sm btn-primary fw-bold admin-only-btn" onclick="openAddRoleModal()"><i class="fas fa-plus me-1"></i><span data-i18n="btn_add_role"> 新增群組</span></button>
                     </div>
                     <div class="card border-0 shadow-sm">
                         <div class="card-body p-3 table-responsive">
                             <table id="dtRole" class="table table-custom align-middle w-100">
-                                <thead><tr><th class="text-start ps-3">群組名稱</th><th class="text-start">允許的看板組合</th><th class="text-center admin-only-col" style="width: 90px;">操作</th></tr></thead>
+                                <thead><tr><th class="text-start ps-3" data-i18n="th_role_name">群組名稱</th><th class="text-start" data-i18n="th_allowed_menus">允許的看板組合</th><th class="text-center admin-only-col" style="width: 90px;" data-i18n="th_actions">操作</th></tr></thead>
                                 <tbody id="roleTableBody"></tbody>
                             </table>
                         </div>
@@ -274,13 +274,13 @@
 
                 <div id="page-account-manage" class="page-section">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0 fw-bold">帳號管理</h5>
-                        <button class="btn btn-sm btn-primary fw-bold admin-only-btn" onclick="openAddAccountModal()"><i class="fas fa-plus me-1"></i> 新增帳號</button>
+                        <h5 class="mb-0 fw-bold" data-i18n="menu_account_manage">帳號管理</h5>
+                        <button class="btn btn-sm btn-primary fw-bold admin-only-btn" onclick="openAddAccountModal()"><i class="fas fa-plus me-1"></i><span data-i18n="btn_add_account"> 新增帳號</span></button>
                     </div>
                     <div class="card border-0 shadow-sm">
                         <div class="card-body p-3 table-responsive">
                             <table id="dtAccount" class="table table-custom text-center align-middle w-100">
-                                <thead><tr><th>工號</th><th>姓名/部門</th><th>權限層級</th><th class="text-start">登入預設首頁</th><th class="text-start">可視群組版面</th><th class="admin-only-col text-center" style="width: 90px;">操作</th></tr></thead>
+                                <thead><tr><th data-i18n="th_emp_id">工號</th><th data-i18n="th_name_dept">姓名/部門</th><th data-i18n="th_role_level">權限層級</th><th class="text-start" data-i18n="th_default_home">登入預設首頁</th><th class="text-start" data-i18n="th_visible_roles">可視群組版面</th><th class="admin-only-col text-center" style="width: 90px;" data-i18n="th_actions">操作</th></tr></thead>
                                 <tbody id="accTableBody"></tbody>
                             </table>
                         </div>
@@ -289,13 +289,13 @@
 
                 <div id="page-apply" class="page-section">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0 fw-bold">需求申請</h5>
-                        <button class="btn btn-sm btn-primary fw-bold" onclick="openApplyModal()"><i class="fas fa-plus me-1"></i> 新增申請</button>
+                        <h5 class="mb-0 fw-bold" data-i18n="menu_apply">需求申請</h5>
+                        <button class="btn btn-sm btn-primary fw-bold" onclick="openApplyModal()"><i class="fas fa-plus me-1"></i><span data-i18n="btn_add_apply"> 新增申請</span></button>
                     </div>
                     <div class="card border-0 shadow-sm">
                         <div class="card-body p-3 table-responsive">
                             <table id="dtApply" class="table table-custom align-middle w-100 text-center">
-                                <thead><tr><th>申請時間</th><th>申請類別 / 廠區</th><th class="text-start">申請原因與需求細節</th><th>處理狀態</th><th class="text-start">處理進度與回覆</th><th class="text-center" style="width: 120px;">操作</th></tr></thead>
+                                <thead><tr><th data-i18n="th_apply_time">申請時間</th><th data-i18n="th_apply_type">申請類別 / 廠區</th><th class="text-start" data-i18n="th_apply_reason">申請原因與需求細節</th><th data-i18n="th_apply_status">處理狀態</th><th class="text-start" data-i18n="th_apply_progress">處理進度與回覆</th><th class="text-center" style="width: 120px;" data-i18n="th_actions">操作</th></tr></thead>
                                 <tbody id="applyTableBody"></tbody>
                             </table>
                         </div>
@@ -303,11 +303,11 @@
                 </div>
 
                 <div id="page-audit-manage" class="page-section">
-                    <h5 class="mb-3 fw-bold">申請審核管理</h5>
+                    <h5 class="mb-3 fw-bold" data-i18n="menu_audit_manage">申請審核管理</h5>
                     <div class="card border-0 shadow-sm">
                         <div class="card-body p-3 table-responsive">
                             <table id="dtAudit" class="table table-custom align-middle w-100 text-center">
-                                <thead><tr><th>申請人</th><th>申請時間</th><th>申請類別 / 廠區</th><th class="text-start">申請原因與需求細節</th><th>處理狀態</th><th class="text-start">處理進度與回覆</th><th class="text-center" style="width: 90px;">操作</th></tr></thead>
+                                <thead><tr><th data-i18n="th_applicant">申請人</th><th data-i18n="th_apply_time">申請時間</th><th data-i18n="th_apply_type">申請類別 / 廠區</th><th class="text-start" data-i18n="th_apply_reason">申請原因與需求細節</th><th data-i18n="th_apply_status">處理狀態</th><th class="text-start" data-i18n="th_apply_progress">處理進度與回覆</th><th class="text-center" style="width: 90px;" data-i18n="th_actions">操作</th></tr></thead>
                                 <tbody id="auditTableBody"></tbody>
                             </table>
                         </div>
@@ -315,22 +315,26 @@
                 </div>
 
                 <div id="page-config-manage" class="page-section">
-                    <div class="d-flex justify-content-between align-items-center mb-3"><h5 class="mb-0 fw-bold">設定檔管理</h5></div>
+                    <div class="d-flex justify-content-between align-items-center mb-3"><h5 class="mb-0 fw-bold" data-i18n="menu_config_manage">設定檔管理</h5></div>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <div class="card p-4 h-100 border-0 shadow-sm text-center d-flex flex-column justify-content-center">
                                 <i class="fas fa-file-upload text-success mb-3" style="font-size: 3rem;"></i>
-                                <h5 class="fw-bold">從 Excel 匯入</h5>
-                                <input type="file" id="configFile" class="form-control form-control-sm mb-3 w-75 mx-auto" accept=".xlsx, .xls">
-                                <button class="btn btn-success fw-bold mx-auto" style="width: fit-content;" onclick="importConfig()"><i class="fas fa-upload me-1"></i> 匯入並覆蓋</button>
+                                <h5 class="fw-bold" data-i18n="config_import_title">從 Excel 匯入</h5>
+                                <div class="custom-file-input-wrapper d-flex align-items-center mb-3 w-75 mx-auto border rounded" style="overflow: hidden; height: 34px;">
+                                    <button type="button" class="btn btn-sm btn-outline-primary fw-bold px-3 border-0 border-end rounded-0 h-100" style="white-space: nowrap;" onclick="document.getElementById('configFile').click();" data-i18n="file_choose">選擇檔案</button>
+                                    <span id="configFileName" class="px-2 text-muted small text-truncate" style="flex:1;" data-i18n="file_none">沒有選擇檔案</span>
+                                    <input type="file" id="configFile" class="d-none" accept=".xlsx, .xls" onchange="document.getElementById('configFileName').innerText = this.files.length ? this.files[0].name : t('file_none','沒有選擇檔案');">
+                                </div>
+                                <button class="btn btn-success fw-bold mx-auto" style="width: fit-content;" onclick="importConfig()"><i class="fas fa-upload me-1"></i><span data-i18n="btn_import_excel"> 匯入並覆蓋</span></button>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="card p-4 h-100 border-0 shadow-sm text-center d-flex flex-column justify-content-center">
                                 <i class="fas fa-file-export text-warning mb-3" style="font-size: 3rem;"></i>
-                                <h5 class="fw-bold">匯出 Excel 備份</h5>
-                                <div class="text-muted small mb-3">將目前資料庫內容匯出為 EQDashboard_Setting.xlsx，供離線備份</div>
-                                <button class="btn btn-warning fw-bold mx-auto" style="width: fit-content;" onclick="exportConfig()"><i class="fas fa-download me-1"></i> 匯出 Excel</button>
+                                <h5 class="fw-bold" data-i18n="config_export_title">匯出 Excel 備份</h5>
+                                <div class="text-muted small mb-3" data-i18n="config_export_desc">將目前資料庫內容匯出為 EQDashboard_Setting.xlsx，供離線備份</div>
+                                <button class="btn btn-warning fw-bold mx-auto" style="width: fit-content;" onclick="exportConfig()"><i class="fas fa-download me-1"></i><span data-i18n="btn_export_excel"> 匯出 Excel</span></button>
                             </div>
                         </div>
                     </div>
@@ -348,17 +352,17 @@
     <div class="modal fade" id="fabModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-light border-bottom"><h5 class="modal-title fw-bold">廠區編輯</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-header bg-light border-bottom"><h5 class="modal-title fw-bold" data-i18n="fab_edit">廠區編輯</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body py-4">
                     <form id="fabForm" onsubmit="saveFabItem(event)">
                         <input type="hidden" id="editFabId">
-                        <div class="mb-3"><label class="form-label fw-bold small">廠區 ID</label><input type="text" id="fabNameInput" class="form-control" required></div>
-                        <div class="mb-3"><label class="form-label fw-bold small">顯示名稱</label><input type="text" id="fabDisplayNameInput" class="form-control" required></div>
-                        <div class="mb-3"><label class="form-label fw-bold small">預設語言</label><select id="fabLangSelect" class="form-select"><option value="zh">繁體中文</option><option value="en">English</option><option value="ja">日本語</option></select></div>
+                        <div class="mb-3"><label class="form-label fw-bold small" data-i18n="fab_id">廠區 ID</label><input type="text" id="fabNameInput" class="form-control" required></div>
+                        <div class="mb-3"><label class="form-label fw-bold small" data-i18n="th_display_name">顯示名稱</label><input type="text" id="fabDisplayNameInput" class="form-control" required></div>
+                        <div class="mb-3"><label class="form-label fw-bold small" data-i18n="th_default_lang">預設語言</label><select id="fabLangSelect" class="form-select"><option value="zh">繁體中文</option><option value="en">English</option><option value="ja">日本語</option></select></div>
                         <div class="mb-4"><label class="form-label fw-bold small">套用權限群組</label><div id="fabRoleCheckboxes" class="d-flex flex-wrap gap-2"></div></div>
                         <div class="text-end">
-                            <button type="button" class="btn btn-outline-secondary fw-bold px-4 me-2" data-bs-dismiss="modal">取消</button>
-                            <button type="submit" class="btn btn-primary fw-bold px-4">儲存</button>
+                            <button type="button" class="btn btn-outline-secondary fw-bold px-4 me-2" data-bs-dismiss="modal" data-i18n="modal_btn_cancel">取消</button>
+                            <button type="submit" class="btn btn-primary fw-bold px-4" data-i18n="modal_btn_save">儲存</button>
                         </div>
                     </form>
                 </div>
@@ -370,15 +374,15 @@
     <div class="modal fade" id="roleModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-light border-bottom"><h5 class="modal-title fw-bold">群組編輯</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-header bg-light border-bottom"><h5 class="modal-title fw-bold" data-i18n="role_edit">群組編輯</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body py-4">
                     <form id="roleForm" onsubmit="saveRoleItem(event)">
                         <input type="hidden" id="editRoleId">
-                        <div class="mb-4"><label class="form-label fw-bold small">群組名稱</label><input type="text" id="roleName" class="form-control" required></div>
+                        <div class="mb-4"><label class="form-label fw-bold small" data-i18n="th_role_name">群組名稱</label><input type="text" id="roleName" class="form-control" required></div>
                         <div class="mb-4"><label class="form-label fw-bold small">允許存取的看板 (拖曳可排序)</label><div id="roleMenuCheckboxes" class="d-flex flex-wrap gap-2"></div></div>
                         <div class="text-end">
-                            <button type="button" class="btn btn-outline-secondary fw-bold px-4 me-2" data-bs-dismiss="modal">取消</button>
-                            <button type="submit" class="btn btn-primary fw-bold px-4">儲存</button>
+                            <button type="button" class="btn btn-outline-secondary fw-bold px-4 me-2" data-bs-dismiss="modal" data-i18n="modal_btn_cancel">取消</button>
+                            <button type="submit" class="btn btn-primary fw-bold px-4" data-i18n="modal_btn_save">儲存</button>
                         </div>
                     </form>
                 </div>
@@ -412,18 +416,18 @@
                                 <input type="text" class="form-control form-control-sm bg-light fw-bold text-dark" id="accEmpId" required>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label small fw-bold text-secondary mb-1">姓名</label>
+                                <label class="form-label small fw-bold text-secondary mb-1" data-i18n="name">姓名</label>
                                 <input type="text" class="form-control form-control-sm" id="accName" required>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label small fw-bold text-secondary mb-1">部門</label>
+                                <label class="form-label small fw-bold text-secondary mb-1" data-i18n="dept">部門</label>
                                 <input type="text" class="form-control form-control-sm" id="accDept">
                             </div>
                         </div>
 
                         <!-- 管理層級獨立一行 (編輯系統 admin 帳號時隱藏整段) -->
                         <div class="mb-3" id="accRoleLevelGroup">
-                            <label class="form-label small fw-bold text-secondary mb-1">管理層級</label>
+                            <label class="form-label small fw-bold text-secondary mb-1" data-i18n="role_level">管理層級</label>
                             <select class="form-select form-select-sm border-secondary shadow-sm fw-bold text-dark" id="accRoleLevel" onchange="typeof toggleAccDelegationUI === 'function' ? toggleAccDelegationUI() : null">
                                 <option value="user">User - 無全域設定權限</option>
                                 <option value="admin" class="text-danger">Admin - 最高管理權限</option>
@@ -445,31 +449,31 @@
                             <div class="bg-light border-bottom p-2 rounded-top">
                                 <div class="form-check form-switch m-0 d-flex align-items-center">
                                     <input class="form-check-input cursor-pointer m-0 me-2" type="checkbox" id="accEnableDelegation" onchange="typeof toggleDelegationDetails === 'function' ? toggleDelegationDetails() : null">
-                                    <label class="form-check-label fw-bold text-primary cursor-pointer small" for="accEnableDelegation">啟用委派管理 <span class="badge bg-primary ms-1">User 專屬</span></label>
+                                    <label class="form-check-label fw-bold text-primary cursor-pointer small" for="accEnableDelegation" data-i18n="delegation">啟用委派管理 <span class="badge bg-primary ms-1">User 專屬</span></label>
                                 </div>
                             </div>
                             <div id="accDelegationDetails" class="p-2 bg-white rounded-bottom" style="display: none;">
                                 <div class="form-check mb-2 p-0">
                                     <div class="d-inline-flex align-items-center bg-light border rounded px-2 py-1 shadow-sm">
                                         <input class="form-check-input cursor-pointer m-0 me-2" type="checkbox" id="accCanEditOthers" style="transform: scale(0.9);">
-                                        <label class="form-check-label fw-bold text-dark cursor-pointer small" for="accCanEditOthers">允許變更他人內容 <span class="text-muted fw-normal ms-1">(若未勾選則只能編輯自己建立的看板)</span></label>
+                                        <label class="form-check-label fw-bold text-dark cursor-pointer small" for="accCanEditOthers" data-i18n="can_edit_others">允許變更他人內容 <span class="text-muted fw-normal ms-1">(若未勾選則只能編輯自己建立的看板)</span></label>
                                     </div>
                                 </div>
-                                <label class="form-label text-secondary fw-bold mb-1 small d-block">管理目錄：</label>
+                                <label class="form-label text-secondary fw-bold mb-1 small d-block" data-i18n="manage_menu">管理目錄：</label>
                                 <div id="accManageMenuCheckboxes" class="border rounded p-2 bg-light d-flex flex-column gap-1" style="max-height: 150px; overflow-y: auto;"></div>
                             </div>
                         </div>
 
                         <!-- 可視群組版面區塊 -->
                         <div class="mb-1 border-top pt-2">
-                            <label class="form-label fw-bold text-secondary mb-2 small">可視群組版面</label>
+                            <label class="form-label fw-bold text-secondary mb-2 small" data-i18n="th_visible_roles">可視群組版面</label>
                             <div id="accRoleCheckboxes" class="d-flex flex-wrap gap-2"></div>
                         </div>
                     </div>
 
                     <div class="modal-footer border-top-0 bg-light py-2">
-                        <button type="button" class="btn btn-outline-secondary btn-sm px-4 fw-bold" data-bs-dismiss="modal">取消</button>
-                        <button type="button" class="btn btn-primary btn-sm px-4 fw-bold shadow-sm" onclick="saveAccountItem(event)"><i class="fas fa-save me-1"></i>儲存</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm px-4 fw-bold" data-bs-dismiss="modal" data-i18n="modal_btn_cancel">取消</button>
+                        <button type="button" class="btn btn-primary btn-sm px-4 fw-bold shadow-sm" onclick="saveAccountItem(event)"><i class="fas fa-save me-1"></i><span data-i18n="modal_btn_save"> 儲存</span></button>
                     </div>
                 </form>
             </div>
@@ -480,7 +484,7 @@
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow">
                 <div class="modal-header bg-light border-bottom">
-                    <h6 class="modal-title fw-bold text-dark"><i class="fas fa-file-code text-primary me-2"></i>看板網頁內容配置</h6>
+                    <h6 class="modal-title fw-bold text-dark"><i class="fas fa-file-code text-primary me-2"></i><span data-i18n="wp_edit">看板網頁內容配置</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body py-3">
@@ -488,28 +492,28 @@
                         <input type="hidden" id="editWpId">
                         <div class="row g-2">
                             <div class="col-md-12 mb-2 pb-2 border-bottom">
-                                <label class="form-label fw-bold fs-7 text-muted me-3 mb-0">看板類型 <span class="text-danger">*</span></label>
+                                <label class="form-label fw-bold fs-7 text-muted me-3 mb-0" data-i18n="wp_type">看板類型 <span class="text-danger">*</span></label>
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input cursor-pointer" type="radio" name="wpMode" id="wpModeLink" value="link" checked onchange="toggleWebpageMode()">
-                                    <label class="form-check-label fw-bold text-primary cursor-pointer small" for="wpModeLink"><i class="fas fa-link"></i> 網頁連結</label>
+                                    <label class="form-check-label fw-bold text-primary cursor-pointer small" for="wpModeLink"><i class="fas fa-link"></i><span data-i18n="wp_link"> 網頁連結</label>
                                 </div>
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input cursor-pointer" type="radio" name="wpMode" id="wpModeAppGrid" value="app_grid" onchange="toggleWebpageMode()">
-                                    <label class="form-check-label fw-bold text-success cursor-pointer small" for="wpModeAppGrid"><i class="fas fa-th-large"></i> 應用集合</label>
+                                    <label class="form-check-label fw-bold text-success cursor-pointer small" for="wpModeAppGrid"><i class="fas fa-th-large"></i><span data-i18n="wp_grid"> 應用集合</label>
                                 </div>
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label fw-bold text-muted small mb-1">系統名稱 <span class="text-danger">*</span></label>
+                                <label class="form-label fw-bold text-muted small mb-1" data-i18n="sys_name">系統名稱 <span class="text-danger">*</span></label>
                                 <input type="text" id="wpSysName" class="form-control form-control-sm" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-bold text-muted small mb-1">顯示名稱 <span class="text-danger">*</span></label>
+                                <label class="form-label fw-bold text-muted small mb-1" data-i18n="th_display_name">顯示名稱 <span class="text-danger">*</span></label>
                                 <input type="text" id="wpDisplayName" class="form-control form-control-sm" required>
                             </div>
 
                             <div class="col-md-12">
-                                <label class="form-label fw-bold text-muted small mb-1">圖示 (Icon)</label>
+                                <label class="form-label fw-bold text-muted small mb-1" data-i18n="icon">圖示 (Icon)</label>
                                 <div class="d-flex gap-2">
                                     <select id="wpIcon" class="form-select form-select-sm w-auto" onchange="handleIconSelectChange('wp')">
                                         <option value="">無</option>
@@ -531,17 +535,17 @@
                             </div>
 
                             <div class="col-md-12" id="wpTargetGroup">
-                                <label class="form-label fw-bold text-muted small mb-1">開啟方式</label>
+                                <label class="form-label fw-bold text-muted small mb-1" data-i18n="open_target">開啟方式</label>
                                 <select id="wpTarget" class="form-select form-select-sm">
-                                    <option value="iframe">嵌入網頁 (Iframe)</option>
-                                    <option value="blank">新分頁 (Blank)</option>
-                                    <option value="fullscreen" class="text-primary fw-bold">全螢幕</option>
+                                    <option value="iframe" data-i18n="iframe">嵌入網頁 (Iframe)</option>
+                                    <option value="blank" data-i18n="blank">新分頁 (Blank)</option>
+                                    <option value="fullscreen" class="text-primary fw-bold" data-i18n="fullscreen">全螢幕</option>
                                 </select>
                             </div>
 
                             <div class="col-12 d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
-                                <button type="button" class="btn btn-sm btn-light border fw-bold" data-bs-dismiss="modal">取消</button>
-                                <button type="submit" class="btn btn-sm btn-primary fw-bold"><i class="fas fa-save me-1"></i> 儲存</button>
+                                <button type="button" class="btn btn-sm btn-light border fw-bold" data-bs-dismiss="modal" data-i18n="modal_btn_cancel">取消</button>
+                                <button type="submit" class="btn btn-sm btn-primary fw-bold"><i class="fas fa-save me-1"></i><span data-i18n="modal_btn_save"> 儲存</span></button>
                             </div>
                         </div>
                     </form>
@@ -555,22 +559,22 @@
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow">
                 <div class="modal-header bg-light border-bottom">
-                    <h5 class="modal-title fw-bold text-primary"><i class="fas fa-sitemap me-2"></i>配置主選單</h5>
+                    <h5 class="modal-title fw-bold text-primary"><i class="fas fa-sitemap me-2"></i><span data-i18n="menu_edit">配置主選單</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body py-4">
                     <form id="nodeForm" onsubmit="saveMenuNodeItem(event)">
                         <input type="hidden" id="editNodeId">
                         <div class="mb-4">
-                            <label class="form-label fw-bold small text-danger mb-1">選單類型 *</label>
+                            <label class="form-label fw-bold small text-danger mb-1" data-i18n="menu_type">選單類型 *</label>
                             <div class="d-flex gap-4">
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="nodeMode" id="nodeModeFolder" onchange="toggleNodeMode()" checked>
-                                    <label class="form-check-label fw-bold text-primary" for="nodeModeFolder"><i class="fas fa-folder text-warning me-1"></i>選單群組 <small class="text-muted">(可包含多個子看板)</small></label>
+                                    <label class="form-check-label fw-bold text-primary" for="nodeModeFolder"><i class="fas fa-folder text-warning me-1"></i><span data-i18n="menu_folder">選單群組 <small class="text-muted">(可包含多個子看板)</small></label>
                                 </div>
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="nodeMode" id="nodeModeLink" onchange="toggleNodeMode()">
-                                    <label class="form-check-label fw-bold text-primary" for="nodeModeLink"><i class="fas fa-link me-1"></i>獨立看板 <small class="text-muted">(單一網址連結)</small></label>
+                                    <label class="form-check-label fw-bold text-primary" for="nodeModeLink"><i class="fas fa-link me-1"></i><span data-i18n="menu_item">獨立看板 <small class="text-muted">(單一網址連結)</small></label>
                                 </div>
                             </div>
                         </div>
@@ -585,7 +589,7 @@
                                 <input type="text" id="nodeDisplayName" class="form-control" required placeholder="例如: ZE 強化防禦群組">
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label fw-bold small text-muted mb-1">圖示 (Icon)</label>
+                                <label class="form-label fw-bold small text-muted mb-1" data-i18n="icon">圖示 (Icon)</label>
                                 <select id="nodeIcon" class="form-select" onchange="handleIconSelectChange('node')">
                                     <option value="">無圖示</option>
                                     <option value="fas fa-folder-open text-warning">資料夾</option>
@@ -599,7 +603,7 @@
                         </div>
 
                         <div class="mb-3" id="nodeUrlGroup" style="display:none;"><label class="form-label fw-bold small text-muted mb-1">連結網址</label><input type="text" id="nodeUrl" class="form-control" placeholder="請輸入網址或 page-id"></div>
-                        <div class="mb-3" id="nodeTargetGroup" style="display:none;"><label class="form-label fw-bold small text-muted mb-1">開啟方式</label><select id="nodeTarget" class="form-select"><option value="iframe">內部嵌入</option><option value="blank">另開分頁</option><option value="fullscreen">全螢幕</option></select></div>
+                        <div class="mb-3" id="nodeTargetGroup" style="display:none;"><label class="form-label fw-bold small text-muted mb-1" data-i18n="open_target">開啟方式</label><select id="nodeTarget" class="form-select"><option value="iframe">內部嵌入</option><option value="blank">另開分頁</option><option value="fullscreen" data-i18n="fullscreen">全螢幕</option></select></div>
 
                         <div id="treeBuilderSection" class="mt-4 pt-3 border-top">
                             <div class="mb-2 text-primary fw-bold"><i class="fas fa-list-ul me-1"></i> 底下包含的看板與群組配置 <small class="text-muted fw-normal">(拖曳左側圖示可排序)</small></div>
@@ -612,7 +616,7 @@
                             </div>
                         </div>
                         <div class="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
-                            <button type="button" class="btn btn-sm btn-light border fw-bold" data-bs-dismiss="modal">取消</button>
+                            <button type="button" class="btn btn-sm btn-light border fw-bold" data-bs-dismiss="modal" data-i18n="modal_btn_cancel">取消</button>
                             <button type="submit" class="btn btn-sm btn-primary fw-bold"><i class="fas fa-save me-1"></i> 儲存選單結構</button>
                         </div>
                     </form>
@@ -631,13 +635,13 @@
                         <input type="hidden" id="appIdInput">
                         <div class="mb-3"><label class="form-label fw-bold small">APP 名稱</label><input type="text" id="appName" class="form-control" required></div>
                         <div class="mb-3"><label class="form-label fw-bold small">連結網址</label><input type="text" id="appUrl" class="form-control" required></div>
-                        <div class="mb-3"><label class="form-label fw-bold small">開啟方式</label><select id="appTarget" class="form-select"><option value="_blank">新分頁 (_blank)</option><option value="iframe">內部嵌入</option></select></div>
+                        <div class="mb-3"><label class="form-label fw-bold small" data-i18n="open_target">開啟方式</label><select id="appTarget" class="form-select"><option value="_blank">新分頁 (_blank)</option><option value="iframe">內部嵌入</option></select></div>
                         <div class="mb-4">
                             <label class="form-label fw-bold small">APP 圖示 (支援上傳圖檔)</label>
                             <input type="file" id="appIconFile" class="form-control form-control-sm mb-2" accept="image/*" onchange="handleAppIconUpload(event)">
                             <img id="appIconPreview" src="" alt="Icon Preview" style="width:64px; height:64px; object-fit:contain; display:none; border-radius:8px; border:1px solid #ccc;">
                         </div>
-                        <div class="text-end"><button type="submit" class="btn btn-primary fw-bold px-4">儲存</button></div>
+                        <div class="text-end"><button type="submit" class="btn btn-primary fw-bold px-4" data-i18n="modal_btn_save">儲存</button></div>
                     </form>
                 </div>
             </div>
@@ -687,13 +691,13 @@
                             <select id="personalMenuTarget" class="form-select form-select-sm">
                                 <option value="">(系統預設)</option>
                                 <option value="iframe">內嵌 (Iframe)</option>
-                                <option value="blank">新分頁 (Blank)</option>
-                                <option value="fullscreen" class="text-primary fw-bold">全螢幕</option>
+                                <option value="blank" data-i18n="blank">新分頁 (Blank)</option>
+                                <option value="fullscreen" class="text-primary fw-bold" data-i18n="fullscreen">全螢幕</option>
                             </select>
                         </div>
                         <div class="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
-                            <button type="button" class="btn btn-sm btn-light border fw-bold" data-bs-dismiss="modal">取消</button>
-                            <button type="submit" class="btn btn-sm btn-primary fw-bold"><i class="fas fa-save me-1"></i> 儲存</button>
+                            <button type="button" class="btn btn-sm btn-light border fw-bold" data-bs-dismiss="modal" data-i18n="modal_btn_cancel">取消</button>
+                            <button type="submit" class="btn btn-sm btn-primary fw-bold"><i class="fas fa-save me-1"></i><span data-i18n="modal_btn_save"> 儲存</span></button>
                         </div>
                     </form>
                 </div>
@@ -713,7 +717,7 @@
                             <div class="col-md-6"><label class="form-label fw-bold small">申請類別</label><select id="applyType" class="form-select"><option value="權限開通">權限開通</option><option value="新增看板">新增看板</option><option value="系統異常">系統異常</option><option value="其他建議">其他建議</option></select></div>
                             <div class="col-md-6"><label class="form-label fw-bold small">指定廠區</label><select id="applyFab" class="form-select"><option value="全域">全域 (Global)</option><option value="12A">12A</option><option value="12i">12i</option><option value="12M">12M</option></select></div>
                         </div>
-                        <div class="mb-4"><label class="form-label fw-bold small">申請原因與需求細節</label><textarea id="applyReason" class="form-control" rows="4" required placeholder="請詳細描述您的需求..."></textarea></div>
+                        <div class="mb-4"><label class="form-label fw-bold small" data-i18n="th_apply_reason">申請原因與需求細節</label><textarea id="applyReason" class="form-control" rows="4" required placeholder="請詳細描述您的需求..."></textarea></div>
                         <div class="text-end"><button type="submit" class="btn btn-primary fw-bold px-4">送出申請</button></div>
                     </form>
                 </div>
@@ -749,8 +753,8 @@
                     <form onsubmit="saveAuditItem(event)">
                         <input type="hidden" id="auditReqId">
                         <div class="row g-2 mb-3 bg-light p-2 rounded border">
-                            <div class="col-md-3"><label class="form-label fw-bold text-muted small mb-0">申請人</label><input type="text" id="auditApplicant" class="form-control form-control-sm border-0 bg-transparent fw-bold text-dark" readonly></div>
-                            <div class="col-md-3"><label class="form-label fw-bold text-muted small mb-0">申請時間</label><input type="text" id="auditTime" class="form-control form-control-sm border-0 bg-transparent fw-bold text-dark" readonly></div>
+                            <div class="col-md-3"><label class="form-label fw-bold text-muted small mb-0" data-i18n="th_applicant">申請人</label><input type="text" id="auditApplicant" class="form-control form-control-sm border-0 bg-transparent fw-bold text-dark" readonly></div>
+                            <div class="col-md-3"><label class="form-label fw-bold text-muted small mb-0" data-i18n="th_apply_time">申請時間</label><input type="text" id="auditTime" class="form-control form-control-sm border-0 bg-transparent fw-bold text-dark" readonly></div>
                             <div class="col-md-3"><label class="form-label fw-bold text-muted small mb-0">申請類別</label><input type="text" id="auditType" class="form-control form-control-sm border-0 bg-transparent fw-bold text-primary" readonly></div>
                             <div class="col-md-3"><label class="form-label fw-bold text-muted small mb-0">關聯廠區</label><input type="text" id="auditFab" class="form-control form-control-sm border-0 bg-transparent fw-bold text-dark" readonly></div>
                             <div class="col-12 mt-2">
@@ -772,7 +776,7 @@
                             <textarea id="auditReply" class="form-control form-control-sm border-primary" rows="3" placeholder="請輸入回覆給使用者的意見或目前處理進度..."></textarea>
                         </div>
                         <div class="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
-                            <button type="button" class="btn btn-sm btn-light border fw-bold" data-bs-dismiss="modal">取消</button>
+                            <button type="button" class="btn btn-sm btn-light border fw-bold" data-bs-dismiss="modal" data-i18n="modal_btn_cancel">取消</button>
                             <button type="submit" class="btn btn-sm btn-primary fw-bold"><i class="fas fa-save me-1"></i> 儲存並通知使用者</button>
                         </div>
                     </form>
@@ -807,7 +811,7 @@
 
     <!-- 全域警告與確認對話框 -->
     <div class="modal fade" id="systemAlertModal" tabindex="-1" style="z-index: 1060;"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content border-0 shadow"><div class="modal-body text-center py-4"><i class="fas fa-info-circle text-info mb-3" style="font-size: 2.5rem;"></i><p class="fs-6 fw-bold mb-0 text-dark" id="systemAlertMsg"></p></div><div class="modal-footer justify-content-center border-0 bg-light py-2"><button type="button" class="btn btn-primary btn-sm px-4 fw-bold" data-bs-dismiss="modal">確定</button></div></div></div></div>
-    <div class="modal fade" id="systemConfirmModal" tabindex="-1" style="z-index: 1060;"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content border-0 shadow"><div class="modal-body text-center py-4"><i class="fas fa-exclamation-triangle text-warning mb-3" style="font-size: 2.5rem;"></i><p class="fs-6 fw-bold mb-0 text-dark" id="systemConfirmMsg"></p></div><div class="modal-footer justify-content-center border-0 bg-light py-2"><button type="button" class="btn btn-light btn-sm border px-3 fw-bold" data-bs-dismiss="modal">取消</button><button type="button" class="btn btn-danger btn-sm px-3 fw-bold" id="systemConfirmBtn" onclick="if(confirmActionCallback) confirmActionCallback(); bootstrap.Modal.getInstance(document.getElementById('systemConfirmModal')).hide();">確定</button></div></div></div></div>
+    <div class="modal fade" id="systemConfirmModal" tabindex="-1" style="z-index: 1060;"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content border-0 shadow"><div class="modal-body text-center py-4"><i class="fas fa-exclamation-triangle text-warning mb-3" style="font-size: 2.5rem;"></i><p class="fs-6 fw-bold mb-0 text-dark" id="systemConfirmMsg"></p></div><div class="modal-footer justify-content-center border-0 bg-light py-2"><button type="button" class="btn btn-light btn-sm border px-3 fw-bold" data-bs-dismiss="modal" data-i18n="modal_btn_cancel">取消</button><button type="button" class="btn btn-danger btn-sm px-3 fw-bold" id="systemConfirmBtn" onclick="if(confirmActionCallback) confirmActionCallback(); bootstrap.Modal.getInstance(document.getElementById('systemConfirmModal')).hide();">確定</button></div></div></div></div>
 
     <!-- ⭐️ 快取破解碼：確保瀏覽器抓到最新版 JS 檔案！ -->
     <script src="js/config.js"></script>

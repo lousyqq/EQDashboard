@@ -170,25 +170,48 @@ window.switchLayoutMode = switchLayoutMode;
 function changeLanguage(lang) {
     currentLang = lang;
 
+    // 1. 全面掃描 data-i18n 屬性，替換靜態 HTML 文字
     if (typeof i18n !== 'undefined') {
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
-            if (i18n[lang] && i18n[lang][key]) el.innerHTML = i18n[lang][key];
+            if (i18n[lang] && i18n[lang][key] !== undefined && i18n[lang][key] !== null) el.innerHTML = i18n[lang][key];
         });
     }
 
-    const langCodes = { 'zh': 'ZH', 'en': 'EN', 'ja': 'JA' };
-    const langNames = { 'zh': '繁中', 'en': 'EN', 'ja': '日本語' };
-    const langCodeEl = document.getElementById('current-lang-code');
-    if (langCodeEl) langCodeEl.innerText = langCodes[lang] || lang.toUpperCase();
+    // 2. 更新語言按鈕顯示文字（用當前語言的名稱）
     const langDisplayEl = document.getElementById('current-lang-display');
-    if (langDisplayEl) langDisplayEl.innerText = langNames[lang] || lang.toUpperCase();
+    if (langDisplayEl) langDisplayEl.innerText = t('lang_' + lang, lang.toUpperCase());
 
-    // ✅ 新增：重繪語言下拉，套用 active + 打勾
-    renderLangSwitcher();
+    // 3. ✅ 更新語言下拉選單的打勾圖示 (同步 check icon)
+    document.querySelectorAll('.lang-check').forEach(el => el.classList.add('d-none'));
+    const checkIcon = document.getElementById('check-' + lang);
+    if (checkIcon) checkIcon.classList.remove('d-none');
 
-    // ✅ 對齊 TEST：有登入才重繪側邊欄
-    if (currentUser) renderSidebarMenus();
+    // 4. 更新版面切換按鈕文字 (系統/自訂 → System/Custom → システム/カスタム)
+    const sysText = document.getElementById('btn-layout-system');
+    const perText = document.getElementById('btn-layout-personal');
+    if (sysText) sysText.innerText = t('nav_sys', '系統');
+    if (perText) perText.innerText = t('nav_personal', '自訂');
+
+    // 5. ✅ 重繪首頁儀表板與右上角使用者資訊
+    if (typeof renderHomeDashboard === 'function') renderHomeDashboard();
+
+    // 6. 重繪側邊欄（含系統設定子選單翻譯）
+    if (currentUser && typeof renderSidebarMenus === 'function') renderSidebarMenus();
+
+    // 7. ✅ 核心修復：重新渲染當前正在顯示的頁面，讓動態產生的按鈕與表格文字也一併翻譯
+    const activePage = document.querySelector('.page-section.active');
+    if (activePage) {
+        const pageId = activePage.id;
+        if (pageId === 'page-personal-manage' && typeof renderPersonalMenuManage === 'function') renderPersonalMenuManage();
+        if (pageId === 'page-webpage-manage' && typeof renderWebpageTable === 'function') renderWebpageTable();
+        if (pageId === 'page-menu-manage' && typeof renderMenuConfigTable === 'function') renderMenuConfigTable();
+        if (pageId === 'page-fab-manage' && typeof renderFabTable === 'function') renderFabTable();
+        if (pageId === 'page-role-manage' && typeof renderRoleTable === 'function') renderRoleTable();
+        if (pageId === 'page-account-manage' && typeof renderAccountTable === 'function') renderAccountTable();
+        if (pageId === 'page-apply' && typeof renderApplyTable === 'function') renderApplyTable();
+        if (pageId === 'page-audit-manage' && typeof renderAuditTable === 'function') renderAuditTable();
+    }
 }
 window.changeLanguage = changeLanguage;
 
@@ -218,7 +241,7 @@ window.renderLangSwitcher = renderLangSwitcher;
 
 // 取得上方導覽列名稱
 function getTopMenuName() {
-    if (window.currentActiveTopMenuId === 'system_settings') return '系統設定';
+    if (window.currentActiveTopMenuId === 'system_settings') return t('nav_sys_settings', '系統設定');
     if (!window.currentActiveTopMenuId) return '';
     const menus = getCustomMenus();
     const cTargetId = window.cleanId(window.currentActiveTopMenuId);
@@ -565,7 +588,7 @@ function navTo(pageId, element, subTitle = '') {
     if (bcPath && bcName) {
         if (pageId === 'page-home') {
             bcPath.style.display = 'none';
-            bcName.innerText = '首頁總覽';
+            bcName.innerText = t('nav_breadcrumb_home', '首頁總覽');
         } else {
             let topName = getTopMenuName();
             let folderPath = element ? getMenuPath(element) : '';
@@ -762,22 +785,13 @@ function syncPinButtonUI() {
 // =========================================================================
 // ⭐️ 新增：語言切換 Dropdown UI 更新與聯動邏輯
 // =========================================================================
-window.updateLangUI = function (langCode, langName) {
-    // 1. 更新頂部按鈕的顯示文字
-    const display = document.getElementById('current-lang-display');
-    if (display) display.innerText = langName;
-
-    // 2. 切換下拉選單裡面的打勾 (Check) 圖示狀態
-    document.querySelectorAll('.lang-check').forEach(el => el.classList.add('d-none'));
-    const checkIcon = document.getElementById('check-' + langCode);
-    if (checkIcon) checkIcon.classList.remove('d-none');
-
-    // 3. 呼叫系統原有的語言切換核心函式 (觸發網頁翻譯與重繪)
+window.updateLangUI = function (langCode) {
+    // 直接呼叫核心語言切換函式（所有 UI 更新邏輯已集中在 changeLanguage 裡）
     if (typeof changeLanguage === 'function') {
         changeLanguage(langCode);
     }
 
-    // 4. 自動滑順收合 Bootstrap 下拉選單
+    // 自動滑順收合 Bootstrap 下拉選單
     const dropdownBtn = document.getElementById('langDropdown');
     if (dropdownBtn && typeof bootstrap !== 'undefined') {
         const bsDropdown = bootstrap.Dropdown.getInstance(dropdownBtn) || new bootstrap.Dropdown(dropdownBtn);

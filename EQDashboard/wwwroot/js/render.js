@@ -183,12 +183,8 @@ function initDataTable(tableId, sortable = true) {
             if (typeof $ === 'undefined' || !$.fn || !$.fn.DataTable) return;
             if ($.fn.DataTable.isDataTable('#' + tableId)) $('#' + tableId).DataTable().destroy();
             dtInstances[tableId] = $('#' + tableId).DataTable({
-                language: {
-                    "processing": "處理中...", "lengthMenu": "顯示 _MENU_ 筆", "zeroRecords": "沒有符合的結果",
-                    "info": "顯示第 _START_ 至 _END_ 筆，共 _TOTAL_ 筆", "infoEmpty": "顯示第 0 至 0 筆，共 0 筆",
-                    "infoFiltered": "(從 _MAX_ 筆結果過濾)", "search": "<i class='fas fa-search text-muted me-1'></i> 搜尋:",
-                    "paginate": { "first": "首頁", "previous": "上一頁", "next": "下一頁", "last": "尾頁" }
-                }, pageLength: 10, lengthMenu: [10, 25, 50, 100], ordering: sortable, order: [], autoWidth: false, stateSave: false
+                language: (typeof getDataTableLang === 'function') ? getDataTableLang() : {},
+                pageLength: 10, lengthMenu: [10, 25, 50, 100], ordering: sortable, order: [], autoWidth: false, stateSave: false
             });
         } catch (e) { }
     }, 50);
@@ -328,7 +324,7 @@ function renderSidebarMenus() {
 
         if (window.currentActiveTopMenuId === 'system_settings') {
             const titleEl = document.getElementById('sidebar-module-title');
-            if (titleEl) titleEl.innerText = '系統設定';
+            if (titleEl) titleEl.innerText = t('nav_sys_settings', '系統設定');
             setTimeout(() => { if (triggerLeft) triggerLeft.style.display = 'block'; if (isPinned) document.body.classList.remove('sidebar-hidden'); }, 10);
 
             const role = currentUser.roleLevel;
@@ -336,18 +332,18 @@ function renderSidebarMenus() {
 
             // ⭐️ 核心修復：根據目前的版面模式 (currentLayoutMode) 決定是否顯示「個人頁面管理」
             const sysMenus = [
-                { id: 'page-personal-manage', icon: 'fas fa-user-cog', name: '個人頁面管理', display: currentLayoutMode === 'personal' },
-                { id: 'page-webpage-manage', icon: 'fas fa-file-code', name: '看板網頁管理', display: canManage },
-                { id: 'page-menu-manage', icon: 'fas fa-sitemap', name: '選單配置管理', display: canManage },
-                { id: 'page-fab-manage', icon: 'fas fa-building', name: '廠區管理', display: role === 'admin' },
-                { id: 'page-role-manage', icon: 'fas fa-users-cog', name: '權限管理', display: role === 'admin' },
-                { id: 'page-account-manage', icon: 'fas fa-user-shield', name: '帳號管理', display: role === 'admin' },
-                { id: 'page-audit-manage', icon: 'fas fa-clipboard-check', name: '申請審核管理', display: role === 'admin' },
-                { id: 'page-apply', icon: 'fas fa-paper-plane', name: '需求申請', display: role !== 'admin' },
-                { id: 'page-config-manage', icon: 'fas fa-database', name: '資料庫與同步', display: role === 'admin' }
+                { id: 'page-personal-manage', icon: 'fas fa-user-cog', i18nKey: 'menu_personal_manage', fallback: '個人頁面管理', display: currentLayoutMode === 'personal' },
+                { id: 'page-webpage-manage', icon: 'fas fa-file-code', i18nKey: 'menu_webpage_manage', fallback: '看板網頁管理', display: canManage },
+                { id: 'page-menu-manage', icon: 'fas fa-sitemap', i18nKey: 'menu_menu_manage', fallback: '選單配置管理', display: canManage },
+                { id: 'page-fab-manage', icon: 'fas fa-building', i18nKey: 'menu_fab_manage', fallback: '廠區管理', display: role === 'admin' },
+                { id: 'page-role-manage', icon: 'fas fa-users-cog', i18nKey: 'menu_role_manage', fallback: '權限管理', display: role === 'admin' },
+                { id: 'page-account-manage', icon: 'fas fa-user-shield', i18nKey: 'menu_account_manage', fallback: '帳號管理', display: role === 'admin' },
+                { id: 'page-audit-manage', icon: 'fas fa-clipboard-check', i18nKey: 'menu_audit_manage', fallback: '申請審核管理', display: role === 'admin' },
+                { id: 'page-apply', icon: 'fas fa-paper-plane', i18nKey: 'menu_apply', fallback: '需求申請', display: role !== 'admin' },
+                { id: 'page-config-manage', icon: 'fas fa-database', i18nKey: 'db_sync', fallback: '資料庫與同步', display: role === 'admin' }
             ];
             sysMenus.forEach(sm => {
-                if (sm.display) html += `<div class="menu-item" onclick="navTo('${sm.id}', this, '${sm.name}')"><i class="${sm.icon} menu-icon"></i> <span class="text-truncate">${sm.name}</span></div>`;
+                if (sm.display) { const smName = t(sm.i18nKey, sm.fallback); html += `<div class="menu-item" onclick="navTo('${sm.id}', this, '${smName}')"><i class="${sm.icon} menu-icon"></i> <span class="text-truncate">${smName}</span></div>`; }
             });
         } else {
             const activeRoot = rootMenus.find(m => window.cleanId(m.id) === window.cleanId(window.currentActiveTopMenuId));
@@ -432,7 +428,7 @@ window.renderHomeDashboard = function () {
         if (!currentUser) return;
         const homeRole = document.getElementById('home-role-title');
         const homeRoleLvl = document.getElementById('home-role-level');
-        if (homeRole) homeRole.innerText = currentUser.roleLevel === 'admin' ? '系統管理員' : '一般使用者';
+        if (homeRole) homeRole.innerText = currentUser.roleLevel === 'admin' ? t('home_role_admin', '系統管理員') : t('home_role_user', '一般使用者');
         if (homeRoleLvl) homeRoleLvl.innerText = currentUser.roleLevel === 'admin' ? '(Admin)' : '(User)';
 
         const fabs = getFabs();
@@ -456,11 +452,11 @@ window.renderUserDropdown = function () {
     setText('user-name', currentUser.id || '');
     const loginCount = currentUser.loginCount || 1;
     setHtml('user-role',
-        '這是您第 <span style="color:#38bdf8; font-weight:800; font-size:0.75rem;">' + loginCount + '</span> 次登入');
+        t('login_count_prefix', '這是您第 ') + '<span style="color:#38bdf8; font-weight:800; font-size:0.75rem;">' + loginCount + '</span>' + t('login_count_suffix', ' 次登入'));
 
     setText('dropdown-user-name', (currentUser.name || '') + ' (' + (currentUser.id || '') + ')');
-    setText('dropdown-user-dept', currentUser.department || '未設定部門');
-    setText('dropdown-user-login-count', loginCount + ' 次');
+    setText('dropdown-user-dept', currentUser.department || t('dept_unknown', '未設定部門'));
+    setText('dropdown-user-login-count', loginCount + ' ' + t('login_count_unit', '次'));
     setText('dropdown-user-login-time', currentUser.currentLoginTime || '00:00 AM');
 };
 // =========================================================================
@@ -581,7 +577,7 @@ window.switchFab = function (fabName) {
         const fabRoleIds = (fabObj.assignedRoles || fabObj.AssignedRoles || []).map(window.cleanId);
         const canSee = fabRoleIds.length > 0 && fabRoleIds.some(r => userRoleIds.includes(r));
         if (!canSee) {
-            if (typeof customAlert === 'function') customAlert('您沒有權限存取此廠區');
+            if (typeof customAlert === 'function') customAlert(t('no_permission', '您沒有權限存取此廠區'));
             return;
         }
     }
@@ -737,13 +733,7 @@ function renderPersonalMenuManage() {
         setTimeout(() => {
             try {
                 const dt = $('#dtPersonalMenu').DataTable({
-                    language: {
-                        "lengthMenu": "顯示 _MENU_ 筆主選單", "zeroRecords": "沒有符合的結果",
-                        "info": "顯示第 _START_ 至 _END_ 筆，共 _TOTAL_ 筆主選單",
-                        "infoEmpty": "顯示第 0 至 0 筆，共 0 筆", "infoFiltered": "(從 _MAX_ 筆結果過濾)",
-                        "search": "<i class='fas fa-search text-muted me-1'></i> 搜尋:",
-                        "paginate": { "first": "首頁", "previous": "上一頁", "next": "下一頁", "last": "尾頁" }
-                    },
+                    language: (typeof getDataTableLang === 'function') ? getDataTableLang() : {},
                     pageLength: 10, lengthMenu: [10, 25, 50, 100],
                     ordering: false, autoWidth: false, stateSave: false
                 });

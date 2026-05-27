@@ -47,8 +47,7 @@
               "ViewState": "AgIAACMAAAAAAAAAAAAcwCgAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
               "WhenOpened": "2026-05-12T15:33:21.016Z",
-              "IsPinned": true,
-              "EditorCaption": ""
+              "IsPinned": true
             },
             {
               "$type": "Document",
@@ -111,7 +110,7 @@
               "RelativeDocumentMoniker": "EQDashboard\\wwwroot\\js\\render.js",
               "ToolTip": "C:\\EQDashboard\\EQDashboard\\EQDashboard\\wwwroot\\js\\render.js",
               "RelativeToolTip": "EQDashboard\\wwwroot\\js\\render.js",
-              "ViewState": "AgIAANYFAAAAAAAAAAAAANsFAAA/AAAAAAAAAA==",
+              "ViewState": "AgIAAMwFAAAAAAAAAAAAANcFAAA5AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
               "WhenOpened": "2026-05-14T13:28:20.76Z",
               "EditorCaption": ""
