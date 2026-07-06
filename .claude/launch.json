@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "eqdashboard-v2",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "EQDashboard.V2.Web", "--no-build", "--urls", "http://localhost:5242"],
+      "port": 5242
+    }
+  ]
+}

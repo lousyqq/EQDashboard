@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  EQ Dashboard — 「上方導覽列為主」版面優化範例（3 個變體，standalone demo）
+  ----------------------------------------------------------------------------
+  ⚠️ 不依賴你的專案、不引用任何 CDN/你的 js/css；全部內嵌、離線可開、可任意刪。
+     你的程式碼一行都沒被更動，這只是給你看版面方向的靜態示意。
+  ----------------------------------------------------------------------------
+  需求對齊：
+   · 主選單顯示在「上方導覽列」（維持你現在的結構）。
+   · 不要入口網頁那種卡片啟動台 / 我的最愛 / 個人版面（瀏覽者多、非特定使用者）。
+   · 內容區＝「目前開啟的看板」本身（非個人化儀表板）。
+   · 提供 3 個導覽結構變體，頂部切換比較：
+       範例 A：雙層導覽（上方主選單 ＋ 左側情境子選單）← 最接近你現況
+       範例 B：純上方導覽（主選單 ＋ 滑過下拉子選單，無左欄，內容滿版）
+       範例 C：上方導覽 ＋ 次級 tab 橫條（無左欄，全橫向、好掃視）
+  ============================================================================
+-->
+<html lang="zh-Hant" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EQ Dashboard — 上方導覽列版面優化範例</title>
+<style>
+  :root{
+    --brand:#2f6df6;--brand-600:#2257d6;--accent:#10b4a5;
+    --bg:#eef2f8;--surface:#fff;--surface-2:#f4f7fc;--surface-3:#eef2f8;
+    --border:#e2e8f2;--border-strong:#d2dbe9;
+    --text:#16202e;--text-2:#475569;--text-3:#8a98ad;
+    --nav:#10203c;--nav-2:#0b1730;--nav-text:#cdd9ef;--nav-muted:#8294b8;
+    --good:#16a34a;--warn:#d97706;--bad:#dc2626;
+    --shadow-sm:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+    --shadow-md:0 8px 20px -6px rgba(16,33,64,.16),0 2px 6px -2px rgba(16,33,64,.08);
+    --shadow-lg:0 24px 48px -12px rgba(16,33,64,.24);
+    --r:13px;--r-sm:9px;--ease:cubic-bezier(.4,0,.2,1);--switcher-h:48px;
+  }
+  [data-theme="dark"]{
+    --bg:#0a0f1a;--surface:#121b2c;--surface-2:#0f1726;--surface-3:#172238;
+    --border:#22304a;--border-strong:#2c3c5a;
+    --text:#e7eef9;--text-2:#a7b6cd;--text-3:#6b7c98;
+    --nav:#0a1322;--nav-2:#070d18;
+    --shadow-md:0 8px 20px -6px rgba(0,0,0,.5);--shadow-lg:0 24px 48px -12px rgba(0,0,0,.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,"Segoe UI","Microsoft JhengHei","PingFang TC","Noto Sans TC",Roboto,sans-serif;
+    background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;
+    padding-top:var(--switcher-h);overflow:hidden;transition:background .3s var(--ease),color .3s var(--ease)
+  }
+  svg.ic{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  a{color:inherit;text-decoration:none}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:20px;border:2px solid transparent;background-clip:content-box}
+
+  /* ===== 頂部「示意切換」列（meta，非設計的一部分） ===== */
+  .switcher{
+    position:fixed;top:0;left:0;right:0;height:var(--switcher-h);z-index:200;
+    background:#070d18;color:#fff;display:flex;align-items:center;gap:14px;padding:0 16px
+  }
+  .switcher .lab{font-size:12px;font-weight:700;letter-spacing:.5px;color:#7f8db0;white-space:nowrap}
+  .switcher .opts{display:flex;background:rgba(255,255,255,.07);border-radius:10px;padding:3px;gap:2px}
+  .switcher .opts button{padding:6px 14px;border-radius:7px;font-size:12.5px;font-weight:600;color:#9fb0d0;white-space:nowrap}
+  .switcher .opts button.on{background:linear-gradient(135deg,var(--brand),var(--brand-600));color:#fff}
+  .switcher .desc{font-size:12px;color:#8294b8;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .switcher .t-toggle{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:#9fb0d0}
+  .switcher .t-toggle:hover{background:rgba(255,255,255,.1);color:#fff}
+
+  .stage{height:calc(100vh - var(--switcher-h))}
+  .variant{height:100%;display:none;flex-direction:column}
+  .variant.on{display:flex}
+
+  /* ===== 共用：頂部工具列 ===== */
+  .util{
+    height:54px;flex:none;display:flex;align-items:center;gap:14px;padding:0 20px;
+    background:var(--surface);border-bottom:1px solid var(--border)
+  }
+  .brand{display:flex;align-items:center;gap:11px;flex:none}
+  .brand .logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;
+    background:linear-gradient(135deg,var(--brand),var(--accent));box-shadow:0 5px 12px -4px rgba(47,109,246,.7)}
+  .brand .logo svg{width:19px;height:19px;stroke-width:2.4}
+  .brand .nm{font-weight:800;font-size:16px;letter-spacing:.2px;white-space:nowrap}
+  .brand .nm small{display:block;font-weight:600;font-size:9.5px;color:var(--text-3);letter-spacing:1.6px}
+  .util-spacer{flex:1}
+  .fab-sel{display:flex;align-items:center;gap:8px;height:38px;padding:0 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface-3);font-weight:700;font-size:13.5px;cursor:pointer}
+  .fab-sel .ic{width:16px;height:16px;color:var(--brand)}
+  .fab-sel .cap{font-size:10px;font-weight:700;color:var(--text-3);letter-spacing:.8px}
+  .fab-menu{position:absolute;margin-top:6px;background:var(--surface);border:1px solid var(--border);border-radius:11px;box-shadow:var(--shadow-md);padding:5px;min-width:170px;z-index:60}
+  .fab-menu[hidden]{display:none}
+  .fab-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:9px 11px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--text-2)}
+  .fab-menu button:hover{background:var(--surface-3);color:var(--text)}
+  .fab-menu button.on{color:var(--brand)}
+  .fab-menu button small{margin-left:auto;color:var(--text-3);font-weight:500}
+  .search{display:flex;align-items:center;gap:9px;height:38px;padding:0 13px;width:300px;max-width:34vw;
+    background:var(--surface-3);border:1px solid var(--border);border-radius:10px;color:var(--text-3)}
+  .search input{border:none;outline:none;background:none;font-size:13.5px;color:var(--text);width:100%;font-family:inherit}
+  .ico-btn{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:var(--text-2)}
+  .ico-btn:hover{background:var(--surface-3);color:var(--text)}
+  .avatar{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13.5px;color:#fff;background:linear-gradient(135deg,#6366f1,#a855f7);flex:none}
+
+  /* ===== 主選單（上方導覽列）共用 tab 樣式 ===== */
+  .mainnav{display:flex;align-items:center;gap:2px}
+  .mainnav .mtab{display:flex;align-items:center;gap:8px;padding:0 15px;height:100%;font-size:14px;font-weight:600;color:var(--text-2);position:relative;white-space:nowrap;cursor:pointer;transition:.14s var(--ease)}
+  .mainnav .mtab .ic{width:17px;height:17px;opacity:.8}
+  .mainnav .mtab:hover{color:var(--text)}
+  .mainnav .mtab.on{color:var(--brand)}
+  .mainnav .mtab.on::after{content:"";position:absolute;left:12px;right:12px;bottom:0;height:3px;border-radius:3px 3px 0 0;background:linear-gradient(90deg,var(--brand),var(--accent))}
+  .mainnav .mtab .chev{width:14px;height:14px;opacity:.5}
+
+  /* ===== 內容區（開啟的看板）共用 ===== */
+  .content{flex:1;overflow-y:auto;padding:22px 26px 40px;background:var(--bg)}
+  .board-head{display:flex;align-items:center;gap:14px;margin-bottom:8px;flex-wrap:wrap}
+  .board-head h1{font-size:22px;font-weight:800;letter-spacing:-.3px}
+  .board-head .live{font-size:11px;font-weight:700;color:var(--good);background:rgba(22,163,74,.12);padding:3px 9px;border-radius:7px;display:inline-flex;align-items:center;gap:5px}
+  .board-head .live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--good);box-shadow:0 0 0 3px rgba(22,163,74,.2)}
+  .board-head .sp{flex:1}
+  .board-head .b-act{display:flex;gap:6px}
+  .board-head .b-act button{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 13px;border:1px solid var(--border);border-radius:10px;background:var(--surface);font-size:13px;font-weight:600;color:var(--text-2)}
+  .board-head .b-act button:hover{border-color:var(--border-strong);color:var(--text)}
+  .board-head .b-act button.icon{padding:0;width:36px;justify-content:center}
+  .crumb{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text-3);margin-bottom:18px;font-weight:500}
+  .crumb .ic{width:14px;height:14px}.crumb b{color:var(--text-2)}
+
+  .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:15px 16px;box-shadow:var(--shadow-sm)}
+  .stat .l{font-size:12px;color:var(--text-2);font-weight:600;display:flex;align-items:center;gap:7px}
+  .stat .l .ic{width:15px;height:15px;color:var(--text-3)}
+  .stat .v{font-size:25px;font-weight:800;letter-spacing:-.4px;margin-top:7px;display:flex;align-items:baseline;gap:7px}
+  .stat .v small{font-size:12px;font-weight:700}
+  .up{color:var(--good)}.down{color:var(--bad)}
+
+  .panels{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-bottom:18px}
+  .pcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow-sm);overflow:hidden}
+  .pcard .ph{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border)}
+  .pcard .ph h3{font-size:14px;font-weight:700}
+  .pcard .ph .sp{flex:1}
+  .pcard .ph .seg{display:flex;background:var(--surface-3);border-radius:8px;padding:2px;gap:1px}
+  .pcard .ph .seg button{padding:4px 10px;border-radius:6px;font-size:11.5px;font-weight:600;color:var(--text-3)}
+  .pcard .ph .seg button.on{background:var(--surface);color:var(--brand);box-shadow:var(--shadow-sm)}
+  .pbody{padding:16px}
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--text-3);text-transform:uppercase;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface-2)}
+  td{padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:var(--surface-2)}
+  .badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;display:inline-flex;align-items:center;gap:5px}
+  .badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+  .b-ok{background:rgba(22,163,74,.12);color:var(--good)}
+  .b-warn{background:rgba(217,119,6,.13);color:var(--warn)}
+  .b-bad{background:rgba(220,38,38,.12);color:var(--bad)}
+
+  /* ===== 範例 A：左側情境子選單 ===== */
+  .A-body{flex:1;display:grid;grid-template-columns:248px 1fr;min-height:0}
+  .A-side{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:14px 12px}
+  .A-side .s-title{font-size:11px;font-weight:700;letter-spacing:1px;color:var(--text-3);text-transform:uppercase;padding:6px 10px 10px}
+  .side-item{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:9px;font-size:13.5px;font-weight:500;color:var(--text-2);cursor:pointer;transition:.13s var(--ease)}
+  .side-item:hover{background:var(--surface-3);color:var(--text)}
+  .side-item.on{background:rgba(47,109,246,.1);color:var(--brand);font-weight:600}
+  .side-item .ic{width:17px;height:17px;opacity:.85}
+  .side-item .chev{width:14px;height:14px;margin-left:auto;opacity:.5;transition:transform .2s}
+  .side-item.open .chev{transform:rotate(90deg)}
+  .side-children{margin:2px 0 2px 16px;border-left:1px solid var(--border);padding-left:6px;overflow:hidden;max-height:0;transition:max-height .25s var(--ease)}
+  .side-children .side-item{font-size:13px;padding:7px 10px}
+  .side-children .side-item .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.5}
+
+  /* ===== 範例 B：下拉子選單 ===== */
+  .B-nav{height:60px;display:flex;align-items:center;gap:14px;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--border);position:relative;z-index:50}
+  .B-nav .mainnav{height:60px}
+  .dropdown{position:absolute;top:58px;background:var(--surface);border:1px solid var(--border);border-radius:13px;box-shadow:var(--shadow-md);padding:8px;min-width:230px;z-index:55;animation:dd .14s var(--ease)}
+  @keyframes dd{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+  .dropdown[hidden]{display:none}
+  .dd-item{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:9px;font-size:13.5px;font-weight:500;color:var(--text-2);cursor:pointer}
+  .dd-item:hover{background:var(--surface-3);color:var(--text)}
+  .dd-item.on{color:var(--brand)}
+  .dd-item .ic{width:17px;height:17px;opacity:.85}
+  .dd-grp{font-size:10.5px;font-weight:700;letter-spacing:.8px;color:var(--text-3);text-transform:uppercase;padding:9px 11px 4px}
+
+  /* ===== 範例 C：次級 tab 橫條 ===== */
+  .C-sub{height:48px;flex:none;display:flex;align-items:center;gap:6px;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto}
+  .C-sub .pill{display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:9px;font-size:13px;font-weight:600;color:var(--text-2);white-space:nowrap;cursor:pointer;border:1px solid transparent}
+  .C-sub .pill .ic{width:15px;height:15px;opacity:.8}
+  .C-sub .pill:hover{background:var(--surface-3)}
+  .C-sub .pill.on{background:rgba(47,109,246,.1);color:var(--brand);border-color:rgba(47,109,246,.22)}
+  .C-sub .divider{width:1px;height:22px;background:var(--border);margin:0 4px;flex:none}
+  .C-sub .sub-lab{font-size:11px;font-weight:700;color:var(--text-3);letter-spacing:.5px;white-space:nowrap;padding-right:2px}
+
+  @media(max-width:1080px){.stat-row{grid-template-columns:repeat(2,1fr)}.panels{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></symbol>
+  <symbol id="i-chevR" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></symbol>
+  <symbol id="i-chevD" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="i-factory" viewBox="0 0 24 24"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M7 18h.01M12 18h.01M17 18h.01"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.2 5.2L3 18l3 3 6.5-6.5a4 4 0 0 0 5.2-5.2l-2.3 2.3-2.4-.6-.6-2.4Z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><polyline points="3.3 7 12 12 20.7 7"/><line x1="12" y1="22" x2="12" y2="12"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10Z"/></symbol>
+  <symbol id="i-cube" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9l-.8-1.2A2 2 0 0 0 8 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.5 9a9 9 0 0 1 14.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0 0 20.5 15"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+</svg>
+
+<!-- ===== 示意切換列 ===== -->
+<div class="switcher">
+  <span class="lab">版面範例</span>
+  <div class="opts" id="vopts">
+    <button class="on" data-v="A">A · 雙層導覽</button>
+    <button data-v="B">B · 純上方導覽</button>
+    <button data-v="C">C · 上方+次級tab</button>
+  </div>
+  <span class="desc" id="vdesc"></span>
+  <button class="t-toggle" id="themeBtn" title="切換主題"><svg class="ic"><use href="#i-moon"/></svg></button>
+</div>
+
+<div class="stage">
+
+  <!-- ============ 範例 A：上方主選單 + 左側情境子選單（最接近現況） ============ -->
+  <div class="variant on" id="vA">
+    <div class="util">
+      <div class="brand"><div class="logo"><svg class="ic"><use href="#i-bolt"/></svg></div><div class="nm">EQ Dashboard<small>EQUIPMENT PERFORMANCE</small></div></div>
+      <div class="util-spacer"></div>
+      <div class="search"><svg class="ic" style="width:16px;height:16px"><use href="#i-search"/></svg><input placeholder="搜尋看板…"></div>
+      <div style="position:relative"><div class="fab-sel" data-fabsel="A"><svg class="ic"><use href="#i-factory"/></svg><span class="cap">廠區</span><b class="fabname">12A</b><svg class="ic" style="width:14px;height:14px"><use href="#i-chevD"/></svg></div></div>
+      <button class="ico-btn"><svg class="ic"><use href="#i-globe"/></svg></button>
+      <button class="ico-btn"><svg class="ic"><use href="#i-bell"/></svg></button>
+      <div class="avatar">林</div>
+    </div>
+    <div class="util" style="height:50px;padding:0 12px"><div class="mainnav" data-nav="A" style="height:50px"></div></div>
+    <div class="A-body">
+      <aside class="A-side"><div class="s-title" data-stitle="A">設備效能</div><div data-side="A"></div></aside>
+      <div class="content"><div class="board-slot" data-board="A"></div></div>
+    </div>
+  </div>
+
+  <!-- ============ 範例 B：純上方導覽 + 下拉子選單（內容滿版） ============ -->
+  <div class="variant" id="vB">
+    <div class="B-nav">
+      <div class="brand"><div class="logo"><svg class="ic"><use href="#i-bolt"/></svg></div><div class="nm">EQ Dashboard</div></div>
+      <div class="mainnav" data-nav="B" style="height:60px;margin-left:8px"></div>
+      <div class="util-spacer"></div>
+      <div class="search" style="width:240px"><svg class="ic" style="width:16px;height:16px"><use href="#i-search"/></svg><input placeholder="搜尋…"></div>
+      <div style="position:relative"><div class="fab-sel" data-fabsel="B"><svg class="ic"><use href="#i-factory"/></svg><b class="fabname">12A</b><svg class="ic" style="width:14px;height:14px"><use href="#i-chevD"/></svg></div></div>
+      <button class="ico-btn"><svg class="ic"><use href="#i-bell"/></svg></button>
+      <div class="avatar">林</div>
+      <div class="dropdown" data-dd="B" hidden></div>
+    </div>
+    <div class="content"><div class="board-slot" data-board="B"></div></div>
+  </div>
+
+  <!-- ============ 範例 C：上方導覽 + 次級 tab 橫條（全橫向） ============ -->
+  <div class="variant" id="vC">
+    <div class="util">
+      <div class="brand"><div class="logo"><svg class="ic"><use href="#i-bolt"/></svg></div><div class="nm">EQ Dashboard<small>EQUIPMENT PERFORMANCE</small></div></div>
+      <div class="mainnav" data-nav="C" style="height:54px;margin-left:16px"></div>
+      <div class="util-spacer"></div>
+      <div class="search" style="width:220px"><svg class="ic" style="width:16px;height:16px"><use href="#i-search"/></svg><input placeholder="搜尋…"></div>
+      <div style="position:relative"><div class="fab-sel" data-fabsel="C"><svg class="ic"><use href="#i-factory"/></svg><b class="fabname">12A</b><svg class="ic" style="width:14px;height:14px"><use href="#i-chevD"/></svg></div></div>
+      <button class="ico-btn"><svg class="ic"><use href="#i-bell"/></svg></button>
+      <div class="avatar">林</div>
+    </div>
+    <div class="C-sub"><span class="sub-lab" data-stitle="C">設備效能</span><span class="divider"></span><div data-side="C" style="display:flex;gap:6px;align-items:center"></div></div>
+    <div class="content"><div class="board-slot" data-board="C"></div></div>
+  </div>
+
+</div>
+
+<!-- 廠區下拉（共用一個，定位到觸發點） -->
+<div class="fab-menu" id="fabMenu" hidden>
+  <button class="on" data-fab="12A">12A<small>十二吋 A 廠</small></button>
+  <button data-fab="12M">12M<small>十二吋 M 廠</small></button>
+  <button data-fab="12i">12i<small>十二吋 i 廠</small></button>
+</div>
+
+<script>
+/* ===== 選單資料（三變體共用） ===== */
+const MENUS=[
+  {id:'perf',name:'設備效能',icon:'i-gauge',children:[
+    {id:'oee',name:'OEE 稼動率',icon:'i-gauge'},
+    {id:'down',name:'異常停機分析',icon:'i-bolt'},
+    {id:'mtbf',name:'MTBF / MTTR',icon:'i-chart'},
+    {id:'yield',name:'良率趨勢',icon:'i-chart'},
+  ]},
+  {id:'pm',name:'保養維護',icon:'i-wrench',children:[
+    {id:'pmsch',name:'PM 保養排程',icon:'i-clock'},
+    {id:'wo',name:'維修工單',icon:'i-wrench'},
+    {id:'spare',name:'備品庫存',icon:'i-box'},
+  ]},
+  {id:'ze',name:'強化防禦',icon:'i-shield',children:[
+    {id:'mnop',name:'MNOP',icon:'i-cube'},
+    {id:'wl',name:'WL 子群組',icon:'i-folder',children:[
+      {id:'scal',name:'ScalingTEST',icon:'i-cube'},
+      {id:'nonscal',name:'Non Scaling',icon:'i-cube'},
+    ]},
+    {id:'bsl',name:'BSL',icon:'i-cube'},
+  ]},
+  {id:'qual',name:'品質管理',icon:'i-check',children:[
+    {id:'spc',name:'SPC 管制圖',icon:'i-chart'},
+    {id:'defect',name:'缺陷分析',icon:'i-bolt'},
+    {id:'complaint',name:'客訴追蹤',icon:'i-bell'},
+  ]},
+  {id:'report',name:'報表中心',icon:'i-grid',children:[
+    {id:'daily',name:'日報',icon:'i-clock'},
+    {id:'weekly',name:'週報',icon:'i-clock'},
+    {id:'monthly',name:'月報',icon:'i-clock'},
+  ]},
+];
+const DESC={
+  A:'雙層導覽：主選單在上、左側顯示該選單的子項樹 —— 最貼近你現在的結構，子項多時也好展開。',
+  B:'純上方導覽：滑過主選單即下拉子項，無左欄、內容滿版 —— 適合高流量、單純點進某看板的瀏覽。',
+  C:'上方導覽＋次級橫條：選主選單後、子項以橫向 pill 呈現 —— 全部靠上、好掃視，子項少時最俐落。',
+};
+
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const svg=id=>`<svg class="ic"><use href="#${id}"/></svg>`;
+
+let state={v:'A',root:'perf',leaf:'oee',fab:'12A'};
+const findRoot=id=>MENUS.find(m=>m.id===id);
+function findLeaf(rootId,leafId){
+  const r=findRoot(rootId);let f=null;
+  (function walk(arr){arr.forEach(n=>{if(n.id===leafId)f=n;if(n.children)walk(n.children);});})(r.children);
+  return f;
+}
+function firstLeaf(rootId){
+  const r=findRoot(rootId);let f=null;
+  (function walk(arr){for(const n of arr){if(n.children){walk(n.children);}else if(!f){f=n;}if(f)break;}})(r.children);
+  // 保底：取第一個非資料夾
+  if(!f){(function walk(arr){arr.forEach(n=>{if(!n.children&&!f)f=n;else if(n.children)walk(n.children);});})(r.children);}
+  return f;
+}
+
+/* ===== 主選單（上方） ===== */
+function renderMainnav(v){
+  const el=$(`[data-nav="${v}"]`);
+  el.innerHTML=MENUS.map(m=>`
+    <div class="mtab ${m.id===state.root?'on':''}" data-root="${m.id}">
+      ${svg(m.icon)}<span>${m.name}</span>${v==='B'?svg('i-chevD').replace('class="ic"','class="ic chev"'):''}
+    </div>`).join('');
+}
+
+/* ===== 範例 A 左側子選單 ===== */
+function renderSideA(){
+  const r=findRoot(state.root);
+  $(`[data-stitle="A"]`).textContent=r.name;
+  $(`[data-side="A"]`).innerHTML=r.children.map(n=>sideNode(n)).join('');
+  bindSideA();
+}
+function sideNode(n){
+  if(n.children){
+    return `<div class="side-item folder" data-fid="${n.id}">${svg(n.icon)}<span>${n.name}</span><svg class="ic chev"><use href="#i-chevR"/></svg></div>
+      <div class="side-children" data-fch="${n.id}">${n.children.map(c=>`<div class="side-item ${c.id===state.leaf?'on':''}" data-leaf="${c.id}"><span class="dot"></span><span>${c.name}</span></div>`).join('')}</div>`;
+  }
+  return `<div class="side-item ${n.id===state.leaf?'on':''}" data-leaf="${n.id}">${svg(n.icon)}<span>${n.name}</span></div>`;
+}
+function bindSideA(){
+  $$(`[data-side="A"] .side-item.folder`).forEach(el=>el.addEventListener('click',()=>{
+    el.classList.toggle('open');const ch=$(`[data-fch="${el.dataset.fid}"]`);
+    ch.style.maxHeight=ch.style.maxHeight?'':ch.scrollHeight+'px';
+  }));
+  $$(`[data-side="A"] .side-item[data-leaf]`).forEach(el=>el.addEventListener('click',()=>{state.leaf=el.dataset.leaf;renderSideA();renderBoard('A');}));
+}
+
+/* ===== 範例 B 下拉 ===== */
+function bindNavB(){
+  const dd=$(`[data-dd="B"]`);
+  $$(`[data-nav="B"] .mtab`).forEach(tab=>{
+    tab.addEventListener('click',e=>{
+      const r=findRoot(tab.dataset.root);
+      if(!dd.hidden && state.openRoot===r.id){dd.hidden=true;state.openRoot=null;return;}
+      state.openRoot=r.id;
+      dd.innerHTML=r.children.map(n=>ddNode(n)).join('');
+      const rect=tab.getBoundingClientRect();
+      dd.style.left=Math.min(rect.left,window.innerWidth-260)+'px';
+      dd.hidden=false;
+      $$('.dd-item[data-leaf]',dd).forEach(it=>it.addEventListener('click',()=>{
+        state.root=r.id;state.leaf=it.dataset.leaf;dd.hidden=true;state.openRoot=null;
+        renderMainnav('B');renderBoard('B');
+      }));
+    });
+  });
+}
+function ddNode(n){
+  if(n.children){
+    return `<div class="dd-grp">${n.name}</div>`+n.children.map(c=>`<div class="dd-item" data-leaf="${c.id}">${svg(c.icon)}<span>${c.name}</span></div>`).join('');
+  }
+  return `<div class="dd-item ${n.id===state.leaf?'on':''}" data-leaf="${n.id}">${svg(n.icon)}<span>${n.name}</span></div>`;
+}
+
+/* ===== 範例 C 次級橫條 ===== */
+function renderSideC(){
+  const r=findRoot(state.root);
+  $(`[data-stitle="C"]`).textContent=r.name;
+  const flat=[];(function walk(arr){arr.forEach(n=>{if(n.children){walk(n.children);}else flat.push(n);});})(r.children);
+  $(`[data-side="C"]`).innerHTML=flat.map(n=>`<div class="pill ${n.id===state.leaf?'on':''}" data-leaf="${n.id}">${svg(n.icon)}<span>${n.name}</span></div>`).join('');
+  $$(`[data-side="C"] .pill`).forEach(el=>el.addEventListener('click',()=>{state.leaf=el.dataset.leaf;renderSideC();renderBoard('C');}));
+}
+
+/* ===== 主選單共用點擊 ===== */
+function bindMainTabs(v){
+  $$(`[data-nav="${v}"] .mtab`).forEach(tab=>{
+    if(v==='B')return; // B 由 bindNavB 處理（下拉）
+    tab.addEventListener('click',()=>{
+      state.root=tab.dataset.root;
+      const fl=firstLeaf(state.root);state.leaf=fl?fl.id:null;
+      renderMainnav(v);
+      if(v==='A'){renderSideA();renderBoard('A');}
+      if(v==='C'){renderSideC();renderBoard('C');}
+    });
+  });
+}
+
+/* ===== 內容區：開啟的看板 ===== */
+function renderBoard(v){
+  const r=findRoot(state.root);const lf=findLeaf(state.root,state.leaf)||{name:'—',icon:'i-grid'};
+  $(`[data-board="${v}"]`).innerHTML=boardHTML(r,lf);
+  $$(`[data-board="${v}"] .pcard .seg button`).forEach(b=>b.addEventListener('click',()=>{
+    b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  }));
+}
+function boardHTML(r,lf){
+  return `
+  <div class="crumb"><svg class="ic"><use href="#i-factory"/></svg><b>${state.fab}</b>
+    <svg class="ic"><use href="#i-chevR"/></svg>${r.name}
+    <svg class="ic"><use href="#i-chevR"/></svg><b>${lf.name}</b></div>
+  <div class="board-head">
+    <h1>${lf.name}</h1><span class="live">即時</span>
+    <div class="sp"></div>
+    <div class="b-act">
+      <button>近 7 天<svg class="ic" style="width:14px;height:14px"><use href="#i-chevD"/></svg></button>
+      <button class="icon" title="重新整理"><svg class="ic" style="width:16px;height:16px"><use href="#i-refresh"/></svg></button>
+      <button class="icon" title="全螢幕"><svg class="ic" style="width:16px;height:16px"><use href="#i-expand"/></svg></button>
+      <button class="icon" title="開新視窗"><svg class="ic" style="width:16px;height:16px"><use href="#i-ext"/></svg></button>
+    </div>
+  </div>
+  <div class="stat-row">
+    <div class="stat"><div class="l">${svg('i-gauge')}設備稼動率 OEE</div><div class="v">92.4<small>%</small> <small class="up">▲1.2%</small></div></div>
+    <div class="stat"><div class="l">${svg('i-check')}可用率</div><div class="v">96.1<small>%</small> <small class="up">▲0.5%</small></div></div>
+    <div class="stat"><div class="l">${svg('i-bolt')}今日異常停機</div><div class="v">3<small>件</small> <small class="down">▲1</small></div></div>
+    <div class="stat"><div class="l">${svg('i-clock')}平均修復 MTTR</div><div class="v">42<small>分</small> <small class="up">▼6</small></div></div>
+  </div>
+  <div class="panels">
+    <div class="pcard">
+      <div class="ph"><h3>OEE 趨勢</h3><div class="sp"></div><div class="seg"><button class="on">日</button><button>週</button><button>月</button></div></div>
+      <div class="pbody">
+        <svg width="100%" height="190" viewBox="0 0 560 190" preserveAspectRatio="none">
+          <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2f6df6" stop-opacity=".28"/><stop offset="1" stop-color="#2f6df6" stop-opacity="0"/></linearGradient></defs>
+          ${[0,1,2,3].map(i=>`<line x1="0" y1="${30+i*40}" x2="560" y2="${30+i*40}" stroke="var(--border)" stroke-width="1"/>`).join('')}
+          <path d="M0,120 L80,96 L160,108 L240,70 L320,84 L400,52 L480,64 L560,38 L560,190 L0,190 Z" fill="url(#g1)"/>
+          <path d="M0,120 L80,96 L160,108 L240,70 L320,84 L400,52 L480,64 L560,38" fill="none" stroke="#2f6df6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          ${[[0,120],[80,96],[160,108],[240,70],[320,84],[400,52],[480,64],[560,38]].map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="#fff" stroke="#2f6df6" stroke-width="2"/>`).join('')}
+        </svg>
+      </div>
+    </div>
+    <div class="pcard">
+      <div class="ph"><h3>停機原因分佈</h3></div>
+      <div class="pbody">
+        <svg width="100%" height="190" viewBox="0 0 280 190">
+          ${[['換線',150,'#2f6df6'],['故障',110,'#10b4a5'],['待料',78,'#f59e0b'],['調機',54,'#8b5cf6'],['其他',30,'#94a3b8']].map((b,i)=>`
+            <text x="0" y="${24+i*36}" font-size="12" fill="var(--text-2)" font-family="sans-serif">${b[0]}</text>
+            <rect x="56" y="${14+i*36}" width="200" height="16" rx="8" fill="var(--surface-3)"/>
+            <rect x="56" y="${14+i*36}" width="${b[1]}" height="16" rx="8" fill="${b[2]}"/>
+            <text x="${62+b[1]}" y="${26+i*36}" font-size="11" fill="var(--text-3)" font-family="sans-serif">${Math.round(b[1]/2)}</text>`).join('')}
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div class="pcard">
+    <div class="ph"><h3>近期異常事件</h3><div class="sp"></div><button style="font-size:12.5px;font-weight:600;color:var(--brand)">查看全部</button></div>
+    <table>
+      <thead><tr><th>時間</th><th>機台</th><th>事件</th><th>停機時長</th><th>狀態</th></tr></thead>
+      <tbody>
+        <tr><td>14:08</td><td>EQ-A12-07</td><td>Vacuum 異常</td><td>18 分</td><td><span class="badge b-bad">處理中</span></td></tr>
+        <tr><td>11:32</td><td>EQ-A12-03</td><td>溫控偏移</td><td>9 分</td><td><span class="badge b-warn">觀察中</span></td></tr>
+        <tr><td>09:15</td><td>EQ-A12-11</td><td>換線保養</td><td>35 分</td><td><span class="badge b-ok">已恢復</span></td></tr>
+        <tr><td>08:47</td><td>EQ-A12-05</td><td>待料停機</td><td>22 分</td><td><span class="badge b-ok">已恢復</span></td></tr>
+      </tbody>
+    </table>
+  </div>`;
+}
+
+/* ===== 變體切換 ===== */
+function showVariant(v){
+  state.v=v;
+  $$('.variant').forEach(el=>el.classList.toggle('on',el.id==='v'+v));
+  $$('#vopts button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  $('#vdesc').textContent=DESC[v];
+  $('#fabMenu').hidden=true;$(`[data-dd="B"]`)&&($(`[data-dd="B"]`).hidden=true);
+  // 確保該變體已渲染
+  renderMainnav(v);
+  if(v==='A')renderSideA();
+  if(v==='C')renderSideC();
+  renderBoard(v);
+}
+
+/* ===== 廠區下拉 ===== */
+function bindFab(){
+  const menu=$('#fabMenu');
+  $$('[data-fabsel]').forEach(sel=>sel.addEventListener('click',e=>{
+    e.stopPropagation();
+    if(!menu.hidden){menu.hidden=true;return;}
+    const r=sel.getBoundingClientRect();
+    menu.style.left=Math.min(r.left,window.innerWidth-180)+'px';
+    menu.style.top=(r.bottom+4)+'px';
+    menu.hidden=false;
+  }));
+  $$('#fabMenu button').forEach(b=>b.addEventListener('click',()=>{
+    state.fab=b.dataset.fab;
+    $$('#fabMenu button').forEach(x=>x.classList.toggle('on',x===b));
+    $$('.fabname').forEach(el=>el.textContent=state.fab);
+    menu.hidden=true;renderBoard(state.v);
+  }));
+  document.addEventListener('click',e=>{
+    if(!e.target.closest('[data-fabsel]')&&!e.target.closest('#fabMenu'))menu.hidden=true;
+    const dd=$(`[data-dd="B"]`);
+    if(dd&&!e.target.closest('[data-nav="B"]')&&!e.target.closest('[data-dd="B"]')){dd.hidden=true;state.openRoot=null;}
+  });
+}
+
+/* ===== 主題 ===== */
+$('#themeBtn').addEventListener('click',()=>{
+  const dark=document.documentElement.getAttribute('data-theme')==='dark';
+  document.documentElement.setAttribute('data-theme',dark?'light':'dark');
+  $('#themeBtn').innerHTML=svg(dark?'i-moon':'i-sun');
+});
+$('#vopts').addEventListener('click',e=>{const b=e.target.closest('button');if(b)showVariant(b.dataset.v);});
+
+/* ===== 初始化 ===== */
+['A','B','C'].forEach(v=>{renderMainnav(v);bindMainTabs(v);});
+bindNavB();renderSideA();renderSideC();bindFab();
+showVariant('A');
+</script>
+</body>
+</html>

@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  EQ Dashboard — 版面重新設計「概念範例」(standalone demo)
+  ----------------------------------------------------------------------------
+  ⚠️ 這是一份「不依賴你專案、可單獨用瀏覽器開啟」的設計示意檔。
+     · 不引用任何 CDN / 你的 js / css，所有樣式與圖示皆內嵌 → 離線可開、可任意刪。
+     · 假資料純為展示版面，與真實 DB 無關。
+     · 你的程式碼完全沒被更動，這只是給你看「我會怎麼排版」的靜態原型。
+  ----------------------------------------------------------------------------
+  設計重點（與現況差異）：
+   1. 入口首頁改為「應用啟動台（Launcher）」卡片牆，而非只有一棵選單樹 →
+      看板數量多時更好找、更好掃視。
+   2. 頂部加「全域命令面板（Ctrl/⌘+K）」可跨廠區秒跳任一看板。
+   3. 廠區切換做成明顯的分段控制；側邊欄可收合成 icon rail。
+   4. KPI 概覽帶（OEE/工單/停機…）讓「效能儀表板」名副其實。
+   5. 亮/暗色主題、空狀態中性化、麵包屑、響應式。
+   6. 管理後台表格重新設計（工具列 + 篩選 chip + 乾淨分頁）。
+  ============================================================================
+-->
+<html lang="zh-Hant" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EQ Dashboard — 版面重新設計範例</title>
+<style>
+  /* ===================== 設計變數（Design Tokens） ===================== */
+  :root{
+    --brand:#2f6df6; --brand-600:#2257d6; --brand-700:#1c46ad;
+    --accent:#10b4a5;            /* 輔助色：teal */
+    --bg:#eef2f8; --surface:#ffffff; --surface-2:#f4f7fc; --surface-3:#eef2f8;
+    --border:#e2e8f2; --border-strong:#d2dbe9;
+    --text:#16202e; --text-2:#475569; --text-3:#8a98ad;
+    --sidebar-bg:#0f1a30; --sidebar-bg-2:#0b1426; --sidebar-text:#c7d2e4;
+    --sidebar-muted:#7f8db0; --sidebar-active:#1b2c4d;
+    --good:#16a34a; --warn:#d97706; --bad:#dc2626;
+    --shadow-sm:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+    --shadow-md:0 6px 16px -4px rgba(16,33,64,.12),0 2px 6px -2px rgba(16,33,64,.08);
+    --shadow-lg:0 24px 48px -12px rgba(16,33,64,.22);
+    --radius:14px; --radius-sm:10px; --radius-lg:20px;
+    --rail:264px; --rail-collapsed:74px; --topbar-h:62px;
+    --ease:cubic-bezier(.4,0,.2,1);
+  }
+  [data-theme="dark"]{
+    --bg:#0a0f1a; --surface:#121b2c; --surface-2:#0f1726; --surface-3:#172238;
+    --border:#22304a; --border-strong:#2c3c5a;
+    --text:#e7eef9; --text-2:#a7b6cd; --text-3:#6b7c98;
+    --sidebar-bg:#0a1322; --sidebar-bg-2:#070d18; --sidebar-active:#172a4d;
+    --shadow-md:0 6px 16px -4px rgba(0,0,0,.5),0 2px 6px -2px rgba(0,0,0,.4);
+    --shadow-lg:0 24px 48px -12px rgba(0,0,0,.6);
+  }
+
+  /* ===================== Reset & 基礎 ===================== */
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,"Segoe UI","Microsoft JhengHei","PingFang TC","Noto Sans TC",Roboto,sans-serif;
+    background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased;
+    transition:background .3s var(--ease),color .3s var(--ease);
+    overflow:hidden;
+  }
+  svg.ic{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:rgba(47,109,246,.22)}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:20px;border:2px solid transparent;background-clip:content-box}
+  ::-webkit-scrollbar-thumb:hover{background:var(--text-3)}
+
+  /* ===================== App Shell ===================== */
+  .app{display:grid;grid-template-columns:var(--rail) 1fr;height:100vh;transition:grid-template-columns .25s var(--ease)}
+  .app.collapsed{grid-template-columns:var(--rail-collapsed) 1fr}
+
+  /* ===================== 側邊欄 ===================== */
+  .sidebar{
+    background:linear-gradient(180deg,var(--sidebar-bg),var(--sidebar-bg-2));
+    color:var(--sidebar-text);display:flex;flex-direction:column;min-width:0;
+    border-right:1px solid rgba(255,255,255,.04);position:relative;z-index:30;
+  }
+  .brand{display:flex;align-items:center;gap:11px;padding:0 18px;height:var(--topbar-h);flex:none}
+  .brand .logo{
+    width:36px;height:36px;border-radius:11px;flex:none;display:grid;place-items:center;color:#fff;
+    background:linear-gradient(135deg,var(--brand),var(--accent));box-shadow:0 6px 14px -4px rgba(47,109,246,.7)
+  }
+  .brand .logo svg{width:21px;height:21px;stroke-width:2.4}
+  .brand .name{font-weight:800;font-size:16px;letter-spacing:.3px;white-space:nowrap;color:#fff}
+  .brand .name small{display:block;font-weight:600;font-size:10.5px;color:var(--sidebar-muted);letter-spacing:1.5px}
+  .collapsed .brand .name{opacity:0;width:0;overflow:hidden}
+
+  /* 廠區切換 */
+  .fab-switch{padding:14px 14px 8px}
+  .fab-label{font-size:10.5px;font-weight:700;letter-spacing:1.4px;color:var(--sidebar-muted);text-transform:uppercase;padding:0 6px 8px}
+  .collapsed .fab-label{text-align:center;padding-left:0;padding-right:0}
+  .fab-pills{display:flex;background:rgba(255,255,255,.05);border-radius:12px;padding:4px;gap:3px}
+  .collapsed .fab-pills{flex-direction:column}
+  .fab-pill{flex:1;border-radius:9px;padding:8px 4px;font-weight:700;font-size:13px;color:var(--sidebar-muted);transition:.18s var(--ease);white-space:nowrap}
+  .fab-pill:hover{color:#fff}
+  .fab-pill.on{background:linear-gradient(135deg,var(--brand),var(--brand-600));color:#fff;box-shadow:0 4px 12px -3px rgba(47,109,246,.6)}
+
+  .nav-scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px 10px 14px}
+  .nav-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12)}
+  .nav-sec{font-size:10.5px;font-weight:700;letter-spacing:1.2px;color:var(--sidebar-muted);padding:14px 12px 6px;text-transform:uppercase}
+  .collapsed .nav-sec{opacity:0;height:8px;padding:0}
+  .nav-item{
+    display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:10px;color:var(--sidebar-text);
+    font-size:14px;font-weight:500;cursor:pointer;transition:.15s var(--ease);position:relative;white-space:nowrap
+  }
+  .nav-item:hover{background:rgba(255,255,255,.06);color:#fff}
+  .nav-item.on{background:var(--sidebar-active);color:#fff;font-weight:600}
+  .nav-item.on::before{content:"";position:absolute;left:-10px;top:50%;transform:translateY(-50%);width:4px;height:20px;border-radius:0 4px 4px 0;background:linear-gradient(var(--brand),var(--accent))}
+  .nav-item .ic{width:19px;height:19px;flex:none;opacity:.92}
+  .nav-item .txt{flex:1;overflow:hidden;text-overflow:ellipsis}
+  .nav-item .chev{width:15px;height:15px;opacity:.55;transition:transform .2s var(--ease)}
+  .nav-item.open .chev{transform:rotate(90deg)}
+  .nav-badge{font-size:11px;font-weight:700;background:rgba(255,255,255,.12);padding:1px 7px;border-radius:20px;color:#dfe7f5}
+  .collapsed .nav-item .txt,.collapsed .nav-item .chev,.collapsed .nav-badge{opacity:0;width:0;overflow:hidden}
+  .collapsed .nav-item{justify-content:center;padding:11px}
+  .nav-children{overflow:hidden;max-height:0;transition:max-height .26s var(--ease)}
+  .nav-children .nav-item{padding-left:30px;font-size:13.5px;color:var(--sidebar-muted)}
+  .nav-children .nav-item:hover{color:#fff}
+  .nav-children .nav-item .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none;opacity:.55}
+  .collapsed .nav-children{display:none}
+
+  /* 側邊欄底部：個人/系統模式 */
+  .side-foot{padding:12px;border-top:1px solid rgba(255,255,255,.06);flex:none}
+  .mode-toggle{display:flex;background:rgba(255,255,255,.05);border-radius:11px;padding:4px;gap:3px}
+  .mode-toggle button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--sidebar-muted)}
+  .mode-toggle button.on{background:rgba(255,255,255,.12);color:#fff}
+  .mode-toggle button .ic{width:15px;height:15px}
+  .collapsed .mode-toggle{flex-direction:column}
+  .collapsed .mode-toggle button span{display:none}
+
+  /* ===================== 主區 ===================== */
+  .main{display:flex;flex-direction:column;min-width:0;background:var(--bg)}
+  .topbar{
+    height:var(--topbar-h);flex:none;display:flex;align-items:center;gap:14px;padding:0 20px;
+    background:color-mix(in srgb,var(--surface) 82%,transparent);backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20
+  }
+  .icon-btn{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;color:var(--text-2);transition:.15s var(--ease)}
+  .icon-btn:hover{background:var(--surface-3);color:var(--text)}
+  .search-trigger{
+    flex:1;max-width:440px;display:flex;align-items:center;gap:10px;height:40px;padding:0 14px;
+    background:var(--surface-3);border:1px solid var(--border);border-radius:12px;color:var(--text-3);
+    font-size:13.5px;transition:.18s var(--ease)
+  }
+  .search-trigger:hover{border-color:var(--border-strong);background:var(--surface)}
+  .search-trigger .kbd{margin-left:auto;font-size:11px;font-weight:600;color:var(--text-3);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:2px 7px}
+  .top-spacer{flex:1}
+  .seg{display:flex;background:var(--surface-3);border:1px solid var(--border);border-radius:11px;padding:3px;gap:2px}
+  .seg button{padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;color:var(--text-2);white-space:nowrap;transition:.15s var(--ease)}
+  .seg button.on{background:var(--surface);color:var(--brand);box-shadow:var(--shadow-sm)}
+  .avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;color:#fff;
+    background:linear-gradient(135deg,#6366f1,#a855f7);cursor:pointer;flex:none;border:2px solid var(--surface);box-shadow:var(--shadow-sm)}
+
+  .content{flex:1;overflow-y:auto;padding:24px 28px 48px}
+  .crumb{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-3);margin-bottom:18px;font-weight:500}
+  .crumb b{color:var(--text-2)}
+  .crumb .ic{width:15px;height:15px}
+  .page-head{display:flex;align-items:flex-end;gap:16px;margin-bottom:22px;flex-wrap:wrap}
+  .page-head h1{font-size:25px;font-weight:800;letter-spacing:-.4px}
+  .page-head p{color:var(--text-2);font-size:13.5px;margin-top:5px}
+  .page-head .spacer{flex:1}
+
+  .btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:11px;font-weight:600;font-size:13.5px;transition:.16s var(--ease)}
+  .btn .ic{width:17px;height:17px}
+  .btn-primary{background:linear-gradient(135deg,var(--brand),var(--brand-600));color:#fff;box-shadow:0 6px 14px -5px rgba(47,109,246,.7)}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 10px 20px -6px rgba(47,109,246,.75)}
+  .btn-ghost{background:var(--surface);border:1px solid var(--border);color:var(--text-2)}
+  .btn-ghost:hover{border-color:var(--border-strong);color:var(--text)}
+
+  /* KPI 概覽帶 */
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:26px}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow-sm);position:relative;overflow:hidden}
+  .kpi .ico{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;margin-bottom:12px}
+  .kpi .lab{font-size:12.5px;color:var(--text-2);font-weight:600}
+  .kpi .val{font-size:27px;font-weight:800;letter-spacing:-.5px;margin-top:3px;display:flex;align-items:baseline;gap:8px}
+  .kpi .val small{font-size:13px;font-weight:700}
+  .kpi .spark{position:absolute;right:14px;bottom:12px;opacity:.85}
+  .up{color:var(--good)} .down{color:var(--bad)}
+
+  /* 區段標題 */
+  .sec-head{display:flex;align-items:center;gap:10px;margin:26px 0 14px}
+  .sec-head h2{font-size:15px;font-weight:800;letter-spacing:.2px}
+  .sec-head .ic{width:18px;height:18px;color:var(--text-3)}
+  .sec-head .count{font-size:12px;font-weight:700;color:var(--text-3);background:var(--surface-3);padding:2px 9px;border-radius:20px}
+  .sec-head .line{flex:1;height:1px;background:var(--border)}
+
+  /* 看板卡片牆 */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:16px}
+  .card{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;
+    box-shadow:var(--shadow-sm);cursor:pointer;transition:.18s var(--ease);position:relative;display:flex;flex-direction:column;gap:13px
+  }
+  .card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:var(--border-strong)}
+  .card .top{display:flex;align-items:flex-start;gap:13px}
+  .card .ico{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;flex:none;color:#fff}
+  .card .ico svg{width:23px;height:23px;stroke-width:2.1}
+  .card h3{font-size:15px;font-weight:700;line-height:1.3}
+  .card .desc{font-size:12.5px;color:var(--text-2);line-height:1.5;flex:1}
+  .card .foot{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .tag{font-size:11px;font-weight:700;padding:3px 9px;border-radius:7px;background:var(--surface-3);color:var(--text-2)}
+  .tag.folder{background:rgba(217,119,6,.12);color:var(--warn)}
+  .tag.live{background:rgba(22,163,74,.12);color:var(--good)}
+  .card .star{position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:var(--text-3);transition:.15s var(--ease)}
+  .card .star:hover{background:var(--surface-3)}
+  .card .star.on{color:#f59e0b}
+  .card .star.on svg{fill:#f59e0b}
+  .card .open{margin-left:auto;color:var(--text-3);display:flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700}
+  .card .open .ic{width:14px;height:14px}
+
+  /* 色票（卡片/KPI icon 背景） */
+  .c-blue{background:linear-gradient(135deg,#3b82f6,#2563eb)} .bg-blue{background:rgba(59,130,246,.13);color:#2563eb}
+  .c-teal{background:linear-gradient(135deg,#14b8a6,#0d9488)} .bg-teal{background:rgba(20,184,166,.13);color:#0d9488}
+  .c-violet{background:linear-gradient(135deg,#8b5cf6,#7c3aed)} .bg-violet{background:rgba(139,92,246,.13);color:#7c3aed}
+  .c-amber{background:linear-gradient(135deg,#f59e0b,#d97706)} .bg-amber{background:rgba(245,158,11,.14);color:#d97706}
+  .c-rose{background:linear-gradient(135deg,#f43f5e,#e11d48)} .bg-rose{background:rgba(244,63,94,.13);color:#e11d48}
+  .c-emerald{background:linear-gradient(135deg,#10b981,#059669)} .bg-emerald{background:rgba(16,185,129,.13);color:#059669}
+  .c-slate{background:linear-gradient(135deg,#64748b,#475569)} .bg-slate{background:rgba(100,116,139,.14);color:#475569}
+
+  /* 空狀態（中性語氣，呼應現況設計原則） */
+  .empty{text-align:center;padding:70px 20px;color:var(--text-3)}
+  .empty .ic{width:54px;height:54px;margin:0 auto 16px;opacity:.5;stroke-width:1.5}
+  .empty h3{font-size:16px;color:var(--text-2);font-weight:700;margin-bottom:6px}
+  .empty p{font-size:13px}
+
+  /* ===================== 管理後台表格 ===================== */
+  .admin-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto}
+  .admin-tabs button{padding:11px 16px;font-size:13.5px;font-weight:600;color:var(--text-2);border-bottom:2px solid transparent;white-space:nowrap;transition:.15s var(--ease)}
+  .admin-tabs button:hover{color:var(--text)}
+  .admin-tabs button.on{color:var(--brand);border-bottom-color:var(--brand)}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden}
+  .panel-tools{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+  .field{display:flex;align-items:center;gap:9px;height:38px;padding:0 12px;background:var(--surface-3);border:1px solid var(--border);border-radius:10px;color:var(--text-3);min-width:230px}
+  .field input{border:none;background:none;outline:none;color:var(--text);font-size:13.5px;width:100%;font-family:inherit}
+  .chip{font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:9px;background:var(--surface-3);border:1px solid var(--border);color:var(--text-2);display:inline-flex;align-items:center;gap:6px}
+  .chip.on{background:rgba(47,109,246,.1);border-color:rgba(47,109,246,.3);color:var(--brand)}
+  table{width:100%;border-collapse:collapse}
+  thead th{text-align:left;font-size:11.5px;font-weight:700;letter-spacing:.6px;color:var(--text-3);text-transform:uppercase;padding:13px 18px;border-bottom:1px solid var(--border);background:var(--surface-2)}
+  tbody td{padding:14px 18px;border-bottom:1px solid var(--border);font-size:13.5px;color:var(--text)}
+  tbody tr{transition:.12s var(--ease)}
+  tbody tr:hover{background:var(--surface-2)}
+  tbody tr:last-child td{border-bottom:none}
+  .u-cell{display:flex;align-items:center;gap:11px}
+  .u-av{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff;flex:none}
+  .u-cell .nm{font-weight:600} .u-cell .id{font-size:12px;color:var(--text-3)}
+  .pill{font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:5px}
+  .pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+  .pill.on{background:rgba(22,163,74,.12);color:var(--good)}
+  .pill.off{background:rgba(100,116,139,.14);color:var(--text-3)}
+  .pill.adm{background:rgba(124,58,237,.12);color:#7c3aed}
+  .row-act{display:flex;gap:4px}
+  .row-act button{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;color:var(--text-3)}
+  .row-act button:hover{background:var(--surface-3);color:var(--text)}
+  .switch{width:40px;height:23px;border-radius:20px;background:var(--border-strong);position:relative;transition:.2s var(--ease);cursor:pointer;flex:none}
+  .switch::after{content:"";position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s var(--ease);box-shadow:var(--shadow-sm)}
+  .switch.on{background:var(--brand)} .switch.on::after{left:19px}
+  .panel-foot{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;flex-wrap:wrap;gap:12px}
+  .panel-foot .info{font-size:13px;color:var(--text-3)}
+  .pager{display:flex;gap:4px}
+  .pager button{min-width:34px;height:34px;padding:0 8px;border-radius:9px;font-size:13px;font-weight:600;color:var(--text-2);border:1px solid var(--border)}
+  .pager button:hover{background:var(--surface-3)}
+  .pager button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+  .pager button.nav{color:var(--text-3)}
+
+  /* ===================== 命令面板 (Ctrl/⌘+K) ===================== */
+  .scrim{position:fixed;inset:0;background:rgba(8,14,26,.55);backdrop-filter:blur(4px);z-index:90;display:flex;align-items:flex-start;justify-content:center;padding-top:11vh}
+  .scrim[hidden]{display:none}
+  .cmdk{width:min(620px,92vw);background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow-lg);overflow:hidden;animation:pop .2s var(--ease)}
+  @keyframes pop{from{transform:translateY(-12px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+  .cmdk-in{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border)}
+  .cmdk-in svg{width:20px;height:20px;color:var(--text-3)}
+  .cmdk-in input{flex:1;border:none;outline:none;background:none;font-size:16px;color:var(--text);font-family:inherit}
+  .cmdk-in .esc{font-size:11px;font-weight:700;color:var(--text-3);border:1px solid var(--border);border-radius:6px;padding:3px 7px}
+  .cmdk-list{max-height:48vh;overflow-y:auto;padding:8px}
+  .cmdk-grp{font-size:11px;font-weight:700;letter-spacing:1px;color:var(--text-3);text-transform:uppercase;padding:10px 12px 5px}
+  .cmdk-item{display:flex;align-items:center;gap:13px;padding:11px 12px;border-radius:11px;cursor:pointer}
+  .cmdk-item:hover,.cmdk-item.sel{background:var(--surface-3)}
+  .cmdk-item .ico{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:#fff;flex:none}
+  .cmdk-item .ico svg{width:17px;height:17px}
+  .cmdk-item .t{font-weight:600;font-size:14px}
+  .cmdk-item .s{font-size:12px;color:var(--text-3)}
+  .cmdk-item .fab-tag{margin-left:auto;font-size:11px;font-weight:700;color:var(--text-3);background:var(--surface-3);padding:3px 9px;border-radius:7px}
+  .cmdk-item:hover .fab-tag,.cmdk-item.sel .fab-tag{background:var(--surface)}
+
+  /* ===================== 登入畫面 ===================== */
+  .login{position:fixed;inset:0;z-index:80;display:grid;grid-template-columns:1.1fr 1fr;background:var(--surface)}
+  .login[hidden]{display:none}
+  .login-hero{
+    position:relative;overflow:hidden;color:#fff;padding:54px;display:flex;flex-direction:column;justify-content:space-between;
+    background:radial-gradient(120% 120% at 0% 0%,#1d3a7a 0%,#0f1a30 55%,#0a1322 100%)
+  }
+  .login-hero::before{content:"";position:absolute;width:520px;height:520px;border-radius:50%;right:-160px;top:-140px;background:radial-gradient(circle,rgba(47,109,246,.55),transparent 60%);filter:blur(10px)}
+  .login-hero::after{content:"";position:absolute;width:380px;height:380px;border-radius:50%;left:-120px;bottom:-120px;background:radial-gradient(circle,rgba(16,180,165,.4),transparent 62%)}
+  .login-hero .lh-top{display:flex;align-items:center;gap:13px;position:relative;z-index:1}
+  .login-hero .lh-top .logo{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,var(--brand),var(--accent))}
+  .login-hero h2{font-size:34px;font-weight:800;line-height:1.25;position:relative;z-index:1;letter-spacing:-.5px}
+  .login-hero p{color:#9fb2d6;font-size:15px;margin-top:14px;line-height:1.7;max-width:380px;position:relative;z-index:1}
+  .login-hero .feat{display:flex;flex-direction:column;gap:14px;position:relative;z-index:1}
+  .login-hero .feat div{display:flex;align-items:center;gap:12px;font-size:14px;color:#cdd8ee}
+  .login-hero .feat .ic{width:20px;height:20px;color:var(--accent)}
+  .login-form{display:flex;align-items:center;justify-content:center;padding:40px}
+  .login-card{width:min(380px,100%)}
+  .login-card .ttl{font-size:23px;font-weight:800}
+  .login-card .sub{color:var(--text-2);font-size:14px;margin:7px 0 26px}
+  .ltab{display:flex;background:var(--surface-3);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:22px}
+  .ltab button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:9px;font-size:13.5px;font-weight:600;color:var(--text-2);transition:.15s var(--ease)}
+  .ltab button.on{background:var(--surface);color:var(--brand);box-shadow:var(--shadow-sm)}
+  .ltab button .ic{width:17px;height:17px}
+  .detected{background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(20,184,166,.06));border:1px solid rgba(16,185,129,.3);border-radius:13px;padding:18px;display:flex;align-items:center;gap:14px;margin-bottom:18px}
+  .detected .av{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#10b981,#059669);display:grid;place-items:center;color:#fff;flex:none}
+  .detected .who{font-size:11px;color:var(--good);font-weight:700;letter-spacing:.5px}
+  .detected .acc{font-weight:700;font-size:15px;margin-top:2px}
+  .lfield{margin-bottom:14px}
+  .lfield label{display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin-bottom:7px}
+  .lfield .inp{display:flex;align-items:center;gap:10px;height:46px;padding:0 14px;background:var(--surface-3);border:1px solid var(--border);border-radius:12px;color:var(--text-3)}
+  .lfield .inp:focus-within{border-color:var(--brand);background:var(--surface)}
+  .lfield input{border:none;outline:none;background:none;flex:1;font-size:14px;color:var(--text);font-family:inherit}
+  .btn-block{width:100%;justify-content:center;height:48px;font-size:15px;margin-top:6px}
+  .login-foot{text-align:center;font-size:12.5px;color:var(--text-3);margin-top:22px}
+
+  /* 小工具：返回示意提示條 */
+  .demo-note{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:200;background:var(--text);color:var(--surface);font-size:12.5px;font-weight:600;padding:9px 16px;border-radius:30px;box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:10px}
+  .demo-note button{background:rgba(255,255,255,.18);color:inherit;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700}
+
+  /* 響應式 */
+  @media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:880px){.app{grid-template-columns:var(--rail-collapsed) 1fr}.search-trigger{display:none}.seg button{padding:7px 9px;font-size:12px}}
+</style>
+</head>
+<body>
+
+<!-- ===================== SVG 圖示 sprite ===================== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9l-.8-1.2A2 2 0 0 0 8 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></symbol>
+  <symbol id="i-chevR" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="i-factory" viewBox="0 0 24 24"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M7 18h.01M12 18h.01M17 18h.01"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10Z"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.2 5.2L3 18l3 3 6.5-6.5a4 4 0 0 0 5.2-5.2l-2.3 2.3-2.4-.6-.6-2.4Z"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><polyline points="3.3 7 12 12 20.7 7"/><line x1="12" y1="22" x2="12" y2="12"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="i-win" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3 21 2m-4 4 3 3m-6-1 3 3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-empty" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2Z"/></symbol>
+  <symbol id="i-cube" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+</svg>
+
+<!-- ===================== App Shell ===================== -->
+<div class="app" id="app">
+
+  <!-- 側邊欄 -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo"><svg class="ic"><use href="#i-bolt"/></svg></div>
+      <div class="name">EQ Dashboard<small>EQUIPMENT PERFORMANCE</small></div>
+    </div>
+
+    <div class="fab-switch">
+      <div class="fab-label">廠區 FAB</div>
+      <div class="fab-pills" id="fabPills">
+        <button class="fab-pill on" data-fab="12A">12A</button>
+        <button class="fab-pill" data-fab="12M">12M</button>
+        <button class="fab-pill" data-fab="12i">12i</button>
+      </div>
+    </div>
+
+    <nav class="nav-scroll" id="navScroll"><!-- JS 渲染 --></nav>
+
+    <div class="side-foot">
+      <div class="mode-toggle">
+        <button class="on" id="mSys"><svg class="ic"><use href="#i-grid"/></svg><span>系統版面</span></button>
+        <button id="mPersonal"><svg class="ic"><use href="#i-user"/></svg><span>個人版面</span></button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 主區 -->
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn" id="btnCollapse" title="收合側邊欄"><svg class="ic"><use href="#i-menu"/></svg></button>
+      <button class="search-trigger" id="btnSearch">
+        <svg class="ic" style="width:17px;height:17px"><use href="#i-search"/></svg>
+        搜尋看板、廠區、功能…
+        <span class="kbd">Ctrl K</span>
+      </button>
+      <div class="top-spacer"></div>
+      <div class="seg" id="screenSeg">
+        <button class="on" data-screen="home">入口首頁</button>
+        <button data-screen="admin">管理後台</button>
+        <button data-screen="login">登入畫面</button>
+      </div>
+      <button class="icon-btn" id="btnTheme" title="切換主題"><svg class="ic"><use href="#i-moon"/></svg></button>
+      <button class="icon-btn" title="語言"><svg class="ic"><use href="#i-globe"/></svg></button>
+      <button class="icon-btn" title="通知"><svg class="ic"><use href="#i-bell"/></svg></button>
+      <div class="avatar" title="林〇〇 · 設備工程部">林</div>
+    </header>
+
+    <div class="content">
+      <!-- ===== 首頁：啟動台 ===== -->
+      <section id="screen-home">
+        <div class="crumb">
+          <svg class="ic"><use href="#i-factory"/></svg>
+          <b id="crumbFab">12A</b><svg class="ic"><use href="#i-chevR"/></svg>入口首頁
+        </div>
+
+        <div class="page-head">
+          <div>
+            <h1 id="homeTitle">12A 廠區入口</h1>
+            <p>選擇看板進入，或按 <b>Ctrl + K</b> 快速搜尋。</p>
+          </div>
+          <div class="spacer"></div>
+          <button class="btn btn-ghost"><svg class="ic"><use href="#i-star"/></svg>我的最愛</button>
+          <button class="btn btn-primary"><svg class="ic"><use href="#i-plus"/></svg>新增看板</button>
+        </div>
+
+        <!-- KPI 概覽帶 -->
+        <div class="kpi-row" id="kpiRow"></div>
+
+        <!-- 卡片牆（JS 渲染） -->
+        <div id="homeBody"></div>
+      </section>
+
+      <!-- ===== 管理後台 ===== -->
+      <section id="screen-admin" hidden>
+        <div class="crumb"><svg class="ic"><use href="#i-shield"/></svg><b>管理後台</b><svg class="ic"><use href="#i-chevR"/></svg>帳號管理</div>
+        <div class="page-head">
+          <div><h1>管理後台</h1><p>帳號、選單、廠區、權限群組與操作紀錄集中管理。</p></div>
+        </div>
+
+        <div class="admin-tabs">
+          <button class="on">帳號管理</button>
+          <button>選單配置</button>
+          <button>看板網頁</button>
+          <button>廠區管理</button>
+          <button>權限群組</button>
+          <button>操作紀錄</button>
+        </div>
+
+        <div class="panel">
+          <div class="panel-tools">
+            <div class="field"><svg class="ic" style="width:17px;height:17px;stroke:currentColor"><use href="#i-search"/></svg><input placeholder="搜尋工號 / 姓名 / 部門…"></div>
+            <span class="chip on">全部角色</span>
+            <span class="chip">啟用中</span>
+            <span class="chip">已停用</span>
+            <div style="flex:1"></div>
+            <button class="btn btn-primary"><svg class="ic"><use href="#i-plus"/></svg>新增帳號</button>
+          </div>
+          <table>
+            <thead><tr><th>使用者</th><th>部門</th><th>權限群組</th><th>登入次數</th><th>狀態</th><th style="text-align:right">操作</th></tr></thead>
+            <tbody id="acctRows"></tbody>
+          </table>
+          <div class="panel-foot">
+            <div class="info">顯示 1–6 筆，共 24 筆</div>
+            <div class="pager">
+              <button class="nav">‹</button>
+              <button class="on">1</button><button>2</button><button>3</button><button>4</button>
+              <button class="nav">›</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 命令面板 ===================== -->
+<div class="scrim" id="cmdkScrim" hidden>
+  <div class="cmdk">
+    <div class="cmdk-in">
+      <svg><use href="#i-search"/></svg>
+      <input id="cmdkInput" placeholder="跨廠區搜尋看板與功能…" autocomplete="off">
+      <span class="esc">ESC</span>
+    </div>
+    <div class="cmdk-list" id="cmdkList"></div>
+  </div>
+</div>
+
+<!-- ===================== 登入畫面 ===================== -->
+<div class="login" id="loginScreen" hidden>
+  <div class="login-hero">
+    <div class="lh-top">
+      <div class="logo"><svg class="ic" style="stroke:#fff"><use href="#i-bolt"/></svg></div>
+      <div style="font-weight:800;font-size:18px">EQ Dashboard</div>
+    </div>
+    <div>
+      <h2>設備效能<br>一站式戰情中心</h2>
+      <p>整合各廠區設備稼動、保養工單與異常分析，依角色精準呈現你該看的看板。</p>
+    </div>
+    <div class="feat">
+      <div><svg class="ic"><use href="#i-check"/></svg>Windows 桌機帳號自動偵測登入</div>
+      <div><svg class="ic"><use href="#i-check"/></svg>角色化看板可見性，所見即所得</div>
+      <div><svg class="ic"><use href="#i-check"/></svg>跨廠區命令面板，秒跳任一看板</div>
+    </div>
+  </div>
+  <div class="login-form">
+    <div class="login-card">
+      <div class="ttl">歡迎回來</div>
+      <div class="sub">請選擇登入方式以進入儀表板。</div>
+      <div class="ltab">
+        <button class="on" id="ltWin"><svg class="ic"><use href="#i-win"/></svg>自動偵測</button>
+        <button id="ltMan"><svg class="ic"><use href="#i-key"/></svg>帳號密碼</button>
+      </div>
+
+      <div id="paneWin">
+        <div class="detected">
+          <div class="av"><svg class="ic" style="stroke:#fff"><use href="#i-user"/></svg></div>
+          <div>
+            <div class="who">已偵測到 WINDOWS 帳號</div>
+            <div class="acc">SARIEL\yu-tinglin</div>
+          </div>
+          <svg class="ic" style="margin-left:auto;color:var(--good)"><use href="#i-check"/></svg>
+        </div>
+        <button class="btn btn-primary btn-block">以此身份進入<svg class="ic"><use href="#i-chevR"/></svg></button>
+        <div class="login-foot">非此帳號？<a href="#" style="color:var(--brand);font-weight:600">重試偵測</a></div>
+      </div>
+
+      <div id="paneMan" hidden>
+        <div class="lfield"><label>網域帳號</label>
+          <div class="inp"><svg class="ic" style="width:18px;height:18px"><use href="#i-user"/></svg><input placeholder="domain\\username"></div>
+        </div>
+        <div class="lfield"><label>密碼</label>
+          <div class="inp"><svg class="ic" style="width:18px;height:18px"><use href="#i-key"/></svg><input type="password" placeholder="••••••••"></div>
+        </div>
+        <button class="btn btn-primary btn-block">登入</button>
+        <div class="login-foot">使用公司 AD 網域帳號登入</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 示意提示條 -->
+<div class="demo-note">
+  這是設計示意原型 · 試試 <b>Ctrl+K</b>、廠區切換、亮/暗主題
+  <button id="noteHide">知道了</button>
+</div>
+
+<script>
+/* =================== 假資料 =================== */
+const KPIS = {
+  '12A':[
+    {lab:'平均設備稼動率',val:'92.4',unit:'%',d:'+1.2%',up:1,icon:'i-gauge',c:'bg-blue'},
+    {lab:'進行中工單',val:'12',unit:'',d:'-3',up:1,icon:'i-wrench',c:'bg-teal'},
+    {lab:'今日異常停機',val:'3',unit:'件',d:'+1',up:0,icon:'i-bolt',c:'bg-rose'},
+    {lab:'待保養設備',val:'8',unit:'台',d:'準時',up:1,icon:'i-clock',c:'bg-amber'},
+  ],
+  '12M':[
+    {lab:'平均設備稼動率',val:'89.7',unit:'%',d:'-0.4%',up:0,icon:'i-gauge',c:'bg-blue'},
+    {lab:'進行中工單',val:'7',unit:'',d:'-2',up:1,icon:'i-wrench',c:'bg-teal'},
+    {lab:'今日異常停機',val:'1',unit:'件',d:'-2',up:1,icon:'i-bolt',c:'bg-rose'},
+    {lab:'待保養設備',val:'5',unit:'台',d:'準時',up:1,icon:'i-clock',c:'bg-amber'},
+  ],
+  '12i':[
+    {lab:'平均設備稼動率',val:'94.1',unit:'%',d:'+2.0%',up:1,icon:'i-gauge',c:'bg-blue'},
+    {lab:'進行中工單',val:'4',unit:'',d:'0',up:1,icon:'i-wrench',c:'bg-teal'},
+    {lab:'今日異常停機',val:'0',unit:'件',d:'-1',up:1,icon:'i-bolt',c:'bg-rose'},
+    {lab:'待保養設備',val:'2',unit:'台',d:'準時',up:1,icon:'i-clock',c:'bg-amber'},
+  ],
+};
+
+// 每張卡：title/desc/icon/色/type(board|folder)/tag/fav/count
+const HOME = {
+  '12A':{
+    sections:[
+      {name:'我的最愛',icon:'i-star',cards:[
+        {t:'設備稼動率 OEE',d:'即時 OEE / 可用率 / 表現率追蹤',icon:'i-gauge',c:'c-blue',type:'board',live:1,fav:1},
+        {t:'良率趨勢分析',d:'各製程站點良率與缺陷分佈',icon:'i-chart',c:'c-violet',type:'board',fav:1},
+        {t:'ZE 強化防禦群組',d:'MNOP / WL子群組 / BSL 等 6 個看板',icon:'i-shield',c:'c-rose',type:'folder',count:6,fav:1},
+      ]},
+      {name:'設備效能',icon:'i-gauge',cards:[
+        {t:'設備稼動率 OEE',d:'即時 OEE / 可用率 / 表現率追蹤',icon:'i-gauge',c:'c-blue',type:'board',live:1},
+        {t:'異常停機分析',d:'Downtime 分類、Pareto 與根因',icon:'i-bolt',c:'c-amber',type:'board'},
+        {t:'MTBF / MTTR',d:'平均故障間隔與修復時間趨勢',icon:'i-chart',c:'c-teal',type:'board'},
+        {t:'良率趨勢分析',d:'各製程站點良率與缺陷分佈',icon:'i-chart',c:'c-violet',type:'board'},
+      ]},
+      {name:'保養與維護',icon:'i-wrench',cards:[
+        {t:'預防保養 PM 排程',d:'保養行事曆與到期提醒',icon:'i-clock',c:'c-emerald',type:'board'},
+        {t:'維修工單系統',d:'開單、派工、進度與簽核',icon:'i-wrench',c:'c-teal',type:'board',live:1},
+        {t:'備品庫存',d:'關鍵備品安全水位與請購',icon:'i-box',c:'c-slate',type:'board'},
+      ]},
+      {name:'強化防禦群組',icon:'i-shield',cards:[
+        {t:'ZE 強化防禦群組',d:'整組強化防禦相關看板',icon:'i-shield',c:'c-rose',type:'folder',count:6},
+        {t:'Productivity 生產力',d:'產線產出與人力效率',icon:'i-grid',c:'c-blue',type:'board'},
+      ]},
+    ]
+  },
+  '12M':{
+    sections:[
+      {name:'設備效能',icon:'i-gauge',cards:[
+        {t:'設備稼動率 OEE',d:'12M 廠區 OEE 即時看板',icon:'i-gauge',c:'c-blue',type:'board',live:1},
+        {t:'12M EAS',d:'N-Sys / xHelp 等子系統',icon:'i-layers',c:'c-violet',type:'folder',count:4},
+        {t:'異常停機分析',d:'Downtime 分類與根因',icon:'i-bolt',c:'c-amber',type:'board'},
+      ]},
+      {name:'保養與維護',icon:'i-wrench',cards:[
+        {t:'預防保養 PM 排程',d:'保養行事曆與到期提醒',icon:'i-clock',c:'c-emerald',type:'board'},
+        {t:'維修工單系統',d:'開單、派工、進度追蹤',icon:'i-wrench',c:'c-teal',type:'board'},
+      ]},
+    ]
+  },
+  '12i':{ empty:true }
+};
+
+const ICONS_BY_NAME = ['i-grid','i-gauge','i-chart','i-shield','i-wrench','i-clock','i-box','i-layers','i-bolt'];
+
+/* =================== 工具 =================== */
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const svg=id=>`<svg class="ic"><use href="#${id}"/></svg>`;
+let curFab='12A';
+
+/* =================== 側邊欄渲染 =================== */
+function renderNav(fab){
+  const data=HOME[fab];
+  let h='';
+  if(data.empty){
+    h=`<div class="nav-sec">選單</div><div class="nav-item"><svg class="ic"><use href="#i-empty"/></svg><span class="txt">尚未配置看板</span></div>`;
+  }else{
+    data.sections.forEach((sec,si)=>{
+      h+=`<div class="nav-sec">${sec.name}</div>`;
+      sec.cards.forEach((c,ci)=>{
+        if(c.type==='folder'){
+          const childId=`ch-${si}-${ci}`;
+          h+=`<div class="nav-item folder-tog" data-target="${childId}">
+                ${svg(c.icon)}<span class="txt">${c.t}</span>
+                <span class="nav-badge">${c.count}</span>
+                <svg class="ic chev"><use href="#i-chevR"/></svg></div>
+              <div class="nav-children" id="${childId}">
+                <div class="nav-item"><span class="dot"></span><span class="txt">MNOP</span></div>
+                <div class="nav-item"><span class="dot"></span><span class="txt">WL 子群組</span></div>
+                <div class="nav-item"><span class="dot"></span><span class="txt">BSL</span></div>
+              </div>`;
+        }else{
+          h+=`<div class="nav-item${si===0&&ci===0?' on':''}">${svg(c.icon)}<span class="txt">${c.t}</span></div>`;
+        }
+      });
+    });
+  }
+  $('#navScroll').innerHTML=h;
+  $$('.folder-tog').forEach(el=>el.addEventListener('click',()=>{
+    el.classList.toggle('open');
+    const ch=$('#'+el.dataset.target);
+    ch.style.maxHeight=ch.style.maxHeight?'':ch.scrollHeight+'px';
+  }));
+  $$('.nav-item:not(.folder-tog)').forEach(el=>el.addEventListener('click',()=>{
+    $$('.nav-item.on').forEach(x=>x.classList.remove('on')); el.classList.add('on');
+  }));
+}
+
+/* =================== KPI =================== */
+function renderKpi(fab){
+  const arr=KPIS[fab]||[];
+  $('#kpiRow').innerHTML=arr.map(k=>`
+    <div class="kpi">
+      <div class="ico ${k.c}">${svg(k.icon)}</div>
+      <div class="lab">${k.lab}</div>
+      <div class="val">${k.val}<small>${k.unit}</small> <small class="${k.up?'up':'down'}">${k.d}</small></div>
+      <svg class="spark" width="64" height="26" viewBox="0 0 64 26" fill="none">
+        <polyline points="0,20 12,14 24,17 36,8 48,12 64,4" stroke="${k.up?'#16a34a':'#dc2626'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/>
+      </svg>
+    </div>`).join('');
+}
+
+/* =================== 首頁卡片牆 =================== */
+function renderHome(fab){
+  const data=HOME[fab];
+  const body=$('#homeBody');
+  if(data.empty){
+    body.innerHTML=`<div class="empty">
+      ${svg('i-empty')}
+      <h3>此廠區尚未配置看板</h3>
+      <p>${fab} 廠區目前沒有可顯示的看板，請聯繫管理員配置。</p></div>`;
+    return;
+  }
+  body.innerHTML=data.sections.map(sec=>`
+    <div class="sec-head">${svg(sec.icon)}<h2>${sec.name}</h2><span class="count">${sec.cards.length}</span><div class="line"></div></div>
+    <div class="grid">
+      ${sec.cards.map(c=>cardHtml(c)).join('')}
+    </div>`).join('');
+  $$('.card .star').forEach(s=>s.addEventListener('click',e=>{e.stopPropagation();s.classList.toggle('on');}));
+}
+function cardHtml(c){
+  const tag = c.type==='folder'
+    ? `<span class="tag folder">${svg('i-folder').replace('class="ic"','class="ic" style="width:13px;height:13px"')} 資料夾 · ${c.count} 項</span>`
+    : (c.live?`<span class="tag live">● 即時</span>`:`<span class="tag">看板</span>`);
+  const open = c.type==='folder'
+    ? `<span class="open">開啟${svg('i-chevR')}</span>`
+    : `<span class="open">前往${svg('i-ext')}</span>`;
+  return `<div class="card">
+    <button class="star ${c.fav?'on':''}">${svg('i-star')}</button>
+    <div class="top">
+      <div class="ico ${c.c}">${svg(c.icon)}</div>
+      <div><h3>${c.t}</h3></div>
+    </div>
+    <div class="desc">${c.d}</div>
+    <div class="foot">${tag}${open}</div>
+  </div>`;
+}
+
+/* =================== 管理後台帳號列 =================== */
+const ACCTS=[
+  {id:'admin',nm:'系統管理員',dep:'資訊部',role:'admin',adm:1,login:482,on:1,c:'c-violet',av:'管'},
+  {id:'yu-tinglin',nm:'林〇〇',dep:'設備工程部',role:'12A 完整模組',login:213,on:1,c:'c-blue',av:'林'},
+  {id:'subadmin',nm:'陳〇〇',dep:'設備工程部',role:'委派 · ZE群組',login:97,on:1,c:'c-teal',av:'陳'},
+  {id:'w-chen',nm:'王〇〇',dep:'製程整合部',role:'12M 唯讀',login:54,on:1,c:'c-amber',av:'王'},
+  {id:'normal',nm:'張〇〇',dep:'生產管理部',role:'—',login:8,on:0,c:'c-slate',av:'張'},
+  {id:'l-wu',nm:'吳〇〇',dep:'品保部',role:'12i 專用模組',login:31,on:1,c:'c-emerald',av:'吳'},
+];
+function renderAccts(){
+  $('#acctRows').innerHTML=ACCTS.map(a=>`
+    <tr>
+      <td><div class="u-cell"><div class="u-av ${a.c}">${a.av}</div><div><div class="nm">${a.nm}</div><div class="id">${a.id}</div></div></div></td>
+      <td>${a.dep}</td>
+      <td>${a.adm?`<span class="pill adm">${a.role}</span>`:a.role}</td>
+      <td>${a.login}</td>
+      <td><span class="pill ${a.on?'on':'off'}">${a.on?'啟用中':'已停用'}</span></td>
+      <td><div class="row-act" style="justify-content:flex-end">
+        <div class="switch ${a.on?'on':''}"></div>
+        <button title="編輯">${svg('i-edit')}</button>
+        <button title="刪除">${svg('i-trash')}</button>
+      </div></td>
+    </tr>`).join('');
+  $$('.switch').forEach(s=>s.addEventListener('click',()=>s.classList.toggle('on')));
+}
+
+/* =================== 命令面板 =================== */
+function allBoards(){
+  const out=[];
+  Object.keys(HOME).forEach(fab=>{
+    const d=HOME[fab]; if(d.empty)return;
+    d.sections.forEach(sec=>sec.cards.forEach(c=>{
+      if(!out.find(x=>x.t===c.t&&x.fab===fab)) out.push({...c,fab});
+    }));
+  });
+  return out;
+}
+function renderCmdk(q=''){
+  const list=allBoards().filter(b=>b.t.toLowerCase().includes(q.toLowerCase())||b.d.toLowerCase().includes(q.toLowerCase()));
+  const wrap=$('#cmdkList');
+  if(!list.length){wrap.innerHTML=`<div class="empty" style="padding:34px"><h3>找不到符合的看板</h3><p>試試其他關鍵字</p></div>`;return;}
+  wrap.innerHTML=`<div class="cmdk-grp">看板與資料夾</div>`+list.slice(0,8).map((b,i)=>`
+    <div class="cmdk-item ${i===0?'sel':''}">
+      <div class="ico ${b.c}">${svg(b.icon)}</div>
+      <div><div class="t">${b.t}</div><div class="s">${b.d}</div></div>
+      <span class="fab-tag">${b.fab}</span>
+    </div>`).join('');
+}
+function openCmdk(){$('#cmdkScrim').hidden=false;renderCmdk();const i=$('#cmdkInput');i.value='';setTimeout(()=>i.focus(),30);}
+function closeCmdk(){$('#cmdkScrim').hidden=true;}
+
+/* =================== 切換邏輯 =================== */
+function setFab(fab){
+  curFab=fab;
+  $$('.fab-pill').forEach(p=>p.classList.toggle('on',p.dataset.fab===fab));
+  $('#crumbFab').textContent=fab;
+  $('#homeTitle').textContent=`${fab} 廠區入口`;
+  renderNav(fab);renderKpi(fab);renderHome(fab);
+}
+function setScreen(s){
+  $$('#screenSeg button').forEach(b=>b.classList.toggle('on',b.dataset.screen===s));
+  $('#screen-home').hidden = s!=='home';
+  $('#screen-admin').hidden = s!=='admin';
+  $('#loginScreen').hidden = s!=='login';
+}
+
+/* =================== 綁定 =================== */
+$('#fabPills').addEventListener('click',e=>{const b=e.target.closest('.fab-pill');if(b)setFab(b.dataset.fab);});
+$('#screenSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setScreen(b.dataset.screen);});
+$('#btnCollapse').addEventListener('click',()=>$('#app').classList.toggle('collapsed'));
+$('#btnTheme').addEventListener('click',e=>{
+  const dark=document.documentElement.getAttribute('data-theme')==='dark';
+  document.documentElement.setAttribute('data-theme',dark?'light':'dark');
+  $('#btnTheme').innerHTML=svg(dark?'i-moon':'i-sun');
+});
+$('#btnSearch').addEventListener('click',openCmdk);
+$('#cmdkScrim').addEventListener('click',e=>{if(e.target.id==='cmdkScrim')closeCmdk();});
+$('#cmdkInput').addEventListener('input',e=>renderCmdk(e.target.value));
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('#cmdkScrim').hidden?openCmdk():closeCmdk();}
+  if(e.key==='Escape')closeCmdk();
+});
+// 模式切換
+$('#mSys').addEventListener('click',()=>{$('#mSys').classList.add('on');$('#mPersonal').classList.remove('on');});
+$('#mPersonal').addEventListener('click',()=>{$('#mPersonal').classList.add('on');$('#mSys').classList.remove('on');});
+// 登入 tab
+$('#ltWin').addEventListener('click',()=>{$('#ltWin').classList.add('on');$('#ltMan').classList.remove('on');$('#paneWin').hidden=false;$('#paneMan').hidden=true;});
+$('#ltMan').addEventListener('click',()=>{$('#ltMan').classList.add('on');$('#ltWin').classList.remove('on');$('#paneMan').hidden=false;$('#paneWin').hidden=true;});
+$('#noteHide').addEventListener('click',()=>$('.demo-note').remove());
+
+/* =================== 初始化 =================== */
+setFab('12A');
+renderAccts();
+</script>
+</body>
+</html>
