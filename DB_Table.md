@@ -359,3 +359,12 @@ GO
   - `Data/Configurations/*`（EF 對應；注意 `HasIndex` 對線上 DB 為 no-op，索引以 SchemaBootstrap 為準）
 - 欄名 `Apps.IconBase64` / `Menus.Icon` 內容已是「圖示路徑字串」（`/images/icons/{guid}.{ext}`），非 base64；欄名為相容舊資料保留。
 - `Map_Menu_Structure` 在線上 DB **無 FK**（CLAUDE.md 所述 "Restrict FK" 為 EF 設計意圖、未實際套用），本檔比照線上現況不建 FK。
+
+---
+
+## 5. 架構異動與增量 SQL 紀錄 (Schema Changelog)
+
+> **使用說明**：為方便判定遠端主機資料庫是否已同步最新結構，日後只要有任何資料庫架構變更（新增/修改 Table、欄位、索引等），**AI 助手（Gemini / Claude）必會在下方依日期 (`YYYY-MM-DD`) 順序往下追加紀錄**，同時標示對應的 SQL 異動腳本檔名與摘要。您可以依據最後執行日期對照此列表，決定要同步執行哪些增量 SQL。
+
+- **2026-07-13 [基準檢核]**：經連線至線上 SQL Server (`EQDashboardV2`) 對全庫 18 張表、92 欄位、主外鍵及 8 個非主鍵索引進行完整比對，確認線上實體 DB 與本文件及 `SchemaBootstrap.cs` 100% 完全一致。
+
