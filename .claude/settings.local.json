@@ -410,7 +410,17 @@
       "Bash(curl -s -o /dev/null -w \"health=%{http_code}\\\\n\" http://localhost:5242/health)",
       "Bash(curl -s -o /dev/null -w \"index=%{http_code}\\\\n\" http://localhost:5242/index.html)",
       "PowerShell(Start-Sleep -Seconds 2; try { $c = Get-NetTCPConnection -LocalPort 5242 -State Listen -ErrorAction Stop; $c | ForEach-Object { $p = Get-Process -Id $_.OwningProcess; \"STILL LISTENING: PID $\\($p.Id\\) $\\($p.ProcessName\\)\" } } catch { \"port 5242 free\" })",
-      "Bash(curl -s -o /dev/null -w \"regfile=%{http_code} type=%{content_type}\\\\n\" http://localhost:5242/tools/install-ie-protocol.reg)"
+      "Bash(curl -s -o /dev/null -w \"regfile=%{http_code} type=%{content_type}\\\\n\" http://localhost:5242/tools/install-ie-protocol.reg)",
+      "PowerShell(Get-ChildItem -Recurse C:\\\\EQDashboard\\\\EQDashboard\\\\EQDashboard.V2.Web\\\\wwwroot\\\\js | Select-Object FullName, @{n='KB';e={[math]::Round\\($_.Length/1KB,1\\)}} | Sort-Object KB -Descending)",
+      "PowerShell(dotnet build C:\\\\EQDashboard\\\\EQDashboard\\\\EQDashboard.V2.Web\\\\EQDashboard.V2.Web.csproj -v q --nologo)",
+      "PowerShell(fc.exe /b C:\\\\EQDashboard\\\\EQDashboard\\\\AGENTS.md C:\\\\EQDashboard\\\\EQDashboard\\\\CLAUDE.md > $null)",
+      "PowerShell(if \\($?\\) { \"identical\" } else { \"different\" })",
+      "PowerShell(Copy-Item C:\\\\EQDashboard\\\\EQDashboard\\\\CLAUDE.md C:\\\\EQDashboard\\\\EQDashboard\\\\AGENTS.md -Force)",
+      "PowerShell(if \\($?\\) { \"synced\" } else { \"mismatch\" })",
+      "Bash(sed -i 's/?v=20260719a/?v=20260719b/g' index.html js/*.js js/ui/*.js js/render/*.js js/admin/*.js && grep -rho '?v=20260719[a-z]' index.html js/ | sort | uniq -c)",
+      "PowerShell(\"synced\")",
+      "Bash(sed -i 's/?v=20260719b/?v=20260719c/g' index.html js/*.js js/ui/*.js js/render/*.js js/admin/*.js)",
+      "Bash(sed -i 's|\\\\\\(css/[a-z]*\\\\.css\\\\\\)?v=20260607e|\\\\1?v=20260719c|g' index.html)"
     ]
   }
 }

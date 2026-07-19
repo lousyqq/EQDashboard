@@ -1,79 +1,86 @@
 # 專案記憶庫 (memory.md)
 
-> 現況快照（非逐日日誌）。2026-06-07 經使用者要求，將累積的「逐日決策日誌／踩坑流水帳／多輪安全審計歷史」壓縮為「仍生效的核心知識＋教訓」。2026-06-17 再次整理：§3 逐日日誌壓縮為主題式里程碑，§4 移除已落地的歷史完成項，仍生效的規則/陷阱全數保留於 §1/§2 與 CLAUDE.md。完整時間序歷史可追 git。
+> 現況快照與開發指引（非逐日流水帳）。依據最新架構狀態整理，保留當前系統運作必備的核心機制、C#/MSSQL 開發規範、安全陷阱以及當前待辦事項。
 
-## 🏗️ 1. 系統核心與隱藏邏輯
-- 系統 UI（廠區切換、權限綁定）高度依賴完整的資料表關聯（`Map_Fab_Role`、`Map_Account_Role`…），缺一不可。
-- **前端為 ES Modules**：`index.html` 唯一進入點 `<script type="module" src="js/main.js">`，由 main.js `import` 整張模組圖。**所有 import 必須置頂**（任一模組 SyntaxError 會中止整張圖，畫面卡「載入中…」、登入/登出全失效）；模組內 `function X` 需 `window.X = X` 才能給 HTML inline `onclick`。
-- `partials/modals.html` 由 `fetch()` 非同步載入插入 `#modals-container`，在 JS 初始化前完成。
-- 後端 Service 層 + DI（`ISettingsService`/`IAccountService`/`IAuthService`/`IMenuAuthService`），Controller 只負責路由與回傳。`AppDbContext` 用 `ApplyConfigurationsFromAssembly`（每 Entity 一個 `Data/Configurations/*Configuration`）。`AuthService` 用 `IOptionsSnapshot<AuthSettings>`。
-- **無 EF Migrations**：schema/索引由 `SchemaBootstrap`（啟動時 idempotent raw SQL）自我修復；EF `HasIndex` 對既有 DB 不會真的建索引。索引單一事實來源＝`SchemaBootstrap.EnsureIndexesAsync`。
-- `GetInitialData` 回應有 10s `IMemoryCache` 快取；任何寫入端點都必須 `InvalidateInitialDataCache()` 同步，否則前端取回舊快照（看似沒存到）。快取僅在全部表載入成功才寫入。
-- **GetInitialData 對「帳號相關表」一律只送呼叫者「自己那一列」（非 admin 本就過濾、admin 自 2026-06-14 重構起亦同）——但「自己那列」絕不可整個移除**：`main.js restoreLoginFromStorage` 以「`appState.accounts` 內找不到自己的 empId」判定為「此帳號已被刪除」→ 清 localStorage 強制重新登入；`api.js` 也以 `MyProfile` 覆寫自身列的權限欄位。故任何「縮減 GetInitialData 帳號資料」的改動都必須保留呼叫者自身列（scope-to-own，不可 scope-to-none）。全部帳號清單只能走 `GET /api/Accounts`（server-side 分頁）／`/{id}`（明細）／`/export`（匯出）這三個 admin-only 端點，**絕不可**再塞回 GetInitialData。
-- 操作紀錄：`ActivityLoggingMiddleware` → `ActivityLogQueue`(Singleton `Channel<>`，`FullMode=Wait`＋`TryWrite` 非阻塞，滿載**記 Warning 告警不丟最舊**) → `ActivityLogProcessor`(BackgroundService，`DequeueAsync` 等第一筆＋`TryDequeue` drain 成批、`MaxBatchSize=100`、`AddRange`＋**單次 SaveChanges**、批次失敗退回逐筆隔離毒資料、每工作單位 `CreateScope()` 解析 Scoped DbContext)。已跳過成功 GET 以降低寫放大。
-- **圖示一律存實體檔、DB 只存路徑 `/images/icons/{guid}.{ext}`**：統一走 `IIconStorageService`（Scoped）。`SaveAsync` data: URI→白名單寫檔、絕對自我參照 URL→正規化相對、FA class/外部 URL→原樣、非白名單 data:→丟棄；`DeleteIfLocalUnreferencedAsync` 於 update/delete commit 後做參照檢查＋path-traversal 防護的孤兒清理；`MigrateBase64IconsAsync` 啟動時一次性轉舊 base64。欄位 `App.IconBase64` 名稱不變但內容已是路徑。Controller **不可**自行存 base64 或拼路徑。
-- **`MenuAuthService` request-scoped 快取**：因 DI 為 Scoped＝每 HTTP 請求一實例，故 `_childToParents`/`_canEditOthersCache`/`_manageSetCache` 在同請求內快取安全；安全前提＝所有權限檢查都發生在結構異動「之前」，不會讀到同請求剛寫的髒資料。改動 MenusController 寫入順序時須維持此前提。
-- **個別覆寫 per-fab（綁廠區）兩層可見性**：`Map_Account_ExtraMenu`/`DenyMenu` PK=`(EmpId, FabId, MenuId)`，前端/DTO/JSON 形狀皆為 `{廠區名:[menuId]}`（與 `defaultPages` 同慣例；`Fabs.FabId == 廠區名`，由 `Map_Account_DefaultPage.FabId` 帶 FK 卻以廠區名存得通證實）。**FabId 無 FK 到 Fabs**（避免多重 cascade＋容遷移列 `FabId=''`）。可見性分兩層、兩邊演算法必須對齊：(1) **後端 `MenuAuthService.GetVisibleMenuIdsAsync` 回「跨所有可存取廠區的 permissive 聯集」**，僅用來過濾 GetInitialData/GetMenus 要送的資料列——extra 取任一可存取廠區的開放、deny 只在「所有可存取廠區皆 deny」(`fullyDenied`，排除 menu ACL force-allow) 才從聯集移除（否則藏掉資料會讓某廠區看板整個消失）；admin 回 null（不過濾）。(2) **前端 `sidebar.js renderSidebarMenus` 用 `_ovForCurrentFab()` 只取 `appState.currentFab` 那一片** extra/deny 做真正的「該廠區才生效」收斂。任何寫到這兩表的路徑都必須 `InvalidateInitialDataCache()`（bump ETag 作廢 `visibleMenus:{ETag}:{empId}` 快取），否則 per-fab 變更 60s 內不生效。帳號存檔走 `AccountService.UpdateAccountMappings`：RemoveRange 舊列→依 `dto.ExtraMenus/DenyMenus` 字典逐廠區帶 FabId 重寫（略過空 fabId）。
+---
 
-- **「上方導覽列」與「權限管理表的選單組合」本就會因個別覆寫而不一致＝非 bug**：上方導覽列＝**當前登入者在當前廠區的「有效權限」**（role `allowedMenuIds` ＋帳號 per-fab `extraMenus` −`denyMenus`，再經 menu ACL）；權限管理表的 chip 清單＝**該 role 的原始設定**（`Map_Role_Menu`，與任何帳號覆寫無關）。兩者天生是不同層級的資料。**排序演算法本身正確**：`sidebar.js` 的 `rootMenus.sort` 依 root 在 `dedupedInitIds`（＝active roles 的 `allowedMenuIds` 串接 ＋ 帳號 extraMenus 接在最後）的 index 排序，不在其中者 index→9999 落到最尾。故 extra-override 的看板會出現在導覽列**最末**，而被 deny 的看板則整個不顯示——這會讓使用者誤以為「順序對不上」，實則只是成員差異。**未來再遇此類「導覽列 vs 群組設定對不上」回報，先查該帳號的 per-fab extra/deny 覆寫，勿急著改排序碼。**
-- **資料庫架構變動與遠端主機同步規則（嚴格遵守）**：使用者的遠端主機已有建立資料庫且含實際營運/測試資料。除了更新 `SchemaBootstrap.cs` 與 `DB_Table.md` 外，**日後若任何改動涉及到 DB 架構變更（新增/修改資料表、欄位、索引等），務必在目錄下提供對應的 SQL 異動檔（`.sql`）**，以便使用者同步至遠端主機執行，維持雙邊 DB 結構一致。
-- **雙 AI 協同開發協議**：使用者同時會以 Gemini 與 Claude 進行本專案的除錯與功能更新。每次完成任務後，務必遵循更新規範將最新進度與規則寫入 `CLAUDE.md` 與 `memory.md`。
-- **預設看板挑選器可選「資料夾」(folder)＝整個群組指定為預設首頁**：`render/account-ui.js` 的 `openMenuSelector` 之 `viewableMenus` 已**移除** `!== 'folder'` 排除條件，folder（有子選單者，如「ZE 強化防禦群組」）也列為可選項（以資料夾 icon＋badge 區隔）。**可見集合 `allowedIds` 完全不變、只放寬可被選取的「類型」**，故與 sidebar 可見範圍仍對齊。登入套用走 `ui/navigation.js` 的 `goDefaultHome`：defPage 若指向 folder，以 `_resolveFolderToFirstLeaf` 在 `appState._currentValidMenus`（已權限過濾的可見清單）中找該資料夾的可見子節點、優先挑可直接開啟者（`url`/`targetPage`/`app_grid`）、否則鑽進第一個子資料夾續展（guard 100 層）；展開後仍是 folder（空資料夾）則 `defPage=null` 交給終極防呆抓第一個可見看板。**改 picker 的可選類型或 goDefaultHome 的資料夾展開邏輯，務必確認兩者一致**（picker 能選什麼 ↔ 登入能落到什麼）。挑選器「由允許資料夾往下展開子節點」的迴圈必須檢查「全部 `parentIds`」、不可只看 `parentId`／`parentIds[0]`，與 `render/sidebar.js getAllowedIdsWithHierarchy`（多父展開事實來源）對齊。
+## 🏗️ 1. 當前系統核心與架構概況
 
-## 🐛 2. 踩坑與填坑紀錄（仍生效的教訓）
-- **取 EmpId 一律走 `ClaimTypes.NameIdentifier`，禁用 `User.Identity.Name`**（後者是姓名，會讓 `Map_Account_ManageMenu` 委派判定全找不到、委派 user 寫入全 403）。
-- **Class-level `[Authorize]` 一律設最寬鬆 baseline**；要 admin 的 action 自己加 `[Authorize(Roles="admin")]`。class+action 的 `[Authorize]` 是「累加」不是 override —— class 設 admin 會把所有非 admin 擋死、整站無 sidebar/廠區/menu。
-- **寫入端點 path id 為事實來源**（函式開頭 `dto.Id = id;`／`dto.EmpId = empId;`）。否則 path 拿來做權限檢查、body 的 Id/EmpId 拿來寫 mappings → 攻擊者可洗掉他人 mapping、替機密目標掛上未經檢查的 mapping/ACL。
-- **`createdBy` 強制為實際登入者**（更新時 immutable），防委派 user 偽造成 admin 建立、混淆 `isMyOwn` 判定。
-- **非 admin 編輯 menu 一律清空 `dto.AllowedEmpIds/DeniedEmpIds`**（那是「決定他人看不看得到」的工具，委派 user 不可動，否則能把正常 user 踢出看板）。
-- **`MenuAuthService` 權限要走 `Map_Menu_Structure` parent chain**（對齊前端：folder 委派＝整個子樹可編）：admin → 自己 createdBy → direct delegation → ancestor delegation + CanEditOthers → 否則 deny。優先序 Menu ACL > Account override > Role。
-- **非 admin 的 `GetInitialData`/`GetMenus` 必須後端按可見性過濾**（`IMenuAuthService.GetVisibleMenuIdsAsync` + `SettingsController.FilterTable`），不可只靠前端 UI 篩。個人表（Accounts/Requests/PersonalSettings/Map_Account_*）只留自己。
-- **`SaveDataAsync` 寫入用批次參數化 INSERT，禁止改回 `SqlBulkCopy`**：Sariel 僅 6GB RAM，bulk load 需 workspace memory grant，在記憶體壓力下排隊等 `RESOURCE_SEMAPHORE`（曾達 196s）；INSERT…VALUES 不需 grant、免疫。
-- **拆分 JS 必須在函式邊界切割並逐檔 `node --check`**：曾因切點橫跨函式結尾 `};`、或在非 async 函式內加 `await`，導致整檔 SyntaxError 無法載入、按鈕無反應。
-- **Excel 匯入格式判斷**：不可只依賴 `Accounts` 頁籤的 `EmpId`（admin 不在表內時空陣列會被誤判 V1 舊格式、清空全表）；須同時判 `Menus`/`Roles` 的 V2 專有欄位。
-- **EF 模型須對齊 DB schema**（NVARCHAR PK，非 INT PK），否則寫入全失敗。
-- **`SchemaBootstrap` 的 `LogError` 需包 try-catch**（缺 EventLog 權限的環境會連記 log 都拋例外、崩潰啟動）；整個 RunAsync 失敗只記 log、不擋啟動。
-- **iframe sandbox**：cross-origin URL 拿掉 `allow-same-origin`（防外部頁用 `parent.document` 操作本站 DOM）；same-origin 維持原配置。
-- **DTO 驗證**：RoleLevel 限 `admin|user`；Request Status 對齊前端 `pending|processing|resolved|rejected|withdrawn`；圖示/URL base64 設大小上限（避免撐肥 cache）；list 元素層級驗證在 service 內 silent-drop。
-- **EF 批次 upsert 大小寫陷阱**：`Map_Menu_Structure`/Menus PK 為 NVARCHAR，SQL 比對不分大小寫但 EF 的 `ToDictionary` 預設 ordinal（分大小寫）。`BatchUpdateMenus` 的 `existingMap` 必須用 `StringComparer.OrdinalIgnoreCase`，否則同一 PK 大小寫不同會被當新列 `Add` → INSERT 撞主鍵爆掉。
-- **EF 同批 RemoveRange + Add 同一 PK 要分兩次 flush**：先 `RemoveRange`＋`SaveChanges` 真正刪掉，再 upsert＋`SaveChanges`，否則同一交易內刪舊加新會撞追蹤衝突。`BatchUpdateMenus`/`BatchDeleteMenus`/`RolesController.UpdateRole`/`FabsController.UpdateFab`/`PersonalSettingsController.SavePersonalSettings`/`AccountService.UpdateAccountMappings` 採此模式；**Add 前對來源 id 去重（`HashSet`／`.Distinct()`）**，否則同批重複鍵撞「Added 同鍵」。EnableRetryOnFailure 下兩次 SaveChanges 須包進 `CreateExecutionStrategy().ExecuteAsync` + 顯式交易才原子。
-- **用 sqlcmd 跑含中文的 .sql 必加 `-f 65001`（輸入 codepage 設 UTF-8）**：本機 .sql 為 UTF-8(no BOM)，但 sqlcmd 預設以系統 ANSI(Big5/CP950) 讀檔 → 中文 `N'...'` 字面值與註解 multibyte 被誤解碼，錯位 byte 還會吃掉引號/關鍵字 → T-SQL parser 噴 `Msg 156 incorrect syntax`。修法：`sqlcmd -f 65001 -u -i file.sql`（`-u` 只影響 console 輸出顯示、不影響儲存）。驗證儲存正確別看 console（仍以輸出 codepage 顯示亂碼），改查 `LEN(col)`／`UNICODE(SUBSTRING(col,1,1))` 比對。
-- **圖示渲染判斷前後端要一致**：前端 `iconVal.startsWith('data:') || iconVal.includes('/')` → `<img>`；否則 FA `<i class>`（FA class 永不含 `/`）。散落 `render/sidebar-item.js`/`render/sidebar.js`/`ui/dialogs.js`/`admin/misc-manage.js` 四處，改一處要同步。（misc-manage.js 另一處 `startsWith('data:image')` 是 Excel 匯出長度防呆，非渲染判斷。）
-- **圖示路徑 passthrough 別只認相對路徑**：舊 `SaveIconAsync` 只 passthrough 相對 `/images/icons/`，App 更新存的是絕對 URL（`http://host/images/icons/...`）→ 被當新檔。`IconStorageService.SaveAsync` 兩者都正規化成相對才存。
-- **禁用父選單必須連子樹一起移除，否則子節點會「升格」成上方導覽列的 root**：`render/sidebar.js renderSidebarMenus` 算 `validMenus` 前先以 BFS 把所有 `enabled===false` 節點的後代收進 `killSet`（走 `window.isParentMatch` 比對 id/name/displayName），filter 連 killSet 一併剔除；只過濾「自己 `enabled===false`」會讓子節點失去父節點 → 被 `hasValidParent` 誤判為最上層升格顯示。一處修好導覽列＋側邊欄樹＋`_currentValidMenus`(搜尋/goDefaultHome)。**教訓：凡「把某節點從可見集合移除」的邏輯，都要想清楚它的子樹是否會變孤兒被別處 root 判定撿回來。**
-- **判斷選單是否為「最上層 root」務必同時看 `parentId` 與 `parentIds`，不可只看 `parentId`**：DB `Menus` 表**無 `ParentId` 欄位**，父子關係只存在 `Map_Menu_Structure`。`api.js` 解析時對「有父節點」者只 push 進 `parentIds`(陣列)，而 `parentId`(單數) 維持 `undefined`（`if(child.parentId===null)` 因 `undefined!==null` 永遠不生效）；又 `cleanId(undefined)===''`，任何「只用 `!cleanId(m.parentId)` 判 root」的 filter 都會把子項目誤判成 root。root 正解：`(!cleanId(m.parentId)) && (m.parentIds||[]).filter(Boolean).length===0`。曾致「群組編輯」chip 清單漏出 WL子群組/N-Sys/xHelp 等子項目。同理「由允許資料夾往下展開」的迴圈須比對全部 parentIds（見 §1 預設看板挑選器）。
-- **前端 `sysMenus` 管理頁閘門必須與後端 Controller class-level `[Authorize]` 對齊；`帳號管理` 是 admin-only，勿用 `canEditOthers` 開門**：`render/sidebar.js` sysMenus 中，後端為 `[Authorize(Roles="admin")]` 整支 admin-only 的頁（account/fab/role/audit/activity-log/config-manage）`display` 一律 `role==='admin'`；只有 `MenusController`（baseline＋Service 層委派）對應的 `page-webpage-manage`/`page-menu-manage` 才用 `canManage`。`canEditOthers` 是「menu 委派旗標」（編輯所屬子樹下他人看板）、**與帳號管理無關**；`AccountService` 無委派邏輯（只有 super-admin 防護），委派者看到帳號管理選單點進去所有 `/api/Accounts` 仍 403＝功能性死選單。**教訓：前端閘門用的旗標要對應後端真正會放行的能力。**
-- **把 id 內嵌進 inline `onclick` 字串字面值前必須跳脫，否則含反斜線的工號（Windows 網域帳號 `SARIEL\yu-tinglin`）會讓「點編輯無反應」**：網域工號（`ClaimTypes.NameIdentifier` 自動建立）含 `\`，原樣內嵌時 JS parser 把 `\y` 當無效跳脫吞掉反斜線（`'SARIEL\yu-tinglin'==='SARIELyu-tinglin'`）→ `editAccount` 拿到錯 id → `GET /api/Accounts/...` 404 → 靜默 return、Modal 不開。**修法**：`render/tables.js` 的 `_jsArg(s)` 先做 JS 字串跳脫（`\`→`\\`、`'`→`\'`、換行）再做 HTML 屬性跳脫（`&`/`"`/`<`/`>`；瀏覽器先 HTML-decode 屬性再 JS-parse，故順序先 JS 後 HTML），編輯/刪除鈕 `aId` 一律經 `_jsArg`。**第二類陷阱（URL path 正規化）**：呼叫 `/api/Accounts/{id}`（GET/PUT/DELETE）一律 `encodeURIComponent`，否則瀏覽器把路徑 `\` 正規化成 `/` → 路由不匹配 404。**教訓：凡把『可能含特殊字元的使用者/系統 id』內嵌進 inline onclick 或 URL path 都要跳脫/編碼。**
-- **EF `column.Contains(term)` 的搜尋字串過長會 500（SqlException 8152「字串會被截斷」），需在比對前 cap term 長度**：`GetAccountsPagedAsync` 的 `q` 翻成 `LIKE '%'+@p+'%'`、`@p` 型別 `nvarchar(4000)`；超長 term 溢出 → 500。修法：比對前 `if (term.Length>100) term=term.Substring(0,100)`——被比對欄位最長 Name/Department=nvarchar(100)，截在 100 字零功能損失。**教訓：任何把使用者字串塞進 `.Contains()`/`LIKE` 的搜尋端點都要 cap 在被比對欄位最大長度。**（2026-07-03 同型補修：`ActivityLogger.QueryAsync` 的 `keyword` 亦已 cap 500＝最長被比對欄位 Path=nvarchar(500)；live 驗證 5000 字 keyword 回 200。）
-- **`appState` 的資料集合（`accounts`/`menus`/`fabs`/`roles`/`apps`/`requests`）在 `fetchInitialDataFromDB` 成功前皆為 `undefined`**：`store.js` 只宣告純量/暫存欄位，這六個集合只在 `fetchInitialDataFromDB` **成功路徑**才賦值；匿名載入時 `GetInitialData` 回 401 → 提前 return、集合仍 `undefined`。讀取端**一律要 `(!arr || arr.length === 0)` 或 `(appState.accounts || [])` 容錯，禁止裸 `.length`**（曾因 `completeLoginAfterAuth` 裸讀 `appState.accounts.length` → 純手動登入 `TypeError` 中斷整個登入流程）。
-- **`api.js` 全域 fetch 攔截器的 401 排除清單必含「初載會 401 的四端點」（Login/GetInitialData/WhoAmI/MyProfile），新增初載端點時務必同步**：MyProfile 改與 GetInitialData 並行發出（省 1 RTT）時漏加排除 → 每次未登入/cookie 過期的冷開頁，MyProfile 401 觸發 `logout()`（連發 `/api/Auth/Logout`＋設 `umc_force_manual_login` 旗標卡住下一步 Windows 自動登入）＋彈「登入時效已過期」視窗。使用者體感＝「太久沒登入就被彈窗騷擾、不能直達首頁」。2026-07-03 修正（加入排除）；同輪並依使用者要求移除 `restoreLoginFromStorage` 查無帳號時的「帳號已被系統管理員移除」彈窗（`umc_account_deleted_hint` 旗標整組刪除，改靜默清 localStorage → tryAutoLogin 重登）。**教訓：改動初載請求的發出方式（序列→並行、新增端點）時，要回頭檢查全域 401/403 攔截器的排除清單。**
-- **Tree Builder 模板變數須先宣告**：`admin/menu-manage.js` 的 `tbAddFolder`/`tbAddLink` 用 `div.innerHTML` 模板字面值引用 `${handleHtml}`/`${removeBtnHtml}`/`${addChildBtnHtml}` 等，每個 `${xxxHtml}` 變數都必須在模板前先 `const` 宣告。曾因清死碼刪掉 `const addChildBtnHtml` 卻留著 `${addChildBtnHtml}` 參照 → 每次 `tbAddFolder` 丟 `ReferenceError`，連鎖「編輯含子資料夾的群組無反應」＋「根層建立子群組按鈕無反應」。清死碼刪某 `*Html` 變數時務必同步移除模板字面值內的 `${...}` 參照（反之亦然）。
+- **專案主線**：`EQDashboard.V2.Web`（ASP.NET Core .NET 9.0 + ES Modules 前端 + Bootstrap 5/jQuery CDN）。
+- **資料儲存與連線**：使用 MSSQL（`ConnectionStrings:EQDashboard`，資料庫 `EQDashboardV2`，伺服器 `Sariel`）。CRUD 異動即時自動寫回 DB；`PersonalSettings` 存放使用者自訂上方導覽列順序與狀態，並搭配本地 LocalStorage 快取。
+- **身分驗證模式 (`AuthSettings`)**：
+  - Kestrel + Negotiate Windows 驗證自動登入，UI 無手動帳密 Tab 與登出按鈕。
+  - `SimulatedAccount`：指定帳號進行本地模擬登入；留空則自動抓取桌機身分。
+  - `DefaultAdmins`：預設管理員名單 (`["yu-ting", "00058897", "00059987"]`)，自動升級以防鎖死。
+  - `OpenAccessMode`：開啟 (`true`) 時，新登入帳號預設為 `user`，並將預設首頁 (`Map_Account_DefaultPage`) 自動指向 **12A 廠區第一個選單第一筆頁面**，全站廠區與看板對外開放；關閉 (`false`) 時則嚴格遵循 DB 帳號管理與選單權限授權。
+  - 應用集合 (App Grid) 權限隔離不分模式生效，無 `canManageCurrentAppGrid` 權限者一律隱藏管理操作按鈕。
+- **資料架構自我修復 (`SchemaBootstrap`)**：系統不使用 EF Migrations，而由 `SchemaBootstrap.cs` 在啟動時以冪等 T-SQL (`IF NOT EXISTS` / `COL_LENGTH IS NULL`) 自動檢查並修復資料表、欄位與實體索引。
+- **圖示儲存與清理 (`IIconStorageService`)**：看板與應用程式圖示寫入一律將 Base64 轉為檔案保存於 `wwwroot/images/icons/{guid}.{ext}`，DB 僅存相對 URL 路徑。透過 `IIconStorageService.SaveAsync`（MIME 白名單/相對路徑正規化）與 `DeleteIfLocalUnreferencedAsync`（孤兒檢驗清理）嚴格管控。
+- **操作稽核紀錄 (`ActivityLogger`)**：中間件攔截非 GET 操作，寫入非阻塞記憶體佇列 `ActivityLogQueue`（滿載告警不丟棄），再由 `ActivityLogProcessor` 背景服務批次寫入 MSSQL `UserActivityLogs` 表。
+- **造訪流量與使用率統計 (`AnalyticsController`)**：專屬統計表 `DailyUserVisits`（由 `IX_DailyUserVisits_Date_Dept` 索引加速點查與聚合），採用單筆複合主鍵 `(VisitDate, EmpId)` 搭配 `UPDATE...IF @@ROWCOUNT=0 INSERT` 冪等記錄。每日進入自動 upsert 並累加 `VisitCount`，提供管理員 UI（`#page-traffic-stats`）即時觀測全站 DAU/MAU 曲線、各部門活躍比率與每日造訪明細。
+- **資料初始載入與 scope-to-own 規範**：`GET /Settings/GetInitialData` 針對非 Admin 會依據 `IMenuAuthService.GetVisibleMenuIdsAsync` 過濾可視選單。對於帳號相關表（`Accounts`、`PersonalSettings`、`Map_Account_*`），後端 `GetInitialDataAsync(empId)` 一律執行 `.Where(EmpId == empId)` 點查，僅回傳登入者自身的資料列。**禁止移除自身的資料列**（前端還原登入狀態與覆寫需要）。
 
-## 🛤️ 3. 開發歷史與決策日誌
-> 逐日日誌已壓縮為主題式里程碑（完整時間序追 git）；仍生效的規則/陷阱見 §1/§2 與 CLAUDE.md。每輪新任務仍在此依日期追加簡短一筆，舊項定期壓縮上移。
+---
 
-- **安全（歷經 10+ 輪 multi-persona 攻擊矩陣審計，已硬化）**：authz baseline（class-level 最寬鬆＋action `[Authorize(Roles="admin")]`）／非 admin server-side 可見性過濾／path-id 事實來源／createdBy immutable／super-admin 防降級刪除／IDOR/mass-assignment 全防／CSRF 後置＋`X-Requested-With` 雙層＋前端自我修復重試／登入 rate-limit 10/60s/IP／IconStorage MIME 白名單＋path-traversal／參數化 SQL＋表名硬編碼白名單／URL allowlist `safeExternalUrl`＋DTO regex＋iframe sandbox／渲染層 `escapeHTML`／health 端點私網限制／Program.cs 生產組態守門。2026-06-16 補 CSP（架構決定必含 `'unsafe-inline'`＋四家 CDN allowlist＋禁 nonce/hash，見 CLAUDE.md §6.3）＋CDN SRI（integrity+crossorigin）。**唯一未結項（需使用者親自處理）**：輪換已外洩的 DataProtection 金鑰 `App_Data/keys/*`（曾進 git 歷史；刪舊金鑰讓 DP 重生＝登出所有人＋需 filter-repo/BFG 清歷史）。**testuser DB 密碼經使用者明示「測試用、不重要、忽略且之後不需修正」——不再列為待辦。**
-- **DB loading 抗成長優化 P1–P4（2026-06-15～16 全數落地，現況 ~5 帳號無感，皆前瞻優化非當前 bug）**：P1 帳號相關表移出 GetInitialData 共享快取改 per-caller `.Where(EmpId==empId)` 點查（index seek、always-fresh）；P2 `IX_Accounts_Search (Name, Department)` 窄覆蓋索引收窄帳號搜尋掃描；P3 `AddDbContext`→`AddDbContextPool`；P4 `UpdateLoginStatsAsync` 改 `UPDATE…OUTPUT` 單次往返。規則見 CLAUDE.md §5/§6.2。
-- **帳號清單去全表化（2026-06-14 重構）**：帳號清單改 server-side 分頁 `GET /api/Accounts?page=&pageSize=&q=`、明細 `/{id}` lazy-load、匯出 `/export`；`SettingsController` 對 admin 也把帳號相關表收斂成「只回自己一列」；前端帳號管理表改 `serverSide:true` DataTable、Excel 匯出 `createWorkbookData` 改 async 走 `/export`。規則見 CLAUDE.md §5/§6.4。
-- **效能/正確性優化**：多 collection-Include 加 `.AsSplitQuery()`、唯讀 GET 投影加 `.AsNoTracking()`（寫入路徑禁加）、登入並行抓 MyProfile+GetInitialData 省 1 RTT（規則見 CLAUDE.md §6.2/§5）；快取作廢集中化 `IInitialDataCacheInvalidator`(Singleton)＋`CacheInvalidationInterceptor`(EF SaveChangesInterceptor 安全網，raw ADO 仍須手呼)；`MenusController` 抽 `MenuService`；複合 PK 寫入 `.Distinct()`＋兩次 flush（PersonalSettings/Account/Role/Fab/Menu mappings，見 §2）；GetInitialData ETag 摻入身分防共用瀏覽器跨使用者 304 回放。
-- **整合測試**：巢狀 `EQDashboard.V2.Web.Tests`（xUnit + `WebApplicationFactory<Program>`，`AuthzMatrixTests` 鎖 authz/CSRF/可見性矩陣/ETag 身分綁定；測試 host 只換 Negotiate scheme、實打真實 `AddDbContextPool`＋真 SQL Server）。⚠️ `GetMenus_VisibilityFiltered`(AuthzMatrixTests.cs:156) 偶紅＝共享 dev DB 上 `subadmin_user` 的 `Map_Account_Role`/`Map_Role_Menu` 被先前 live 測試清空的**資料漂移、非程式 bug**，補回 mapping 即綠（紅燈時先查這兩張表）。
-- **登入/版面 UI 修補（規則見 CLAUDE.md §1/§6.4）**：`Auth:AllowManualLogin=false` 純自動模式的三處旗標生命週期（logout/tryAutoLogin/fetchWhoAmI，含 `showLoginOverlay` config-aware 強制 `'manual'`→`'windows'`）；管理表 CRUD 後留原分頁＋保留 pageLength（`_dtPageMemory`/`appState.dtPageLenMemory`）；純狀態切換不重畫整表避免閃爍；還原預設版面後「自訂上方導覽列/個人結構表/系統版面」三者同序（`dedupedInitIds`）；廠區無看板顯示中性「空狀態」非「無權限」警示；2026-06-17 修 Tree Builder `addChildBtnHtml` ReferenceError（編輯含子資料夾群組／建立子群組）＋預設看板挑選器多父展開（見 §2）。
-- **環境/流程陷阱**：reload 時 Kestrel+Negotiate 會自動抓 Windows 桌機帳號 `SARIEL\yu-tinglin`（共享 DB 上常無權限）→ 登入畫面卡偵測＝本機環境 quirk、非 bug；live 測試用 `completeLoginAfterAuth('admin','manual',acc)` 的 admin fallback 繞過。preview 工具偶遺失追蹤留 orphan dotnet 佔 5242 → 新 `preview_start` 全「address already in use」崩潰，用 `Get-NetTCPConnection -LocalPort 5242`+`Stop-Process` 清 PID 後乾淨重啟。**當「其他程式/外部工具」改過專案，文件所述狀態可能領先實際碼——務必 `git diff` 對照 committed HEAD＋live 行為雙重驗證**（2026-06-15 曾遇 O3 重構半套還原 regression）。
-- **非正式原型（root，非 app 程式碼、不在 wwwroot、未經 Kestrel、未登錄 `專案架構.md`）**：`redesign-*.html` 系列為「沿用現況版面、純視覺優化」展示稿，若採納再逐項移植進 V2 的 4 支 css。
-- **2026-07-03 移除開頁擾民彈窗（使用者要求「桌機開頁直達預設首頁、零彈窗」）**：①刪除「帳號已被系統管理員移除」彈窗（`main.js restoreLoginFromStorage` 不再設 `umc_account_deleted_hint`、`auth.js showLoginOverlay` 消費端整段移除，查無帳號改靜默清 localStorage → tryAutoLogin）；②`api.js` 401 排除清單補 `/api/Auth/MyProfile`（根治冷開頁 logout 連發＋「登入時效已過期」彈窗＋force-manual 旗標卡自動登入，見 §2）。live 驗證三情境全過（冷開頁無彈窗無旗標、valid-cookie＋幽靈 localStorage 靜默修復、admin 正常登入直達 page-home）。**附帶發現：工作目錄的 `appsettings.json` 消失**（app 啟動即拋 Missing connection string），已從巢狀 repo `d7cc0d6^`（刪除追蹤 commit 的父版）還原——此檔已 .gitignore、不進版控，**若再消失同法還原**。
-- **2026-07-03 新增開啟方式「另開分頁 (IE)」（`target='ie'`）**：使用者需求＝部分老網頁含舊元件（ActiveX 類）Edge 開不出畫面，須用 IE 瀏覽。實作：四個開啟方式下拉（wpTarget/nodeTarget/appTarget/personalMenuTarget）＋三語 i18n `blank_ie`＋`navigation.js openInIE()`（導向自訂協定 `ie:<絕對URL>`）＋`sidebar-item.js`/`main.js` 的 `data-action="open-ie"`（與 open-url 同過 `safeExternalUrl`）＋`tables.js` 顯示 map 與 App grid＋客戶端安裝檔 `wwwroot/tools/install-ie-protocol.reg`（cmd `%u:~3%` 去前綴後 start iexplore；`call` 為二次展開必要）＋Program.cs 靜態檔 `.reg`→text/plain MIME 映射（預設對照表沒有 `.reg` 會 404）。五處消費端清單見 CLAUDE.md §6.4。live 驗證：四下拉含 ie 選項、記憶體改 target 後側欄出 open-ie 並點擊靜默（協定未註冊）、activateMenu 路徑無錯、console 0 錯誤、.reg 可下載(200 text/plain)。
-- **2026-07-03 第二輪審計（後端 15 支 Services/Controllers/Middleware/Helpers 至此 100% 讀畢）＋三項小修**：①`ActivityLogger.QueryAsync` keyword cap 500（8152 同型漏網，見 §2）；②`api.js` `myProfilePromise` 加 `.catch(() => null)`＋消費端 `myProfileRes && myProfileRes.ok` 判空（GetInitialData 網路失敗早退時的 unhandled rejection 噪音）；③`api.js` Menu/Role/Fab/App 的 save/delete URL id 補 `encodeURIComponent`（純一致性——已驗證這些 id 全系統產生 URL-safe、`encodeURIComponent(id)===id`，零行為改變）。live 驗證：5000 字 keyword 200、正常查詢 529 筆、admin 登入/選單載入正常、console 0 錯誤。其餘檔案（SchemaBootstrap/IconStorage/AuthService/ActivityLog 管線/攔截器/MenusController 等）全數乾淨；前端反模式全域掃描（裸 `.length`／CRUD 誤用 syncDataToDB／寫死 pageLength／XSS 跳脫）零命中。
-- **2026-07-03 全專案深度再審計（read-only，無改碼）**：build 0/0；後端 12 支 Controller/Service（Program/Account/MenuAuth/Settings(Controller+Service)/Menu/Auth/Roles/Fabs/Apps/PersonalSettings/Requests/ActivityLogs）逐檔複查＝production-grade，無 authz/IDOR/注入/正確性缺陷，無 banned anti-pattern（TODO/FIXME/Console.Write/`User.Identity.Name` grep 皆 0）。唯一觀察＝純外觀一致性：`api.js` 的 `saveMenuAPI`/`deleteMenuAPI`/`saveRoleAPI`…等對 URL id **未** `encodeURIComponent`（與已硬化的 Account 端點不一致），但 Menu/Role/Fab/App/Request id 全為系統產生（`m_`/`f_`/`role_`/`fab_`/`app_`/`req_` + `Date.now()`）＝URL-safe、無反斜線→**非 latent bug，無修正急迫性**（僅 empId 含反斜線、其端點已編碼）。結論：無需修正項，現況穩定。
-- **2026-07-07 解答企業內部無管理員權限下「另開分頁(IE)」解法、為何前端無法強制 IE 模式，以及 AD/IIS 整合驗證偶發認證彈窗原因與 IIS 主機端零設定根治法**：①**IE 模式與協定**：瀏覽器遇到未註冊 `ie:` 會靜默忽略，且前端 JS/HTML 語法受限於沙盒安全無法強制 Edge 轉為 IE 模式；解法為執行免權限註冊檔 `wwwroot/tools/install-ie-protocol-user.reg` (HKCU)、Edge 自助記憶 30 天或 GPO 企業網站清單；②**Windows 認證偶發彈窗**：使用者反映以單名 `http://p58esiap12` 開啟網頁已抓到帳號卻偶爾跳出 Windows 認證密碼視窗，且要求外部員工完全免設定即可自動進入。診斷與主機端根治：單名連線已符合 Windows 內部網路安全區域，彈窗係因 IIS 主機 Kerberos (Negotiate) SPN 驗證失敗降級 NTLM 或 ASP.NET Core `AddNegotiate` 雙重驗證打架。**主機端零客戶端設定根治法**：在 IIS 管理員「Windows 驗證 → 提供者」將 `NTLM` 移至最頂部（或移除 Negotiate），並於 `appsettings.json` 設 `"Auth": { "DisableNegotiate": true }` 關閉 Kestrel 重複挑戰，即可讓全體員工打開網址全自動登入、永不彈窗。
-- **2026-07-13 確立雙 AI（Gemini + Claude）協同開發與遠端 DB SQL 異動檔產出協定＋全庫結構比對驗證與異動日誌機制**：①確立重要資料庫架構規則：因遠端主機 DB 已經建立且內含資料，若未來有任何需變動 DB 架構（新增表/欄位/索引等）的情況，除了更新 `DB_Table.md` 與專案內 self-healing 機制，**必須在目錄下提供獨立的 SQL 異動腳本檔案（`.sql`）**，且**必須在 `DB_Table.md` 末尾「5. 架構異動與增量 SQL 紀錄 (Schema Changelog)」依日期 (`YYYY-MM-DD`) 往下追加紀錄與對應 SQL 檔名**，供使用者直接判定並於遠端主機執行；②**線上資料庫結構與 `DB_Table.md` 完整比對**：經實體連線至 SQL Server (`EQDashboardV2`) 對全庫逐表比對，確認 18 張表、92 個欄位名稱與型別及 NULL 限制、31 個主鍵組成欄位、8 個外鍵與 8 個非主鍵索引，皆與 `DB_Table.md` 及 `SchemaBootstrap.cs` **100% 一致**，無任何資料結構漂移或差異。
+## 🚨 2. 關鍵開發規範與常見陷阱 (Critical Pitfalls & Conventions)
 
+**進行 C#、MSSQL 與前端開發時，必須遵守以下必守規則與防禦指南：**
 
+### C# 後端與 MSSQL 開發規範
+1. **工號取得**：一律從 `User.FindFirst(ClaimTypes.NameIdentifier)?.Value` 取得當前 `EmpId`。**嚴禁使用 `User.Identity.Name`**（該欄位為人員姓名，用於比對會導致權限判定與委派全數失效）。
+2. **SQL 參數化**：所有原生 ADO.NET (`Microsoft.Data.SqlClient`) 或 SQL 查詢一律使用 `SqlParameter`（如 `@p`）。**嚴禁以字串拼接組裝 SQL 條件**。
+3. **交易與執行策略**：因 DbContext 開啟 `EnableRetryOnFailure`，所有「先刪舊 mapping、再寫新 mapping」之多步原子操作，一律透過 `_context.Database.CreateExecutionStrategy().ExecuteAsync(...)` 包裝並顯式開啟 `BeginTransactionAsync()`。
+4. **複合 PK 關聯表的兩回合 SaveChanges 規範**：對 `Map_Role_Menu`、`Map_Fab_Role`、`PersonalSettings` 替換關聯時，必須先 `RemoveRange(oldItems)` 並 `await _context.SaveChangesAsync()` 自 ChangeTracker 移除舊列後，才能 `Add(newItems)` 並再次 `SaveChangesAsync()`。同批 Add 前需使用 `HashSet` 或 `.Distinct()` 去重，否則會觸發 EF `Identity Map` 主鍵追蹤衝突。
+5. **參照預檢 (`ValidateMappingRefsAsync`)**：寫入 `Map_*` 表前，先檢驗 `RoleId`、`MenuId` 是否存在於主表，回傳乾淨的 400 錯誤而非 500 FK Violation。
+6. **實體索引集中宣告**：所有資料庫實體索引一律在 `SchemaBootstrap.EnsureIndexesAsync` 以 T-SQL 建立（例如 `IX_Accounts_Search (Name, Department)`），**嚴禁使用 EF Core `HasIndex`**（對既有資料庫為無效 metadata）。
+7. **單語句 UPDATE + OUTPUT**：更新計數/時間等情境，一律寫為單一 SQL 並搭配 `OUTPUT INSERTED.*` 取得最新值（如 `UPDATE Accounts ... OUTPUT INSERTED.LoginCount WHERE EmpId=@EmpId`），禁用 UPDATE + SELECT 兩次來回。
+8. **快取作廢與 ETag 推進 (`InvalidateInitialDataCache`)**：異動 `Menus`、`Roles`、`Fabs` 或 `Map_*` 表完成後，必須手動呼叫 `IInitialDataCacheInvalidator.InvalidateInitialDataCache()`。此舉不僅清除記憶體快取，更能推進 ETag 作廢 `visibleMenus:{ETag}:{empId}` 跨請求快取。`CacheInvalidationInterceptor` 可作為 EF SaveChanges 安全網，但原生 SQL/ADO.NET 仍須手動呼叫。
+9. **約束啟用安全語法**：重新啟用約束時必用 `WITH CHECK CHECK CONSTRAINT ALL`，**嚴禁使用 `WITH NOCHECK CHECK`**。
+10. **大批量寫入禁用 `SqlBulkCopy`**：維持參數化批次 `INSERT ... VALUES` 即可。因主機記憶體 (`6GB`) 有限，`SqlBulkCopy` 申請 Memory Grant 會在並發壓力下卡死於 `RESOURCE_SEMAPHORE`。
+11. **DbContext 池化規範 (`AddDbContextPool`)**：建構子限接受 `DbContextOptions<AppDbContext>`，**嚴禁注入 Scoped 服務、嚴禁定義可變實例欄位、嚴禁於實例中修改逾時或追蹤設定**。
+12. **查詢拆分 (`AsSplitQuery`)**：LINQ 查詢內含有 **2 個或以上 Collection `Include`** 時，必須於查詢結尾呼叫 `.AsSplitQuery()`，防止 Cartesian 乘積。
+13. **唯讀查詢追蹤 (`AsNoTracking`)**：僅用於 JSON 序列化回傳且無須修改的 GET 查詢皆須 `.AsNoTracking()`；即將執行修改存檔 (`SaveChanges`) 的查詢嚴禁加入 `.AsNoTracking()`。
+14. **狀態碼與日誌**：找不到資源回 `404 NotFound`，業務檢驗阻擋回 `400 BadRequest`。系統錯誤一律透過 DI 注入之 `ILogger<T>` 記錄，**嚴禁 `Console.WriteLine` / `Console.Error.WriteLine`**。
+15. **時間與跨時區一致性 (`GETDATE()`)**：凡涉及每日造訪統計或跨日比對的查詢（如 `DailyUserVisits`），計算「今天」的基準必須以 SQL Server 資料庫端時間 (`CONVERT(date, GETDATE())`) 為準，防範 App Server 與 SQL Server 時區不一致導致的資料偏差。
 
+### 前端 ES Modules 與安全規範
+1. **CSRF Middleware 配置順序**：`Program.cs` 的 Antiforgery Middleware 必須置於 `UseAuthentication()` 與 `UseAuthorization()` **之後**，確保 Token 與正確的使用者 Identity 驗證綁定。
+2. **CSP 與 SRI 標頭**：CSP 因前端 inline style/script 需求必須設定 `'unsafe-inline'`，並嚴格限制 CDN 白名單 (`cdn.jsdelivr.net`, `cdnjs.cloudflare.com`, `cdn.datatables.net`, `code.jquery.com`)。所有 CDN JS/CSS 載入標籤皆需配置正確的 `integrity` (SHA-384 Base64) 與 `crossorigin="anonymous"`。
+3. **JS 跳脫 (`_jsArg`)、HTML 轉義 (`escHtml`) 與 URL 編碼 (`encodeURIComponent`)**：
+   - 傳入 HTML inline `onclick="func('ID')"` 的變數，皆需先調用 `_jsArg()` 轉義，否則 Windows 網域 ID 內的 `\` 會被 JS 吞掉（如 `SARIEL\yu-ting` -> `SARIELyu-ting`）。
+   - 將資料庫回傳的使用者資料（如 `empName`, `department`, `err.message` 等）動態拼接入 `innerHTML` 時，必須調用 `escHtml(s)` 實體跳脫，防範 Stored / Reflected XSS。
+   - 透過 REST API (`GET /api/Accounts/{id}`) 傳送 ID 時，URL 路徑參數必須包裝 `encodeURIComponent(id)`。
+4. **帳號查詢上限限制**：後端 `AccountsController.GetAccountsPaged` 對於參數 `q` (`Contains` 查詢)，在 DB 執行前必定截斷長度至 100 字(`term.Substring(0, 100)`)；同理 `ActivityLogger.QueryAsync` 的 `keyword` 截斷至 500 字，避免超長輸入導致 `nvarchar` 字串截斷錯誤 (`SqlException 8152`)。
+5. **Root 最上層選單判定**：檢查節點是否為最上層，必須同時驗證 `(!cleanId(m.parentId)) && (m.parentIds||[]).filter(Boolean).length===0`。
+6. **樹狀編輯器變數宣告**：`Tree Builder` 的 `innerHTML` 模板字面值若引用 `${xxxHtml}`，必須在模板上方預先以 `const` 宣告，避免拋出 `ReferenceError`。
+7. **App Shell 與 LocalStorage 快取防禦 (`clearAppCache`)**：因 `index.html` 內嵌腳本會在 JS 載入前第一時間從 `localStorage` (`app_shell_top_menus`, `app_shell_sidebar_menus`) 填入舊版面快照，且 `Ctrl+F5` 不會清除 `localStorage`。當執行 `syncDataToDB()`、後台 CRUD RESTful 存檔 (`save*API`/`delete*API`)、登入切換身分或登出時，必須自動呼叫 `window.clearAppCache(preserveCurrentUser)` 清理過時的 `app_shell_*` 與 `umc_personal_menus_*` 快取，確保畫面與 DB 最新狀態隨時保持百分之百同步。
+8. **回饋訊息分流 (`showToast` vs `customAlert`)**：「成功/資訊」類回饋一律走 `ui/dialogs.js` 的非阻斷式 `showToast(msg, type, delay, isHtml)`（右上角 Bootstrap Toast、自動消失）；錯誤與需使用者決策的情境才走 `customAlert` / `customConfirm`。舊有「匯入結果訊息抑制補丁」(`__allowImportResultAlert`) 已隨此機制移除，勿再引用。
+9. **JS 版本碼 (`?v=`) 全站一致性**：`index.html` 的 `<script src>` 與所有模組內部 `import ?v=` 版本碼必須完全一致（目前 `20260719c`），否則同一模組會以不同 query 被重複實例化兩份導致狀態分裂。改版時全域取代，勿只改單檔。
+10. **i18n 全量覆蓋**：新 UI 文字必掛 `data-i18n`（placeholder 用 `data-i18n-placeholder`）並在 `config.js` 同步補 zh/en/ja 三語 key；JS 動態字串走 `t(key, fallback)`，帶數值訊息用 `{0}` 模板 + `.replace()`。含圖示元素須把文字包 `<span data-i18n>` 以免替換 innerHTML 時吃掉圖示。
+11. **RWD 斷點集中管理**：`@media` 覆寫一律寫在 `css/responsive.css`（≤992px 側欄浮層+遮罩 / ≤768px 手機 / ≤480px 窄幅）；JS 行為集中在 `ui/layout.js` RWD 區塊，斷點常數 992 兩邊必須一致。
+12. **帳號即時同步與防呆 (`restoreLoginFromStorage` / `MyProfile`)**：後端 `/api/Auth/MyProfile`、`WhoAmI`、`Config` 端點皆加入 `Cache-Control: no-cache, no-store, must-revalidate` 標頭且前端以 `{ cache: 'no-store' }` 請求，防止身分與授權回應被瀏覽器快取。當使用者按 `Ctrl+F5` 重整時，`restoreLoginFromStorage` 會比對 `window._currentServerEmpId` 進行雙重身分驗證（不符則靜默清 localStorage 重走自動偵測），並透過 `Object.assign` 將 DB 最新的帳號欄位（名稱、部門、個別選單覆寫與角色）即時同步寫回 local user，確保無需手動清除快取即可反映最新權限。
 
-## 🛠️ 4. 進行中與待辦事項
-> 2026-06-07～06-16 的大批 [x] 完成項（E*/H*/D*/O*/F*/B* 健檢與優化、XSS/CSRF/ETag 硬化、死碼清理等）已落地、規則沉澱於上方各節與 CLAUDE.md，移出本清單；完整紀錄追 git。
+---
 
-- [~] **版控收尾（需使用者親自做）**：canonical＝巢狀 `EQDashboard.V2.Web/.git`，已加 `.gitignore`＋`git rm --cached` 停追 bin/obj/.vs/App_Data/appsettings.json/*.csproj.user/node_modules（staged 未 commit）。待：commit（含漏追源碼）、**輪換外洩的 DP 金鑰 `App_Data/keys/*`**（曾進 git 歷史）、（選擇性）filter-repo/BFG 清歷史。root `.git`（追舊 V1+docs）依決議不動。
-- [~] **帳號去全表化剩餘（前瞻、現況無感）**：非 admin 的「全域表」（Menus/Fabs/Roles/Map_Role_Menu/Map_Fab_Role/Map_Menu_Structure/Apps）仍走共享快取＋C# 記憶體過濾、未下推 SQL `WHERE`。**§8② 已確認為正確設計**（這些表不隨帳號數成長、共享快取下推 SQL 反而打破共享）——**勿改**。
-- [ ] **（選擇性/長期優化，現況無感）**：E5 PersonalSettings 差量更新；E7 其餘 Map_* 熱點欄位索引盤點；F2 DataTables stateSave。
-- [ ] **（未來擴展，現資料量無感）** 看板成長到數百~數千時：Menu metadata（Category/Tags/Description/Owner 驅動分類搜尋）、看板樹 lazy render、分廠 on-demand 載入。屬產品決策，另案 scope。
+## 🛠️ 3. 目前進行中與待辦事項 (Active & Open Tasks)
+
+- [x] **Ctrl+F5 強制重整無法更新快取問題修復 (`LocalStorage Cache Defense & Identity Guard`)**：(1) 後端 `AuthController` 的 `/api/Auth/Config`、`WhoAmI` 與 `MyProfile` 全面加上 `Cache-Control: no-cache, no-store, must-revalidate` HTTP 標頭，且前端 `fetch` 請求一律帶上 `{ cache: 'no-store' }` 防止瀏覽器快取；(2) 擴充 `MyProfile` API 回傳帳號名稱 (`name`)、部門 (`department`) 與登入統計數值；(3) 前端在 `fetchInitialDataFromDB` 中將 API 回報之真實身分記錄於 `window._currentServerEmpId` 與 `_currentServerProfile`；(4) `main.js` `restoreLoginFromStorage` 增加雙重身分驗證，並以 `Object.assign` 將最新 DB 資料完整同步至 `localStorage`，保證按 `Ctrl+F5` 隨時自動更新至最新的帳號與權限。
+- [x] **P0~P2 關鍵安全與測試防線修復 (`Security & Test Hardening`)**：(1) `Program.cs` 增設 `Auth:SimulatedAccount` 正式部署防線且 `appsettings.json` 預設留空；(2) 整合測試 `EqDashboardWebAppFactory` 明確注入 `AllowManualLogin=true` 與 `OpenAccessMode=false` 測試設定，8/8 測試全數通過；(3) `openMenuSelector` 首頁挑選器全面套用 `escHtml` 與 `_jsArg` 防禦 Stored XSS；(4) `main.js` 初始例外轉義 `error.message` 且 `error.stack` 僅限開發環境顯示。
+- [x] **全站系統架構與安全效能全面健檢 (`Audit Fixes`)**：已完成所有 1 個 Critical (`EnsureDailyUserVisitsAsync` 自助補表修復)、4 個 High (`AnalyticsController` 連線池安全、補 `ILogger`+`try-catch`、`traffic-stats.js` XSS `escHtml` 防禦)、4 個 Medium (時區對齊、部門模糊查詢、防 NULL、`SqlParameter` 替代 `AddWithValue`) 修正並驗證通過。
+- [~] **本地 Git 版控收尾**：確認 `bin/`, `obj/`, `.vs/`, `App_Data/`, `appsettings.json` 不進版控並完成 commit，維持工作目錄乾淨。
+- [ ] **DataProtection 金鑰輪換 (安全優先)**：刪除歷史外洩之 `App_Data/keys/*` 檔案，由系統自動重產新金鑰。
+- [ ] **大型規模擴展評估 (長期可選)**：針對未來選單/看板超過數千筆情境，規劃 Category/Tags 搜尋架構、樹狀選單 Lazy Rendering 及分廠載入。
+
+---
+
+## 🔄 4. 雙 AI 協同與文件同步規範
+
+本專案由使用者同時協同 Gemini 與 Claude 進行開發。每次回答或修改完成前，**必須自動執行**：
+1. **同步 `CLAUDE.md` 與 `memory.md`**：將新確定之開發規範或坑點寫入，移除已過時之歷史任務。
+2. **同步 `專案架構.md`**：若新增、修改或移除檔案/目錄與職責，同步更新專案架構說明。
+3. **資料庫架構變動與 SQL 腳本同步 (`DB_Table.md` & `.sql` - 嚴格執行)**：
+   - 由於遠端正式/測試資料庫已存在且運行中，若改動涉及任何 DB 架構（新增表/欄位/索引等）：
+     1. 修改 `DB_Table.md` 資料表定義快照。
+     2. **於專案目錄下產出一份增量異動 SQL 腳本檔案 (`.sql`)**（使用 `IF NOT EXISTS` 冪等 DDL 相容既有資料）。
+     3. **於 `DB_Table.md` 結尾「5. 架構異動與增量 SQL 紀錄 (Schema Changelog)」追加當天日期 (`YYYY-MM-DD`) 與該 `.sql` 檔名紀錄**。
+4. **回覆標明**：於答覆末尾附上 `*已自動更新 CLAUDE.md 與 memory.md*`（若產出 SQL 檔或異動架構亦同步標明）。

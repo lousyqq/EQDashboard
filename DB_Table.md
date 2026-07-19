@@ -303,6 +303,23 @@ CREATE TABLE dbo.UserActivityLogs (
     CONSTRAINT PK_UserActivityLogs PRIMARY KEY (LogId)
 );
 GO
+
+/* =========================================================
+   2.3 統計分析表 (Analytics)
+   ========================================================= */
+
+IF OBJECT_ID(N'dbo.DailyUserVisits', N'U') IS NULL
+CREATE TABLE dbo.DailyUserVisits (
+    VisitDate      DATE          NOT NULL,
+    EmpId          NVARCHAR(50)  NOT NULL,
+    EmpName        NVARCHAR(100) NULL,
+    Department     NVARCHAR(100) NULL,
+    VisitCount     INT           NOT NULL DEFAULT 1,
+    FirstVisitTime DATETIME2     NOT NULL,
+    LastVisitTime  DATETIME2     NOT NULL,
+    CONSTRAINT PK_DailyUserVisits PRIMARY KEY (VisitDate, EmpId)
+);
+GO
 ```
 
 ---
@@ -347,6 +364,11 @@ GO
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Map_Menu_DenyAccount_EmpId' AND object_id = OBJECT_ID(N'dbo.Map_Menu_DenyAccount'))
     CREATE NONCLUSTERED INDEX IX_Map_Menu_DenyAccount_EmpId ON dbo.Map_Menu_DenyAccount (EmpId);
 GO
+
+/* DailyUserVisits：以日期與部門組合查詢 (AnalyticsController.GetUsageStats) */
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_DailyUserVisits_Date_Dept' AND object_id = OBJECT_ID(N'dbo.DailyUserVisits'))
+    CREATE NONCLUSTERED INDEX IX_DailyUserVisits_Date_Dept ON dbo.DailyUserVisits (VisitDate, Department);
+GO
 ```
 
 ---
@@ -367,4 +389,5 @@ GO
 > **使用說明**：為方便判定遠端主機資料庫是否已同步最新結構，日後只要有任何資料庫架構變更（新增/修改 Table、欄位、索引等），**AI 助手（Gemini / Claude）必會在下方依日期 (`YYYY-MM-DD`) 順序往下追加紀錄**，同時標示對應的 SQL 異動腳本檔名與摘要。您可以依據最後執行日期對照此列表，決定要同步執行哪些增量 SQL。
 
 - **2026-07-13 [基準檢核]**：經連線至線上 SQL Server (`EQDashboardV2`) 對全庫 18 張表、92 欄位、主外鍵及 8 個非主鍵索引進行完整比對，確認線上實體 DB 與本文件及 `SchemaBootstrap.cs` 100% 完全一致。
+- **2026-07-18 [新增每日活躍造訪統計表]** (`sql/2026-07-18_Add_DailyUserVisits.sql`)：新增 `DailyUserVisits` 實體表與對應索引 (`IX_DailyUserVisits_Date_Dept`)，作為全站每日活躍訪客 (DAU)、月度活躍訪客 (MAU) 與各廠區/部門比率統計使用；已同步於 `SchemaBootstrap.cs` 自動冪等建立。
 
