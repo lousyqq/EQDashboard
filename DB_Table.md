@@ -1,7 +1,7 @@
 # EQDashboardV2 資料庫 Table 架構檔 (DB_Table.md)
 
 > 本檔為 **EQDashboardV2** 資料庫的現況快照（CREATE TABLE 全量腳本），供在其他主機上「建立／更新」資料表結構使用。
-> **資料來源**：`sql/schema_v2.sql`（17 張實體＋關聯表）＋ `Services/SchemaBootstrap.cs`（UserActivityLogs 與全部索引）＋對線上 `EQDashboardV2` 實際結構逐表驗證（欄位/型別/PK/FK/索引/定序）。
+> **資料來源**：本檔第 2 節 CREATE TABLE 快照（19 張表）＋ `Services/SchemaBootstrap.cs`（自動補表/補欄位與全部索引）＋對線上 `EQDashboardV2` 實際結構逐表驗證（欄位/型別/PK/FK/索引/定序）。（原始參考腳本 `sql/schema_v2.sql` 已自專案移除，本檔即為建表唯一快照。）
 > **若專案任何變動動到 DB 架構（新增/修改表、欄位、索引、FK），務必同步更新本檔。**
 
 ---
@@ -27,7 +27,7 @@
 
 ---
 
-## 1. 表清單（共 18 張）
+## 1. 表清單（共 19 張）
 
 | 類別 | 表 | PK |
 | --- | --- | --- |
@@ -49,6 +49,7 @@
 | 關聯/ACL | `Map_Menu_AllowAccount` | (MenuId, EmpId) ＋FK |
 | 關聯/ACL | `Map_Menu_DenyAccount` | (MenuId, EmpId) ＋FK |
 | 稽核 | `UserActivityLogs` | LogId (IDENTITY) |
+| 統計 | `DailyUserVisits` | (VisitDate, EmpId) |
 
 > **FK 現況**：線上資料庫中**只有 4 張 override/ACL 表**（`Map_Account_ExtraMenu` / `Map_Account_DenyMenu` / `Map_Menu_AllowAccount` / `Map_Menu_DenyAccount`）帶 FK 約束；其餘 6 張關聯表與 `Map_Menu_Structure` **無 FK**（靠應用層維持參照完整性）。
 > **per-fab 覆寫（綁廠區）**：`Map_Account_ExtraMenu` / `Map_Account_DenyMenu` 的 PK 為 `(EmpId, FabId, MenuId)` —— `FabId` 表示「此額外開放/封鎖只在哪個廠區生效」。`FabId` **刻意不加 FK 到 Fabs**（避免 Account/Menu/Fab 多重 cascade 路徑衝突，且讓舊資料遷移列 `FabId=''` 能存活）；FK 仍只在 EmpId→Accounts(CASCADE) 與 MenuId→Menus。舊版「帳號全域」資料經 `SchemaBootstrap` 補欄位時 `FabId` 補預設 `''`（inert，不對應任何真實廠區），下次存帳號時被 RemoveRange→per-fab 重寫清掉。
@@ -376,8 +377,8 @@ GO
 ## 4. 變動同步提醒
 
 - 本檔須與下列來源保持一致，任一處改動 DB 結構即同步本檔：
-  - `sql/schema_v2.sql`（實體＋關聯表 CREATE TABLE）
-  - `Services/SchemaBootstrap.cs`（自動補欄位、`UserActivityLogs`、`EnsureIndexesAsync` 全部索引）
+  - `Services/SchemaBootstrap.cs`（自動補表/補欄位、`UserActivityLogs`、`DailyUserVisits`、`EnsureIndexesAsync` 全部索引）
+  - 方案根目錄 `sql\` 之增量異動腳本（與本檔第 5 節 Changelog 一一對應）
   - `Data/Configurations/*`（EF 對應；注意 `HasIndex` 對線上 DB 為 no-op，索引以 SchemaBootstrap 為準）
 - 欄名 `Apps.IconBase64` / `Menus.Icon` 內容已是「圖示路徑字串」（`/images/icons/{guid}.{ext}`），非 base64；欄名為相容舊資料保留。
 - `Map_Menu_Structure` 在線上 DB **無 FK**（CLAUDE.md 所述 "Restrict FK" 為 EF 設計意圖、未實際套用），本檔比照線上現況不建 FK。
@@ -390,4 +391,5 @@ GO
 
 - **2026-07-13 [基準檢核]**：經連線至線上 SQL Server (`EQDashboardV2`) 對全庫 18 張表、92 欄位、主外鍵及 8 個非主鍵索引進行完整比對，確認線上實體 DB 與本文件及 `SchemaBootstrap.cs` 100% 完全一致。
 - **2026-07-18 [新增每日活躍造訪統計表]** (`sql/2026-07-18_Add_DailyUserVisits.sql`)：新增 `DailyUserVisits` 實體表與對應索引 (`IX_DailyUserVisits_Date_Dept`)，作為全站每日活躍訪客 (DAU)、月度活躍訪客 (MAU) 與各廠區/部門比率統計使用；已同步於 `SchemaBootstrap.cs` 自動冪等建立。
+- **2026-07-19 [文件整理檢核，無架構異動]**：本次僅文件整理、**無任何資料庫結構變更、無需執行任何 SQL**。同步修正本檔快照區：表清單補列 `DailyUserVisits`（總表數 18→19，2026-07-18 已建者），並更新已移除之 `sql/schema_v2.sql` 來源參照（本檔第 2 節即為建表唯一快照）。
 

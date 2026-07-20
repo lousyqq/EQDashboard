@@ -420,7 +420,8 @@
       "Bash(sed -i 's/?v=20260719a/?v=20260719b/g' index.html js/*.js js/ui/*.js js/render/*.js js/admin/*.js && grep -rho '?v=20260719[a-z]' index.html js/ | sort | uniq -c)",
       "PowerShell(\"synced\")",
       "Bash(sed -i 's/?v=20260719b/?v=20260719c/g' index.html js/*.js js/ui/*.js js/render/*.js js/admin/*.js)",
-      "Bash(sed -i 's|\\\\\\(css/[a-z]*\\\\.css\\\\\\)?v=20260607e|\\\\1?v=20260719c|g' index.html)"
+      "Bash(sed -i 's|\\\\\\(css/[a-z]*\\\\.css\\\\\\)?v=20260607e|\\\\1?v=20260719c|g' index.html)",
+      "PowerShell(fc.exe /b AGENTS.md CLAUDE.md)"
     ]
   }
 }
