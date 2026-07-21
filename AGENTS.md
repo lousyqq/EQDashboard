@@ -1,4 +1,4 @@
-﻿# EQ Performance Dashboard - 專案說明文件 (CLAUDE.md / AGENTS.md)
+# EQ Performance Dashboard - 專案說明文件 (CLAUDE.md / AGENTS.md)
 
 > AI 助手在此專案開發、修改、除錯的最小必要知識與規範（最新狀態快照，2026-07-19 整理）。
 > **現役主線**：`EQDashboard.V2.Web`（ASP.NET Core .NET 9.0 + ES Modules 前端 + 最小整合測試 `EQDashboard.V2.Web.Tests`）。
@@ -11,7 +11,7 @@
 - **架構**：Kestrel/IIS；後端 Service 層 + DI 解耦；前端 ES Modules + Bootstrap 5/Vanilla JS（全 CDN，無 npm/bundler）。
 - **資料**：MSSQL（`ConnectionStrings:EQDashboard`，DB `EQDashboardV2`，Server `Sariel`）。CRUD 異動自動靜默寫回 DB；個人版面存 `PersonalSettings` + LocalStorage 快取；登入更新 `Accounts.LoginCount/LastLoginTime` 並冪等 upsert `DailyUserVisits`。
 - **驗證 (`AuthSettings`)**：Kestrel + Negotiate 自動偵測 Windows 桌機帳號（如 `00058897` 或 `UMC\00059987`），前端無手動帳密 Tab 與登出按鈕。三核心配置：
-  1. **`SimulatedAccount`**：指定帳號本地模擬驗證；留空 (`""`) 自動抓桌機身分。
+  1. **`SimulatedAccount`**：指定帳號本地模擬驗證；留空 (`""`) 自動抓桌機身分。後端 Controller/Service 統一注入 `IOptionsSnapshot<AuthSettings>`，並在 Cookie 驗證中配置 `OnValidatePrincipal`：當 `appsettings.json` 的 `SimulatedAccount` 變更或切換回 Windows 偵測時，即時作廢舊 Cookie (`SignOutAsync`) 並觸發前端 `tryAutoLogin` / `completeLoginAfterAuth` 重新拉取新登入者的完整權限結構 (`fetchInitialDataFromDB`)。
   2. **`DefaultAdmins`**（`["yu-ting", "00058897", "00059987"]`）：這些身分登入時若 DB 不存在或權限不足，自動建立/升級為 `admin`，防止系統鎖死。
   3. **`OpenAccessMode=true`**：名單外新登入者自動建帳（`roleLevel="user"`、部門「一般使用者」）、自動綁定所有角色群組（可視全廠區）；預設首頁不設定（自動抓第一個，登入網頁預設停留 12A）；全站開放瀏覽（後端 `GetVisibleMenuIdsAsync` 回 null 不過濾、前端全放行）。`false` 則嚴格限 DB 帳號名單登入與授權。
 - **App Grid 權限隔離**：無 `canManageCurrentAppGrid` 者一律隱藏編輯/刪除圖示與操作端點，不分模式；開啟方式全站一致（新視窗全螢幕或彈窗/IE 模式）。
@@ -49,7 +49,7 @@ EQDashboard.V2.Web\
 - **19 張表**：實體 7（`Menus`/`Fabs`/`Roles`/`Accounts`/`Apps`/`Requests`/`PersonalSettings`）＋關聯 10（`Map_*`）＋稽核統計 2（`UserActivityLogs`、`DailyUserVisits` 複合 PK `(VisitDate, EmpId)`）。
 - **Per-Fab 覆寫**：`Map_Account_ExtraMenu`/`Map_Account_DenyMenu` PK 為 `(EmpId, FabId, MenuId)`，`FabId` 存廠區名稱（如 `12A`），刻意不建 FK 以免多重 Cascade 路徑衝突。
 - **命名映射**：前端 JS 一律 CamelCase（`m.displayName`），後端 C#/DB 一律 PascalCase（`DisplayName`）。`Accounts` 覆寫存檔必帶 `LoginCount`/`LastLoginTime`，以免被洗成 NULL。
-- **圖示**：base64 一律轉實體檔存 `wwwroot/images/icons/{guid}.{ext}`，DB 只存相對路徑 `images/icons/{guid}.{ext}`（不帶開頭斜線以相容 IIS 虛擬目錄與子應用程式部署）；統一走 `IIconStorageService.SaveAsync`（MIME 白名單、路徑正規化）與 `DeleteIfLocalUnreferencedAsync`（孤兒清理），禁止 Controller 自行存檔。前端統一經由 `window.resolveIconUrl` 轉換並加 `onerror` 降級。
+- **圖示**：base64 一律轉實體檔存 `wwwroot/images/icons/{guid}.{ext}`，DB 只存相對路徑 `images/icons/{guid}.{ext}`（不帶開頭斜線以相容 IIS 虛擬目錄與子應用程式部署）；統一走 `IIconStorageService.SaveAsync`（MIME 白名單、路徑正規化）與 `DeleteIfLocalUnreferencedAsync`（孤兒清理），禁止 Controller 自行存檔。前端統一經由 `window.resolveIconUrl` 轉換並加 `onerror` 降級；APP 圖示編輯區由 `setIconPreviewBoxVisible` 透過 Bootstrap `d-none !important` / `d-flex !important` 嚴密控制（全新建立 APP 尚未上傳圖檔時不顯示預覽卡片區塊）。
 
 ---
 
@@ -90,12 +90,12 @@ EQDashboard.V2.Web\
 - **Authorization baseline**：Controller 預設 class-level `[Authorize]`，管理員功能再加 `[Authorize(Roles="admin")]`。
 - **ES Modules**：`import` 絕對置頂（任一 SyntaxError 中斷整張模組圖）；inline `onclick` 用的函式必 `window.X = X`；狀態一律走 `store.js` 的 `appState`。
 - **App Shell 快取防禦**：`syncDataToDB()`、RESTful 存檔（`save*API`/`delete*API`）、切帳號/登出後必呼叫 `window.clearAppCache(preserveCurrentUser)`（`app_shell_*` 快照 Ctrl+F5 不會清）；`restoreLoginFromStorage` 比對 `window._currentServerEmpId` 雙重驗證，並以 `Object.assign` 將 DB 最新身分同步回 localStorage。
-- **版本碼 `?v=`**：`index.html` 與所有模組 `import ?v=` 全站完全一致（目前 `20260720b`），改版一律全域取代，否則同模組雙載、狀態分裂。
+- **版本碼 `?v=`**：`index.html` 與所有模組 `import ?v=` 全站完全一致（目前 `20260721c`），改版一律全域取代，否則同模組雙載、狀態分裂。
 - **訊息分流**：成功/資訊走 `showToast(msg, type, delay, isHtml)`（非阻斷 Toast）；錯誤與需決策才走 `customAlert`/`customConfirm`，嚴禁為成功訊息新增阻斷 Modal；查詢表格載入態一律 `skeletonRows(colCount, rowCount)` 骨架屏。
 - **i18n 全量覆蓋**：新 UI 文字必掛 `data-i18n`（placeholder 用 `data-i18n-placeholder`），`config.js` 字典同步補 zh/en/ja；JS 動態字串走 `t(key, fallback)`，含數值用 `{0}`/`{1}` 模板＋`.replace()`；含圖示元素把文字包 `<span data-i18n>`。
 - **轉義三件套**：ID 進 inline `onclick('ID')` 先 `_jsArg()`（防網域 ID 的 `\` 被吃）；DB 資料進 `innerHTML` 必 `escHtml()`（防 XSS）；REST URL 的 ID 必 `encodeURIComponent()`。
 - **RWD**：`@media` 斷點全集中 `css/responsive.css`（≤992 側欄浮層＋遮罩 / ≤768 手機 / ≤480 窄幅）；JS 行為集中 `ui/layout.js` RWD 區塊（`RWD_SIDEBAR_BREAKPOINT = 992` 與 CSS 一致）。
-- **表格/挑選器**：`renderAccountTable` 是唯一 `serverSide:true` DataTable，禁改回記憶體分頁；查詢篩選綁 Enter 送出且新查詢重設回第 1 頁；sticky 表頭只宣告於 `components.css`；`openMenuSelector` 支援 folder 當預設首頁，權限與 Root 判定必檢查整個 `parentIds` 陣列：`(!cleanId(m.parentId)) && (m.parentIds||[]).filter(Boolean).length===0`；樹狀模板引用的 `${xxxHtml}` 必先以 `const` 宣告。
+- **表格/挑選器**：`renderAccountTable` 是唯一 `serverSide:true` DataTable（方案 A 旗艦優化為 6 欄配置，將層級與委派整合為「管理層級與狀態」，將可視群組與委派選單整合為「可視與管轄範圍」，大幅釋放寬度供長路徑文字展開），禁改回記憶體分頁；查詢篩選綁 Enter 送出且新查詢重設回第 1 頁；sticky 表頭只宣告於 `components.css`；`openMenuSelector` 支援 folder 當預設首頁，權限與 Root 判定必檢查整個 `parentIds` 陣列：`(!cleanId(m.parentId)) && (m.parentIds||[]).filter(Boolean).length===0`；樹狀模板引用的 `${xxxHtml}` 必先以 `const` 宣告。
 - **排序**：系統選單拖曳走 `batchSaveMenusAPI`（禁 Excel 全量覆寫）；個人排序走 `/api/PersonalSettings`，personal 模式根層排序 fallback 對齊 `dedupedInitIds` 索引。
 - **意見箱**：`openFeedbackPage` 導向系統「需求申請」頁（非外部信箱），管理員於「申請審核管理」回覆。
 
