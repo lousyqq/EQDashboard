@@ -1,4 +1,4 @@
-# 專案記憶庫 (memory.md)
+﻿# 專案記憶庫 (memory.md)
 
 > 現況快照與待辦（精簡版，2026-07-19 整理）。
 > 開發規範與坑點 → `CLAUDE.md`（＝`AGENTS.md`）；目錄結構與模組職責 → `系統架構.md`；DB 結構快照與增量 SQL 歷史 → `DB_Table.md`（Changelog 只增不刪）。
@@ -15,7 +15,7 @@
 - **稽核與流量統計**：`ActivityLoggingMiddleware` → `ActivityLogQueue`（Channel，滿載告警不丟棄）→ `ActivityLogProcessor` 批次寫 `UserActivityLogs`；登入統計時 `SettingsService.RecordDailyUserVisitAsync` 以 `UPDATE...IF @@ROWCOUNT=0 INSERT` 冪等 upsert `DailyUserVisits`；`AnalyticsController`（admin-only）提供 DAU/MAU KPI 與造訪明細，前端 `admin/traffic-stats.js`（`#page-traffic-stats`）。
 - **圖示與 IIS 相容性**：base64 一律轉實體檔 `images/icons/{guid}.{ext}`（不帶開頭斜線以相容 IIS 虛擬目錄與子應用程式部署），DB 只存相對路徑，統一走 `IIconStorageService`；前端由 `window.resolveIconUrl` 自動相容新舊圖示路徑並加 `onerror` 降級。APP 圖示編輯由 `setIconPreviewBoxVisible` 以 `d-none !important` 控制，全新建立時不顯示預覽卡片區塊。
 - **帳號管理與委派欄位**：帳號列表為 serverSide DataTable（方案 A 旗艦優化為 6 欄配置），將「權限層級」與「委派啟用狀態」整合為「管理層級與狀態 (`th_role_and_status`)」，將「可視群組」與「委派目錄」整合為「可視與管轄範圍 (`th_scope_and_managed`)」，大幅釋放橫向寬度供預設首頁與長目錄名稱不折行展開。
-- **前端**：唯一進入點 `index.html` → `main.js`；狀態中心 `store.js`；版本碼 `?v=20260721c` 全站一致；i18n zh/en/ja 全量覆蓋；RWD 集中 `css/responsive.css` + `ui/layout.js`。
+- **前端**：唯一進入點 `index.html` → `main.js`；狀態中心 `store.js`；版本碼 `?v=20260723w` 全站一致；i18n zh/en/ja 全量覆蓋；RWD 集中 `css/responsive.css` + `ui/layout.js`。
 
 ---
 
