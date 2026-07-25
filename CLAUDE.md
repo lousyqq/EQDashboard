@@ -1,4 +1,4 @@
-﻿# EQ Performance Dashboard - 專案說明文件 (CLAUDE.md / AGENTS.md)
+# EQ Performance Dashboard - 專案說明文件 (CLAUDE.md / AGENTS.md)
 
 > AI 助手在此專案開發、修改、除錯的最小必要知識與規範（最新狀態快照，2026-07-19 整理）。
 > **現役主線**：`EQDashboard.V2.Web`（ASP.NET Core .NET 9.0 + ES Modules 前端 + 最小整合測試 `EQDashboard.V2.Web.Tests`）。
@@ -49,7 +49,7 @@ EQDashboard.V2.Web\
 - **19 張表**：實體 7（`Menus`/`Fabs`/`Roles`/`Accounts`/`Apps`/`Requests`/`PersonalSettings`）＋關聯 10（`Map_*`）＋稽核統計 2（`UserActivityLogs`、`DailyUserVisits` 複合 PK `(VisitDate, EmpId)`）。
 - **Per-Fab 覆寫**：`Map_Account_ExtraMenu`/`Map_Account_DenyMenu` PK 為 `(EmpId, FabId, MenuId)`，`FabId` 存廠區名稱（如 `12A`），刻意不建 FK 以免多重 Cascade 路徑衝突。
 - **命名映射**：前端 JS 一律 CamelCase（`m.displayName`），後端 C#/DB 一律 PascalCase（`DisplayName`）。`Accounts` 覆寫存檔必帶 `LoginCount`/`LastLoginTime`，以免被洗成 NULL。
-- **圖示**：base64 一律轉實體檔存 `wwwroot/images/icons/{guid}.{ext}`，DB 只存相對路徑 `images/icons/{guid}.{ext}`（不帶開頭斜線以相容 IIS 虛擬目錄與子應用程式部署）；統一走 `IIconStorageService.SaveAsync`（MIME 白名單、路徑正規化）與 `DeleteIfLocalUnreferencedAsync`（孤兒清理），禁止 Controller 自行存檔。前端統一經由 `window.resolveIconUrl` 轉換並加 `onerror` 降級；APP 圖示編輯區由 `setIconPreviewBoxVisible` 透過 Bootstrap `d-none !important` / `d-flex !important` 嚴密控制（全新建立 APP 尚未上傳圖檔時不顯示預覽卡片區塊）。
+- **圖示**：為支援多主機 Web Farm 部署，上傳的圖示（Base64）統一儲存於資料庫（`Menus.Icon` / `Apps.IconBase64`），不再寫入本機實體檔案。舊有實體圖示已由 `IconStorageService.MigrateBase64IconsAsync` 於系統啟動時自動轉換回 DB 儲存。前端統一經由 `window.resolveIconUrl` 處理，`IconStorageService` 負責 MIME 驗證。APP 圖示編輯區由 `setIconPreviewBoxVisible` 透過 Bootstrap `d-none !important` / `d-flex !important` 嚴密控制（全新建立 APP 尚未上傳圖檔時不顯示預覽卡片區塊）。
 
 ---
 
@@ -90,7 +90,7 @@ EQDashboard.V2.Web\
 - **Authorization baseline**：Controller 預設 class-level `[Authorize]`，管理員功能再加 `[Authorize(Roles="admin")]`。
 - **ES Modules**：`import` 絕對置頂（任一 SyntaxError 中斷整張模組圖）；inline `onclick` 用的函式必 `window.X = X`；狀態一律走 `store.js` 的 `appState`。
 - **App Shell 快取防禦**：`syncDataToDB()`、RESTful 存檔（`save*API`/`delete*API`）、切帳號/登出後必呼叫 `window.clearAppCache(preserveCurrentUser)`（`app_shell_*` 快照 Ctrl+F5 不會清）；`restoreLoginFromStorage` 比對 `window._currentServerEmpId` 雙重驗證，並以 `Object.assign` 將 DB 最新身分同步回 localStorage。
-- **版本碼 `?v=`**：`index.html` 與所有模組 `import ?v=` 全站完全一致（目前 `20260723w`），改版一律全域取代，否則同模組雙載、狀態分裂。
+- **版本碼 `?v=`**：`index.html` 與所有模組 `import ?v=` 全站完全一致（目前 `20260725e`），改版一律全域取代，否則同模組雙載、狀態分裂。
 - **訊息分流**：成功/資訊走 `showToast(msg, type, delay, isHtml)`（非阻斷 Toast）；錯誤與需決策才走 `customAlert`/`customConfirm`，嚴禁為成功訊息新增阻斷 Modal；查詢表格載入態一律 `skeletonRows(colCount, rowCount)` 骨架屏。
 - **i18n 全量覆蓋**：新 UI 文字必掛 `data-i18n`（placeholder 用 `data-i18n-placeholder`），`config.js` 字典同步補 zh/en/ja；JS 動態字串走 `t(key, fallback)`，含數值用 `{0}`/`{1}` 模板＋`.replace()`；含圖示元素把文字包 `<span data-i18n>`。
 - **轉義三件套**：ID 進 inline `onclick('ID')` 先 `_jsArg()`（防網域 ID 的 `\` 被吃）；DB 資料進 `innerHTML` 必 `escHtml()`（防 XSS）；REST URL 的 ID 必 `encodeURIComponent()`。
