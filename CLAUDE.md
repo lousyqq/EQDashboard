@@ -90,7 +90,7 @@ EQDashboard.V2.Web\
 - **Authorization baseline**：Controller 預設 class-level `[Authorize]`，管理員功能再加 `[Authorize(Roles="admin")]`。
 - **ES Modules**：`import` 絕對置頂（任一 SyntaxError 中斷整張模組圖）；inline `onclick` 用的函式必 `window.X = X`；狀態一律走 `store.js` 的 `appState`。
 - **App Shell 快取防禦**：`syncDataToDB()`、RESTful 存檔（`save*API`/`delete*API`）、切帳號/登出後必呼叫 `window.clearAppCache(preserveCurrentUser)`（`app_shell_*` 快照 Ctrl+F5 不會清）；`restoreLoginFromStorage` 比對 `window._currentServerEmpId` 雙重驗證，並以 `Object.assign` 將 DB 最新身分同步回 localStorage。
-- **版本碼 `?v=`**：`index.html` 與所有模組 `import ?v=` 全站完全一致（目前 `20260725e`），改版一律全域取代，否則同模組雙載、狀態分裂。
+- **版本碼 `?v=`**：`index.html` 與所有模組 `import ?v=` 全站完全一致（目前 `20260727a`），改版一律全域取代，否則同模組雙載、狀態分裂。
 - **訊息分流**：成功/資訊走 `showToast(msg, type, delay, isHtml)`（非阻斷 Toast）；錯誤與需決策才走 `customAlert`/`customConfirm`，嚴禁為成功訊息新增阻斷 Modal；查詢表格載入態一律 `skeletonRows(colCount, rowCount)` 骨架屏。
 - **i18n 全量覆蓋**：新 UI 文字必掛 `data-i18n`（placeholder 用 `data-i18n-placeholder`），`config.js` 字典同步補 zh/en/ja；JS 動態字串走 `t(key, fallback)`，含數值用 `{0}`/`{1}` 模板＋`.replace()`；含圖示元素把文字包 `<span data-i18n>`。
 - **轉義三件套**：ID 進 inline `onclick('ID')` 先 `_jsArg()`（防網域 ID 的 `\` 被吃）；DB 資料進 `innerHTML` 必 `escHtml()`（防 XSS）；REST URL 的 ID 必 `encodeURIComponent()`。
