@@ -1,4 +1,4 @@
-﻿# 專案記憶庫 (memory.md)
+# 專案記憶庫 (memory.md)
 
 > 現況快照與待辦（精簡版，2026-07-19 整理）。
 > 開發規範與坑點 → `CLAUDE.md`（＝`AGENTS.md`）；目錄結構與模組職責 → `系統架構.md`；DB 結構快照與增量 SQL 歷史 → `DB_Table.md`（Changelog 只增不刪）。
@@ -21,9 +21,9 @@
 
 ## 2. 目前待辦事項 (Active Tasks)
 
-- [~] **本地 Git 版控收尾**：確認 `bin/`、`obj/`、`.vs/`、`App_Data/`、`appsettings.json` 不進版控並完成 commit，維持工作目錄乾淨。
-- [ ] **DataProtection 金鑰輪換（安全優先）**：刪除歷史外洩之 `App_Data/keys/*`，重啟由系統自動重產新金鑰（現有 Sessions 失效）。
-- [ ] **大型規模擴展評估（長期可選）**：看板/權限達數千筆規模時，評估 Category/Tags 檢索、側欄樹狀 Lazy Rendering 與分廠 on-demand 載入。
+- [x] **本地 Git 版控收尾**：確認 `bin/`、`obj/`、`.vs/`、`App_Data/`、`appsettings.json` 不進版控並完成 commit，維持工作目錄乾淨。
+- [x] **DataProtection 金鑰輪換（安全優先）**：刪除歷史外洩之 `App_Data/keys/*`，重啟由系統自動重產新金鑰（現有 Sessions 失效）。
+- [x] **大型規模擴展評估（長期可選）**：看板/權限達數千筆規模時，評估 Category/Tags 檢索、側欄樹狀 Lazy Rendering 與分廠 on-demand 載入。已實作側欄樹狀 DOM lazy-loading。
 
 ---
 

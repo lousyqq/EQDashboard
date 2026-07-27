@@ -1,4 +1,4 @@
-﻿# EQ Performance Dashboard - 專案說明文件 (CLAUDE.md / AGENTS.md)
+# EQ Performance Dashboard - 專案說明文件 (CLAUDE.md / AGENTS.md)
 
 > AI 助手在此專案開發、修改、除錯的最小必要知識與規範（最新狀態快照，2026-07-19 整理）。
 > **現役主線**：`EQDashboard.V2.Web`（ASP.NET Core .NET 9.0 + ES Modules 前端 + 最小整合測試 `EQDashboard.V2.Web.Tests`）。
@@ -103,9 +103,9 @@ EQDashboard.V2.Web\
 
 ## 7. 當前待辦事項 (Active Tasks)
 
-- [~] **本地版控收尾**：確保 `bin/`、`obj/`、`.vs/`、`App_Data/`、`appsettings.json` 不進版控，並 commit 保存最新狀態。
-- [ ] **DataProtection 金鑰輪換（安全優先）**：清除歷史外洩的 `App_Data/keys/*` 並重啟重產新金鑰（現有 Sessions 失效）。
-- [ ] **大型規模擴展評估（長期可選）**：看板/權限達數千筆時，評估 Menu 分類檢索、側欄樹狀 lazy-loading 與分廠 on-demand 載入。
+- [x] **本地版控收尾**：確保 `bin/`、`obj/`、`.vs/`、`App_Data/`、`appsettings.json` 不進版控，並 commit 保存最新狀態。
+- [x] **DataProtection 金鑰輪換（安全優先）**：清除歷史外洩的 `App_Data/keys/*` 並重啟重產新金鑰（現有 Sessions 失效）。
+- [x] **大型規模擴展評估（長期可選）**：看板/權限達數千筆時，評估 Menu 分類檢索、側欄樹狀 lazy-loading 與分廠 on-demand 載入。已實作側欄樹狀 DOM lazy-loading。
 
 ---
 
